@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600">
+  <defs>
+    <pattern id="coins" width="120" height="120" patternUnits="userSpaceOnUse">
+      <circle cx="60" cy="60" r="28" fill="#b8860b" opacity="0.35"/>
+      <circle cx="60" cy="60" r="22" fill="none" stroke="#8b6914" stroke-width="2" opacity="0.5"/>
+      <rect x="48" y="54" width="24" height="12" rx="2" fill="#8b6914" opacity="0.4"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="600" fill="url(#coins)"/>
+</svg>

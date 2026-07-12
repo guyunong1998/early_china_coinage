@@ -1,0 +1,38 @@
+import Link from 'next/link'
+import { SearchForm } from '@/components/ui/SearchForm'
+
+export function SiteHeader() {
+  return (
+    <header className="border-b border-brand/20 bg-white shadow-sm">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
+        <Link href="/" className="group flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+            钱
+          </div>
+          <div>
+            <p className="font-serif text-lg font-semibold tracking-wide text-brand">
+              Early Chinese Coin Finds
+            </p>
+            <p className="text-xs text-gray-500">先秦至汉初钱币出土数据库</p>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 md:flex">
+          <Link href="/about" className="hover:text-brand">
+            About
+          </Link>
+          <Link href="/search" className="hover:text-brand">
+            Search
+          </Link>
+          <Link href="/map" className="hover:text-brand">
+            Map
+          </Link>
+        </nav>
+
+        <div className="hidden w-64 lg:block">
+          <SearchForm compact />
+        </div>
+      </div>
+    </header>
+  )
+}
