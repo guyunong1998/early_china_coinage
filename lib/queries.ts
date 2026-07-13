@@ -125,3 +125,133 @@ export async function searchSites(query: string): Promise<MapSite[]> {
   if (error) throw error
   return data ?? []
 }
+
+export type MintTypeOption = {
+  key: string
+  label: string
+  siteCount: number
+}
+
+export type MintFindspotsData = {
+  sites: MapSite[]
+  typeOptions: MintTypeOption[]
+  siteTypeKeys: Record<string, string[]>
+}
+
+function buildTypeKey(coin: {
+  coin_type_code: string
+  major_type_zh: string | null
+  minor_type_zh: string | null
+  inscription: string | null
+}) {
+  if (coin.minor_type_zh) return `minor:${coin.minor_type_zh}`
+  if (coin.major_type_zh) return `major:${coin.major_type_zh}`
+  if (coin.inscription) return `insc:${coin.inscription}`
+  return `code:${coin.coin_type_code}`
+}
+
+function buildTypeLabel(coin: {
+  major_type_zh: string | null
+  minor_type_zh: string | null
+  inscription: string | null
+  coin_type_code: string
+}) {
+  if (coin.major_type_zh && coin.minor_type_zh) return `${coin.major_type_zh} · ${coin.minor_type_zh}`
+  if (coin.minor_type_zh) return coin.minor_type_zh
+  if (coin.major_type_zh) return coin.major_type_zh
+  if (coin.inscription) return `Inscription: ${coin.inscription}`
+  return coin.coin_type_code
+}
+
+/**
+ * Returns mint-issued coin findspots based on finds+coin_types in current DB.
+ * This powers the mint detail page distribution map and coin-type filters.
+ */
+export async function getMintFindspotsData(mintZh: string): Promise<MintFindspotsData> {
+  if (!mintZh) return { sites: [], typeOptions: [], siteTypeKeys: {} }
+
+  const { data: mintedCoinTypes, error: coinError } = await supabase
+    .from('coin_types')
+    .select('coin_type_code, major_type_zh, minor_type_zh, inscription, mint_zh')
+    .eq('mint_zh', mintZh)
+
+  if (coinError) throw coinError
+  if (!mintedCoinTypes || mintedCoinTypes.length === 0) {
+    return { sites: [], typeOptions: [], siteTypeKeys: {} }
+  }
+
+  const coinTypeCodes = mintedCoinTypes.map((row) => row.coin_type_code).filter(Boolean)
+  if (coinTypeCodes.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
+
+  const { data: finds, error: findError } = await supabase
+    .from('finds')
+    .select('find_code, context_code, coin_type_code')
+    .in('coin_type_code', coinTypeCodes)
+
+  if (findError) throw findError
+  if (!finds || finds.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
+
+  const contextCodes = [...new Set(finds.map((f) => f.context_code).filter(Boolean))]
+  const { data: contexts, error: contextError } = await supabase
+    .from('contexts')
+    .select('context_code, site_code')
+    .in('context_code', contextCodes)
+
+  if (contextError) throw contextError
+
+  const contextToSite = new Map<string, string>()
+  ;(contexts ?? []).forEach((ctx) => contextToSite.set(ctx.context_code, ctx.site_code))
+
+  const siteCodeSet = new Set<string>()
+  const siteTypeSetMap = new Map<string, Set<string>>()
+  const typeKeyToLabel = new Map<string, string>()
+
+  const codeToTypeRow = new Map(
+    mintedCoinTypes.map((row) => [row.coin_type_code, row] as const)
+  )
+
+  finds.forEach((find) => {
+    const siteCode = contextToSite.get(find.context_code)
+    if (!siteCode) return
+    const typeRow = codeToTypeRow.get(find.coin_type_code ?? '')
+    if (!typeRow) return
+
+    const typeKey = buildTypeKey({
+      coin_type_code: typeRow.coin_type_code,
+      major_type_zh: typeRow.major_type_zh,
+      minor_type_zh: typeRow.minor_type_zh,
+      inscription: typeRow.inscription,
+    })
+
+    siteCodeSet.add(siteCode)
+    if (!siteTypeSetMap.has(siteCode)) siteTypeSetMap.set(siteCode, new Set())
+    siteTypeSetMap.get(siteCode)?.add(typeKey)
+    typeKeyToLabel.set(typeKey, buildTypeLabel(typeRow))
+  })
+
+  const siteCodes = [...siteCodeSet]
+  if (siteCodes.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
+
+  const { data: sites, error: siteError } = await supabase
+    .from('v_coin_map_sites')
+    .select(MAP_SITE_FIELDS)
+    .in('site_code', siteCodes)
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+
+  if (siteError) throw siteError
+
+  const siteTypeKeys: Record<string, string[]> = {}
+  siteTypeSetMap.forEach((set, siteCode) => {
+    siteTypeKeys[siteCode] = [...set]
+  })
+
+  const typeOptions: MintTypeOption[] = [...typeKeyToLabel.entries()]
+    .map(([key, label]) => {
+      const siteCount = Object.values(siteTypeKeys).filter((keys) => keys.includes(key)).length
+      return { key, label, siteCount }
+    })
+    .sort((a, b) => b.siteCount - a.siteCount || a.label.localeCompare(b.label, 'zh-CN'))
+
+  return { sites: sites ?? [], typeOptions, siteTypeKeys }
+}

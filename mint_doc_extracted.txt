@@ -1,0 +1,360 @@
+﻿In the Eastern Zhou period, a large portion of the inscriptions on coinage are the names of the mint towns. Huang Xiquan estimates that the number of locality inscriptions on square-foot spades, pointed-foot spades, and bridge-foot coins is approximately 160, 30, and 20, respectively.The locality inscriptions not only help identify the production cities but also provide a glimpse into the commercial activity of these cities. Therefore, identifying the location of the mint town is an essential step in studying the economic activities. 
+Nevertheless, whether an inscription can be matched to a specific town—or even whether some inscriptions should be understood as locality names at all—remains a matter of ongoing debate. Although the historical geography research is not the main focus of this dissertation, it is essential to explain my principles in mapping the cities. 
+Several clues can be used to decide whether or not the inscriptions can be understood as localities. (1) A large portion of the inscriptions precisely match the localities in transmitted texts and excavated texts. (2) One locality usually appeared on multiple media, such as bronze weapons, bronze vessels, pottery, and seals. (3) The format within one currency is usually stable. If the inscriptions on the same type of coins are mostly the names of the mint town, then the inscriptions that have not been deciphered might also indicate some unknown sites.  
+Based on the three principles above, the inscriptions on the bridge-foot spades, pointed-foot spades, square-foot spades, sharp-angled spades, and Qi large knife coins certainly indicate the mint town. While most of the inscriptions on the pointed-tip knives, ming knives, and hollow-socket spades probably indicate the production institutions rather than localities. For example, on hollow-socket spades, the inscriptions often consist of numerals, stem-branch signs, and single-character inscriptions that cannot be matched to any known site. For example, Shaoqushinan, may indicate that the coins were issued south of the market in Shaoqu. In this case, the inscription refers to a specific institution or location within Shaoqu, rather than to the city itself. Another example is the pointed-tip knives. Although Huang Xiquan argued that some inscriptions represent specific groups or cities based on phonetic resemblance, none of the inscriptions on the pointed-tip knives match the city names found in other media. The inscriptions on the pointed-tip knives and ming knives share a lot of similarities, such as the use of numeral stem-branch signs, implying that these inscriptions might relate to production institutions rather than locations. 
+For the locality inscriptions, although many match the sites in the texts, sometimes it is difficult to identify them with specific sites. First, some inscriptions contain phonetic substitution, in which one graph was used for another because of their similar pronunciation, such as Fuhu on the pointed-foot spades indicatingLvsi, a city in present-day Wutai County, or ge on the square-foot spades indicating dai, another city in Yu County.  Second, in some cases, multiple cities have the same name. For example, Anyang has been seen in Han, Zhao, Wei, and Qi. In this circumstance, it is hard to decide which city issued the coin with the Anyang inscription. Third, some place names change to other regions over time, while transmitted texts record only later locations, not earlier ones. For instance, Pingzhou County was first set in Yulin, and then moved to Lishi due to the invasion of the Xiongnu during the Eastern Han period. However, the transmitted texts only record Pingzhou in Shanxi, while neglecting its first location. Only in recent years, with the discovery of excavated texts, has it become possible to identify the original location of Pingzhou County.
+The dissertation does not primarily focus on research in historical geography. In fact, previous research has already provided a foundation for our further studies. However, because there are often different explanations for the same city, it is still necessary for me to explain the principle for identifying the city's location. 
+First, the excavated texts are the direct evidence for us to identify the city. For instance, pottery with the inscription Shan has been constantly found in several sites in present-day Shanzhou district, Sanmenxia, implying that this is the location of the Shan county in the Warring States period. In recent years, the discovery of pottery vessels bearing locality inscriptions in northern Shaanxi has provided new evidence for discussing the cities of the Loess Plateau.
+Second, the circulation pattern can also give us clues to identify the mint town.Coins were usually first used locally and then circulated to other regions. As distance from the issuing city increased, the number of coins generally decreased. Zhu Hua used the percentage of Pingyang square-foot spades in hoards to argue that Pingyang should be located in southern Shanxi rather than Hebei, since Pingyang spades occur in significantly higher proportions in southern Shanxi than in other regions.
+Third, the transmitted texts can offer clues about the location, but we need to clarify the historical changes. For instance, Cheng Enze identified Ganguanwith Fushi County, but he did not realize that the location of Fushi County in the Qing dynasty differed from that in the Qin and Han periods. As a result, he wrongly placed it near present-day Yan'an.
+Here, I would try to present the location of each city in the transmitted texts. The location of the city is primarily based on geographical texts from before the Song Dynasty, such as Shuijingzhu, Kuodizhi, and Yuanhejunxianzhi. If the city can be matched to specific archaeological sites, I will place the city at that site. The city site is based on archaeological reports and the Atlas of Chinese Cultural Relics. However, for cities for which no clear clues are available, or for which the evidence is very vague, I will note the uncertainty in the text and provide only an approximate location. For some place name that can match multiple cities, I will list all the possibilities and evidence. 
+桥足布
+安邑：
+夏县西北7.5公里，禹王村附近。城市有三重城圈，大城周长约15.5公里，中城在周长约6.5公里。小城周长约3公里。城内有丰富的战国、汉代堆积。也曾发现过铸造桥足布的陶范。《史记·魏世家》“悼公之十一年，魏绛徙治安邑。“《正义》”安邑在绛州夏县安邑故城是也。“
+Anyi
+Located 7.5 km northwest of Xia County, near Yuwang Village. The city consists of three enclosures, with circumferences of roughly 15.5 km, 6.5 km, and 3 km. Numerous Warring States and Han Period deposits have been found within the city(Tao and Ye 1962). Near the Miaohouzhuang village, archaeologists found the mouldused to cast bridge-foot spade coins, providing direct evidence for coin production(Zhang and Huang 1983). 
+Geolocation: 35.182116514281695, 111.16443424223753
+Coin Type
+Bridge-foot spades
+魏
+芮城县北，中龙泉村附近。《史记·魏世家》“以魏封毕万。”《史记正义》“魏城在陕州芮城县北五里。：山西省考古研究所曾经对城址进行过调查。南城墙全长1150米，东城墙1268米，城内采集大量东周遗物。
+Located in the north of Ruicheng County, near Zhonglongquan village. Shiji recorded “In the sixteenth year of Duke Xian's reign, Zhao Su was the charioteer and Bi Wan was the right-hand man, leading a campaign to attack Huo, Geng, and Wei, which they destroyed. Geng was enfeoffed to Zhao Su, and Wei was enfeoffed to Bi Wan”. Sun Shoujie marked the Wei city to the north 2.5 km of Ruicheng County. The Shanxi Institute of Archaeology surveyed the city. The length of the south wall is 1150 m, and the eastwall is 1268 m. Numerous Eastern Zhou remains were collected from the site(Tao and Ye 1962). 
+Geo Location: 34.73137309704103, 110.68667925393225
+Coin Type: Bridge-foot spades
+阴晋
+华阴瓦渣梁。《汉书·地理志》“华阴，故阴晋，秦惠文王五年更名宁秦，高帝八年更名华阴。”80年代初陕西省考古研究所发掘瓦渣梁遗址，发现西汉京师仓，遗址南部发现带有“宁秦”戳印的残砖，并在周围发现围绕京师仓周长3330米，面积78.4万平方米的古城，城墙年代上限战国早期。
+The city of Yinjin is mentioned in both the Shiji and the Hanshu. According to the Hanshu, the county was renamed Ningqin in the fifth year of King Huiwen of Qin (333 BCE) and subsequently renamed Huayin in the eighth year of Emperor Gaozu of Han (199 BCE). In the 1980s, the Shaanxi Provincial Institute of Archaeology excavated the Wazhaliang site and uncovered the Jingshi Granary, a large storage facility dating to the Western Han period. Bricks bearing the inscription Ningqin were discovered south of the granary, indicating that the site was located within Ningqin County. Archaeological investigations also identified the remains of a walled city that can be dated to the early Warring States period. The city had a perimeter of approximately 3,330 m and enclosed an area of about 784,000 m².
+Geo Location: 34.606855497327906, 110.16925759135434
+Coin Type: Bridge-foot spades
+蒲阪
+《括地志》“蒲阪古城在蒲州河东县南二里，即尧舜所都也。”现蒲州故城位于蒲州镇西厢村西南约1千米。根据《地图集》，当地发现唐代到明代的城址，但是没有系统工作。附近的薛家崖曾经在黄河水涨时出土大量的战国铜器，包括错金银的车具、带钩、货币等，可能与蒲阪故城有关。
+According to the Kuodizhi, Puban was located approximately 1 km south of Puzhou County. The site of Puzhou County has been identified about 1 km southwest of Xixiang Village in present-day Puzhou Town. Transmitted historical sources indicate that the location of Puban County remained unchanged until the Qing dynasty. The Atlas of Chinese Cultural Relics dates the city to the Tang–Ming periods. However, no systematic archaeological survey or excavation has yet been conducted in this area. Nevertheless, many artifacts have been discovered in nearby Xujiaya Village, a village close to the Puzhou County, including chariot fittings with gold and silver inlay, belt hooks, and coins. These finds may indicate the location of the ancient city of Puban.
+Geolocation: 34.84688258291176, 110.32932430263423
+Coin Type: Bridge-foot Spade
+高奴
+位于桥儿沟乡尹家沟村西200 米。城址平面略呈三角形，东西约1000米，南北约900米。城墙夯筑，现存北墙及部分东、西墙，共长约2500米，残高3～6米，夯层厚9～18厘米。据《史记·项羽本纪》,项羽“立董翳为翟王，王上郡，都高奴”。张守节《正义》:“《括地志》云：‘延州州城即汉高奴县’”。《元和郡县志·关内道三》:延州，“秦置三十六郡，属上郡。在汉为上郡高奴县之地，今州理即上郡高奴县之城也。项羽三分秦地，立董翳为翟王，都高奴，即其地也”。史籍所记高奴地望与该址相合。
+Located on the west 200 m of the Yinjiagou Village, Qiaoergou town. The city is roughly triangular in plan, measuring about 1,000 m east–west and 900 meters north–south. The city walls were built of rammed earth. The northern wall and parts of the eastern and western walls survive today, with a total remaining length of about 2,500 m. The surviving walls are 3–6 meters high, and the rammed-earth layers are 9–18 cm thick. Zhang Shoujie quoted Kuodizhi in the Shiji Zhengyi, the Yanzhouprefectural city site is the location of Gaonu County in the Han Dynasty. The Atlas marks the location of GaonuCounty to Yinjiagou Village. 
+Geolocation: 36.610145823587764, 109.51203757851496
+Coin Type: Bridge-foot Spades
+言阳
+即圁阳。戈有圁阳銘文者，根据陕北出土东汉画像石，圁阳大致分布在绥德五里店、四十里铺、中角乡一带。目前还没有报道的城址。出土画像石有出土于中角乡白家山的“西河圁阳张文卿永元十六年十月造万岁堂”、出土于四十里铺的“西河太守掾圁阳榆里田文成万岁室延平元年十月十七日塟”、出土于五里店的“圁阳西乡榆里郭稚文万岁室宅。”
+Yanyang is the yinyang county in the Han dynasty. Based on the inscriptions on the Han pictorial stones, the location of the Yinyang county is roughly around Wulipu, Sishilipu, and Zhongjiaoxiang, but there is no city site that has been reported. The pictorial stones discovered in Baijiashan Village, Zhongjiao town, has the inscription, Zhang Wenqing of Yinyang, Xihe, constructed the Wansui Tomb-Chamber in the tenth month of the sixteenth year of the Yongyuan reign [104 CE]. The pictorial stone discovered in Sishilipu has inscription, Tian Wencheng of Yuli, Yinyang, Xihe, an aide to the Grand Administrator of Xihe, was buried in the Wansuishi (‘Chamber of Ten Thousand Years,’ i.e. the tomb chamber) on the seventeenth day of the tenth month in the first year of Yanping [106 CE]. The one from Wulidian has inscription, The Wansuishizhai (‘Chamber-Dwelling of Ten Thousand Years,’ i.e. the tomb chamber) of Guo Zhiwen of Yuli, Western Township, Yinyang.”
+Geolocaion: 37.53007430074505, 110.28064749221848(Wulidian Village)
+Coin Type: Straight-back Knife; Bridge-foot Spade
+陕
+《史记·秦本纪》“十三年四月戌午，魏君为王，韩亦为王。使张仪伐取陕，出其人与魏。”陕，在今三门峡陕州区。陕县后川、三门峡刚玉砂场、大岭粮库、后川等战国秦汉墓地发现不少带有“陕亭”、“陕市”的戳印陶文。2019年以来在陕州城附近的甘棠学校发掘发现了不少东周墓葬，随葬成套青铜礼器。50年代中后期黄河水库考古队曾发现汉代陕县城的夯土东城墙遗迹，并在城外发掘大批汉墓。
+Shan was located in present-day Shanzhou District, Sanmenxia. In the Shuijingzhu, Shan is described as lying south of the Yellow River. In the 1950s, the Archaeological Team for the Yellow River Reservoir Project identified the rammed-earth city wall of Shan and excavated several cemeteries outside the city.Since then, archaeologists have found pottery inscribed with Shan ting or Shan shi—that is, the market station or market bureau of Shan—in several cemeteries, including Houchuan, GangyuShachang, and Daling Liangku. Since 2019, the Henan Provincial Institute of Cultural Heritage and Archaeology has excavated a cemetery dating from the seventh to fifth centuries BCE, which includes several high-ranking elite tombs. This cemetery is located close to the Shan city site. 
+東則咸陽澗水注之，水出北虞山南，至陝津注河，河南即陝城也。To the east, Xianyang Jian Shui converges into it as well. This stream originates from south of Beiyu Shan and flows to Shanjin before joining the Yellow River; to its south lies Shan Cheng.
+Geolocation: 34.789193190623784, 111.17376540168375
+Coin Type: Bridge-foot spade
+少梁
+位于芝川镇瓦头村西、吕庄村北和嵬东乡堡安村之东。城址平面略呈长方形，东西长约1.75公里，南北宽约1.5公里。城墙夯筑，北墙无存，东、南、西墙残高0.5～2.2米，基宽6～14米，夯层厚7～9厘米。东墙辟有二门。城内北部、东北部遗存夯土建筑台基10  处，残高1.7～2.4米。城内外还发现陶窑、冶铁遗址及墓葬区，出土陶茧形壶、罐、盆、釜，铜蒜头壶、钫、半两钱，铸造凿、铲、镰等生产工具的陶范，以及绳纹简瓦、板瓦、砖、柱础石等。《史记 ·秦本纪》:“秦惠文王十一年(公元前327年)更名少梁曰夏阳”。《正义》:  “夏阳城在韩城县南二十里”, 即为此城。其废弃时间当在西汉末年。1993年10月，城古村南出土一枚梁半釿布币和一块钱范。该村距离夏阳城不远，可能是铸造钱币的作坊。
+Located in the west of the Watou Village, Zhichuan Town, Hancheng. The east-west wall is 1.75 km, south-north wall is 1.5 km. The width of the city wall is 6-14 m. In the northeastern part of the site, ten rammed-earth building platforms survive, with remaining heights of 1.7–2.4 meters. Pottery kilns, iron-smelting remains, and cemetery areas have also been found both inside and outside the city.The Shiji records that in the eleventh year of the reign of King Huiwen, Shaoliang was renamed Xiayang. According to the annotation in the Shiji zhengyi, Xiayang was located south of Hancheng County, which corresponds well with the location of the city site. In October 1993, a spade coin bearing the inscription Liang banjin, together with a fragmentary coin mold, was found south of Chenggu Village, close to the city site.
+Geolocation: 35.37805481710488, 110.40007185536928
+Coin Type: Bridge-foot Spade
+卢氏
+县城关东南隅。本春秋西虢邑，汉置卢氏县，清同治三年（1864年）更瓮以砖石。城址平面呈长方形，城垣周长约2300米，现存夯土城垣数段，残高6米，夯层厚12—14厘米。另存一段清代砖砌城墙。城内外出土有东周、汉代陶鬲、鼎、罐、壶、豆残片及板瓦等建筑残构件等。
+The city site is located southeast of present-day Lushi County. The city has a perimeter of approximately 2,300 meters, and several sections of rammed-earth wall still survive today. Numerous remains dating to the Eastern Zhou and Han periods have been found at the site.
+Geolocation: 34.053308630430436, 111.0457251877067
+Coin Type: Bridge-foot Spade
+共
+辉县市区内。城址接近方形，南北1500米，东西1100米，破坏严重。城内曾发现过规模较大的铸铁遗址。史语所及中科院考古所曾先后发掘周围的琉璃阁墓地，周围还有赵固、固围村、南宿等墓地，均有出土东周青铜礼器。
+The city site is located in downtown Huixian. Its plan is roughly square, measuring approximately 1,500 meters from north to south and 1,100 meters from east to west, although it has been severely damaged by modern urbanization. A large-scale iron-production workshop has been found inside the city. Outside the city, the Institute of History and Philology, Academia Sinica, and the Institute of Archaeology, Chinese Academy of Sciences, excavated several high-ranking elite cemeteries, including Liulige, Zhaogu, and Guweicun. Gong was an important political center of the state of Wei during the Warring States period.
+Geo location: 35.46468838986013, 113.800154242262
+Coin Type: Bridge-foot Spades; Round Coin
+安阴
+地名未知。何琳仪将其左读为“阴安”，认为在河南南乐县东南。吉林省博物院藏有“七年安阴令”戈，表面存在安阴地名，未必要左读为阴安。安阴地点未知。
+The location of the site remains unknown. He Linyi read the inscription in reverse order as Yinan, identifying it with a place southeast of present-day Nanle County. However, the Jilin Provincial Museum has in its collection a ge dagger-axe bearing the inscription “Anyin county official, seventh year” (qi nianAnyin xian guan). This suggests that Anyin was already used as a county name during the Warring States period, and therefore there is no need to read the coin inscription in reverse order.
+Geolocation: Unknown 
+Coin Type: Bridge-foot Spade
+分
+Unknow site. 
+Geolocation: Unknown 
+Coin Type: Bridge-foot Spade
+𨛶/泫氏
+位于今天高平县治。《元和郡县图志》“高平县。本汉泫氏县，属上党郡，在泫水之上，故以为名。”谭其骧将其考订在高平县治。
+Xuanshi is located in present-day Gaoping county. Xuanshi was renamed as Gaoping in the Han dynasty, affiniated to the Shangdangprefectual. Xuanshi was named because it locates near the Xuan river. Tan Qixiang point the location to the GaopingCounty.
+Geolocation: 35.789246763587045, 112.92810754543565
+Coin-Type: Bridge-foot spade; square-foot spade
+尖足布
+西都：
+《汉书.地理志》载，西河郡有西都县。西都地望有两说。
+伊金霍洛旗：艾充根据西都字面含义，认为西都县位于西河郡西部，推定在伊金霍洛旗的车架渠古城。
+鄂尔多斯：马孟龙认为根据《秩律》，西都属于西河郡，这一时期汉朝尚未控制秦昭襄王长城以北的领土。结合战国时期赵国在陕北的领土范围在无定河以北，可以推测西都县位于无定河以北，秦昭襄王长城以东，黄河以西的范围内。根据《汉书.地理志》西都县自注“莽曰五原亭”，可知王莽时期西都县曾隶属于五原郡，因此其地当在西汉末年五原郡和西河郡交界的黄甫川。符合条件的县级古城仅有郝家圪台古城。
+西都地望以马孟龙说法为准。
+Xidu is affiliated with the Xiheprefecture in the Western Han Dynasty. The location of the Xidu county has long been debated because the transmitted text does not provide details for the specific location. Ai Chong identifies it with the Chejiaqu city site, while Ma Menglong marks it at the Haojiagatai city site. However, in recent years, the Yulin Institute of Archaeology conducted a survey in the Qiaotoumao city site, collecting pottery shards with “Xidu” inscription. The discovery disprove previous assumptions and suggests that the Qiaotoumao city site is the Xidu county in the Han Dynasty. Near the Qiaotoumao city site, local museums has reported findings of bronze vessels dating to the 5th century BCE, suggesting that the history of the city can be traced back to the Warring States period. 
+Geolocation: 38.472543979479624, 110.33054769804633
+Coin Type: pointed-foot spade
+平周
+平周县战国时期最早为魏国所置。《史记.魏世家》记录，襄王“十三年张仪相魏。…秦取我曲沃、平周”。战国晚期赵国铸有“平州”字样尖足布，可能也曾短暂占据平周。关于平州地望有两说。
+介休：唐宋以来平周地望被定在山西介休县西。《史记.魏世家》正义引《十三州志》说：“古平周县在汾州介休县西五十里也。”
+米脂：吴镇烽列举1978年陕西米脂县官庄发掘的牛季平墓画像石题记，“永和四年九月十日癸酉，河内山阳尉西河平周寿贵里牛季平造作千万岁室宅“，说明东汉时期平周县应在今天米脂一带。东汉末年匈奴侵占西河，平周县从河西迁到河东。孝义县的平周可能是汉末三国混乱时内迁至此。
+平周地望以吴镇烽说法为准。地点暂定为米脂县官庄。
+Pingzhou was first set by Wei in the Warring States period. In Shiji, Qin took over Quwo and Pingzhou in the 13th year of King Xiang's reign. Zhao issued the pointed-tip spades with Pingzhou inscription, implying that Zhao also shortly controlled Pingzhou. 
+Based on the transmitted texts written in the Tang Dynasty, Pingzhou was located in the west of Jiexiu County, Shanxi Province. However, in recent years, Wu Zhenfeng challenged this argument based on excavated texts. The inscriptions on the pictorial stones from the Niu Jiping tomb at Guanzhuang,Mizhi, indicate that Pingzhou is located nearby.  On the guiyou day, the tenth day of the ninth month in the fourth year of Yonghe, Niu Jiping of Shougui Ward, Pingzhou, Xihe, serving as commandant of Shanyang in Henei, made this chamber-house for ten thousand myriad years. In the Late Eastern Han Dynasty, the invasion of the Xiongnu might have caused the relocation of the Pingzhou County. 
+I locate Pingzhou at Guanzhuang. 
+Geolocation: 37.747722222372516, 110.16228242775668
+Coin Type: Pointed-foot spade. 
+阳曲
+阳曲城定位在晋昌镇。根据《文物地图集》，城址今日犹在，平面呈方形。现南墙、西墙、北墙部分残存，总长约1000多米，残高1~6米。墙体夯筑，夯层厚  0.09~0.12米。采集有泥质灰陶盆及绳纹板瓦等残片。
+Yangquis located inJinchang town, Dingxiang County. According to the Altas, the city wall is still on the ground. The plan is square, and the south, west, and north walls are still preserved. The remaining height of the city wall ranges from 1 to 6 meters. The wall was constructed with rammed earth, with rammed layers measuring 0.09–0.12 meters thick. Fragments of gray pottery shards and cord-marked tiles were collected.
+Geolocation:  38.48692489022878, 112.97113695203011
+Coin Type: Pointed-foot spade. 
+晋阳
+晋阳城定位在太原罗城村。城址内最早发现东周时期的陶片。谢元璐与张颔最早踏查此遗址，随后不断进行发掘工作。近十年来山西省考古研究所对晋阳城进行了持续发掘。
+Jinyang is located in the Luocheng village, Taiyuan. Inside the city, archaeologists found pottery shards dated to the Eastern Zhou period. Xie Yuanlu and Zhang Han first surveyed the city. In recent years, the Shanxi Institute of Archaeology has continuouslyexcavated the city. 
+Geolocation: 37.75756222269521, 112.4779842902503
+Coin Type: Pointed-foot spade. 
+榆即
+榆次城定位在榆次砖窑街一带，今晋丰一品小区。1942年日本学者对此城进行初步调查，1954年山西省文管会对这一区域继续调查并确定城址范围。2013年以来晋中市考古研究院对城址重新进行调查。城址外围有猫儿岭墓群，所出陶器有“次市”陶文，应为秦汉以来榆次县城所在。
+Yuci is located in the Zhuanwayao, Yuci County. In 1942, Japanese scholars had done a preliminary survey. In 1954, the Shanxi Institute of Archaeology continued surveying and mapping the plan of the city. Since 2013, the Jinzhong Institute of archaeology restarted the survey. Outside of the city, near the Maoerling village, high-ranking elite's tombs from the Warring States period have also been excavated. Pottery with the inscription “Ci Shi”(Market of Yuci) had been found in the cemetery, implying that the location of Yuci County should not be far away from the cemetery. 
+Geolocation: 37.68881034442893, 112.75766728520112
+Coin Type: Pointed-foot spade, square-foot spade.
+兹氏
+《史记.秦本纪》记载，“（昭襄王）二十五年，拔赵二城。”云梦出土《编年记》也有记录，“（昭王）廿五年，攻兹氏。秦代兹氏县属于太原郡。《读史方舆纪要》认为兹氏城在汾州府南十五里，即今天三泉镇巩村。此处有一战国城址，东西700米，南北300米，可能就是兹氏城。
+The Shiji records that in the twenty-fifth year, Qin captured two cities from Zhao. The Biannian ji編年記 (Chronicle) excavated from Shuihudi, Yunmeng, further specifies that in the twenty-fifth year of King Zhaoxiang’s reign, Qin captured Zishi兹氏. During the Qin dynasty, Zishi County was administered under Taiyuan Commandery. The Dushi fangyujiyao讀史方輿紀要 states that Zishi was located fifteen li south of Fenzhou, approximately 7.5 km. The Atlas identifies the Warring States-period city at Gongcun, Sanquan Town, as the likely location of Zishi County.
+Geolocation: 37.21501666336281, 111.73989910472737
+Coin Type: Pointed-food spade. 
+蔺
+蔺城定位在曜头乡郝塔村。根据县志记载，曜头古城遗址位于县城东北18公里，介于曜头乡郝塔村和南庄村之间。黄土丘陵的山梁，起伏连绵，现已垦为耕地，表层露头。秃水河自北向南流经遗址土丘前缘的缓坡之西。古城依山梁的起伏，沿崖壁周缘自沟底向顶部夯筑，垂直高度20～60米，底宽20～30米，顶宽4.4～9.4米，至顶上再加筑夯土墙体，残3.5～11.7米，居山临水，高低相差悬殊，势当南北通行的要塞，为兵家必争之地。现临白公路穿越城西，压住部分西墙。古城呈不规则梯形，内城、外城和城外防御设施三部分组成。城墙墙体夯法筑成，城下部用黄褐色土夯筑，分层为3～8厘米，较薄，外表风化较碎，上部用黄土近红色土夯筑，分层为4～19厘米，夯层分层明显实。其中，内城周长2 880米，东墙长170米，南墙长975米，西墙长915米，北墙长820米。
+内城东南部外侧与外城墙之间亦由夯筑墙体相连。外城周长4 980米，东墙长630米，南墙长1 250米，西墙长1 800米，北墙长1 300米。城内主要有4条大自然沟及其多条小沟，东外墙内侧坡上人工凿出平行排列的浅沟，沟内两壁垂直夯筑，以修建圆形夯土建筑，有的沟内两端一段距离交错防御横墙，横墙后再建造圆形夯土建筑。现存圆形建筑基址较多，大小不等，高低不一，层叠交错，直通沟口、河岸边。城外防御设施，东、南、北三面城墙外侧，峭壁陡直，沟壑纵横，沟内除夯筑坚固高耸的墙体、房屋的方式与城内相同，城外沟内现存圆形建筑基址又以其相连的高山峻岭为天然屏障。在西墙中、南部有两处缺口，可能是当时的城门。外城南墙外侧为墓葬区，亦有积炭墓，内城东顶部发现墓葬，可能是战死的将士。据城内采集残刀币范、大量砖瓦、陶器碎片及铁器、镞、青铜器、铁斧、鼎的特征认定此城始建于战国初年，城墙经多次修补，证明战争频繁，直至秦汉时代，古城仍得维持。唐、明两朝亦有人居住，但应是古城废弃以后的住户。结合文献记载，古城可能是战国时期的蔺。
+Lin is located in the Haota Village, Yaotou town. The Department of History, Shanxi University, had conducted a survey and found a Warring States city nearby. The inner city has a circumference of 2,880 meters, and the outer city has a circumference of 4,950 meters. Some of the high-ranking elite’s tombs have been discovered outside of the city. Inside the city, archaeologists collected knife-coin casting mold. Fu Shumin傅淑敏 proposed that the city is Lin County in the Warring States. 
+Geolocation: 37.433038813761065, 110.89422582633883
+Coin Type: Pointed-tip spade, square-foot spade, straight-back knife, round coin. 
+襄城
+张家坡二四七号汉墓出土的《二年律令·秩律》记录，襄城应属于上郡。马孟龙指出，战国末期秦代的上郡也有襄城，这一地点可能就是尖足布的襄城。赵国最早在陕北设置襄城县，后来被秦国所夺。颍川郡韩国的襄城在被秦国夺取以后称为“新襄城。”具体位置不详，大致在今天榆林境内。
+Xiangcheng was administered under Shang Prefecture. Ma Menglong馬孟龍 proposes that in the late Warring States period, Xiangcheng belonged to Qin’s Shang Prefecture and may have been captured from Zhao. The exact location of Xiangcheng County remains uncertain, but it was probably situated in present-day Yulin.
+Coin Type: Pointed-tip spade
+甘丹
+甘丹即邯郸，定位在今天邯郸赵王城。
+Gandan is Handan. The specific location is Zhaowangchang, Handan. The first systematic survey and excavation of Handan was conducted by Harada Yoshito during World War 2. After the revolution in 1949, Peking University, Hebei Institute of Archaeology, and Handan Institute of Archaeology continued excavations. However, until recent years, asystematic excavation report has not been published. Most of the surveys and excavations are published in the form of primitive reports or brief introductions in internal publications. 
+Geolocation: 36.568335217562, 114.42837633544315
+大阴
+大阴即“阴”地。《左传·僖公十五年》“晋阴饴甥会秦伯，盟于王城”。杜注“阴，晋地也。”《中国历史地图集》将其标注在山西霍县东南。阴地战国时属于赵国。“六年，大阴令賙弩、上库工师中均、冶人逢。（1231）”、“口廿，大阴令𨝱𮵧，上库工师公行䢦，冶人屠。”（《飞诺藏金》）
+Da yin is Yin city. Zuozhuan“In the tenth month, Yin Yi Sheng of Jin met with the Liege of Qin and swore a covenant at Wangcheng.”Du Yu杜預 notes that Yin is a city of Jin. Yin is the fief of Yin Yi Sheng. The Cultural Relics Atlas of China marks Yin Dayinto the southeast of present-day Huo County. Yin belongs to Jin in the Spring and Autumn period, and then belongs to Zhao in the Warring States period. Weapon inscriptions show that Zhao was casting weapons in Da Yin. 
+Geolocation: 36.57147046500399, 111.7553834556418
+Coin Type: pointed-foot spade. 
+邪
+地望不可考。何琳仪认为是上郡属县“推邪”之省，在陕西榆林一带。
+The specific location is uncertain. He Linyi proposes that it is Tuixie belonged to the Shang prefecture of Qin. Located in present-day Yulin. 
+阳邑
+梁惠成王九年，与邯郸榆次、阳邑。《水经·洞过水注》引《竹书纪年》。疑在今山西太谷县阳邑镇乡南。元和郡县志记载，阳邑故城，在县东南十五里。阳邑乡净信寺有唐开元碑刻二通，记载该地就是唐人认识的阳邑故城。
+Shuijingzhu (Commentary on the Water Classic) quotes ZhushuJinian (Bamboo Annals), “In the ninth year of King Huicheng of Liang, (Wei/Liang) gave Yuci and Yangyi to Zhao”. Yuanhejuanxiantuzhi元和郡縣圖志 records that the city of Yangyi is located 15 li (around 8 km) southeast of Taigu太谷 county. The JingxinTemple净信寺 in present-day Yangyi Town陽邑鄉 has two Tang-dynasty steles, and the inscriptions state that this is the site of Yangyi City. 
+ Geolocation: 37.43671957488965, 112.66662426377367
+虑虒
+旧说有肤施和五台两说，现在看五台说更为合理。李零从音韵学角度讨论肤施与虑虒的音韵关系，认为虑虒就是战国时代赵国的肤施。《汉书·地理志》记载，太原郡有虑虒县，汉代改名为五台。《文物地图集》记载，故城在五台县台城镇东北1000米，今天的古城村附近。《五台县志》记录当地出土过大量东周时期的遗存，其中包括不少布币。当地人回忆，在农业学大寨的时候发现过不少虑虒尖足布币。古城村东北3000米处的卢家坟有大量被盗的竖穴土坑积石墓，出土大量青铜器。
+Hanshu漢書records that Lvsi County is in Taiyuan Prefecture. Lvsiwas renamed to Wutai in the Han dynasty. Li Ling李零 proposes that Lvsi is located in Wutai rather than Fushi in Northern Shaanxi. The Cultural Relics Atlas of China records an ancient city site located 1,000 m northeast of the Taicheng town臺城鎮，Wutai County五臺縣。Wutai Xianzhi 五臺縣志 （Wutai County Gazetteer）mentions that many Eastern Zhou remains have been discovered near the city site, including many spade coins. 
+Geolocation: 38.73360829009155, 113.26885192218957
+埒
+《汉书.地理志》雁门郡有埒，一般认为币文之埒即是雁门郡之埒。关于埒的地望有三种说法。
+（1）繁峙东北：吴良宝主张此说。
+（2）神池：《中国历史地图集》将西汉埒县定在山西宁武县、神池县、朔城区交界地带。朱本军沿袭此说，将赵国埒县也定在此处。
+（3）五寨：近年来山西本地学者郭效生、朱和森主张此说。五王城遗址附近发现若干次带“埒市”戳印的陶文。2017年五寨县东秀庄乡后五王城村五王城遗址古城内村民锄地时捡到弩机配件“望山”，铭文“廿五年[寽阝]命（令）富䡃丨叚[矤]〇庚冶人〇”。
+从出土文物来看，五寨县五王城村古城应是埒县所在地。根据文物地图集，城址平面呈方形，边长约500米。现存东墙残长约400米，北墙残长约300米，基宽0.3~1  米，残高0.3~0.7米。采集有泥质灰陶卷沿瓮、卷沿缸、平盘豆、罐及绳纹板瓦等残片。
+Hanshu漢書 records that Lie county埒縣 is affiliated to the Yanmen prefecture雁門郡. It is the city that cast spade coins with Lie inscription. However, the specific location of the city of Lie is a subject of debate. Wu Liangbao吳良寳 proposes that Lie is located in present-day FanshiCounty, while Zhu Benjun朱本軍 argues that it is located at the junction of Ningwu County寧武縣, Shenchi County神池縣, and Shuocheng District朔城區. 
+Nevertheless, neither argument has concrete evidence to support. New discoveries from Wuzhai County provide another answer. In the Wuwangcheng五王城 city site, local scholars found pottery shards with the inscription “Lie Shi埒市”(The market of Lie County). In 2017, a villager from Wuwangcheng五王城 found a crossbow trigger bearing an inscription indicating it was made in Lie County. Therefore, Lie County should be located near Wuwangcheng village during the Warring States period.  The Cultural Relics Atlas of Chinarecords that the city enclosure is square, with each side measuring around 500 m. The eastern wall and northern wall are still preserved.  
+Geolocation: 38.97568326329446, 111.68127421565163
+中阳
+关于中阳的地望有三种说法。
+（1）柳林：《水经.河水注》“（河水）又南过中阳县西”，其地约当今山西省柳林县三交镇之”吴王城“。《清一统志》认为，孝义市中阳故城是曹魏以后侨置中阳县，汉代中阳当在柳林。
+（2）孝义：《水经.文水注》“文湖水迳中阳县故城东。按《晋书地道记》《太康地记》西河有中阳城旧县也。”《括地志》采用这一说法，认为”中阳故城在汾州隰城县南十里，汉中阳县也“。
+（3）神木：张家川汉简《秩律》简452有“中阳”，该简地名全部为上郡属县。中阳似不可能在黄河以东。马孟龙根据《说文解字》“漹水出西河中阳北沙，南入河”判断中阳应当在秃尾河与窟野河上游，今天神木县和府谷县境内。考古调查表明此地最大汉代城址为喇嘛河古城，附近曾出土一件秦代铜戈，置用地为“中阳”。
+The location of Zhongyang County 中陽縣 has long been a subject of debate. Based on the transmitted texts, there is no doubt that Zhongyang is located on the east side of the Yellow River, probably in present-day Xiaoyi County孝義縣 or Liulin County柳林縣. However, new excavated texts challenge this assumption. In the Zhangjiashan Han slips, Zhilv秩律(Statutes on Official Ranks), Zhongyang belongs to the Shang prefecture. Therefore, it seems unlikely that Zhongyang County is located on the East side of the Yellow River. It is possible that the invasion of the Xiongnu in the late Eastern Han dynasty caused forced migration, and many counties that used to be located on the West side of the Yellow River were relocated to the East side of the Yellow River. 
+The excavation in Yulin provides new clues to point to the city site of Zhongyang County. Yulin Institute of Archaeology has conducted a survey in Langanbao欄杆堡 city site and excavated a cemetery near the city site. Some pottery bears the inscription “Zhongyang中陽,” suggesting that it was produced in Zhongyang County.Since the cemetery dates to the late Warring States period, the city site can be identified as Zhongyang. 
+Geolocation: 38.5987186715624, 110.24145613552632
+武安
+睡虎地秦简《编年记》“八年，攻武安”，张琪《战国策释地》“故城在今彰德府武安县西南五十里。大约相当于今天的固镇村。
+Zhang Qi 張琪 mentions that the city site of Wu’an is located 50 li southeast of present-day Wu’an County. The city site near the Guzhen village (固镇村) is a possible location of Wu’an. Archaeologists found a city site neat the village, measuring approximately 1,750 m from north to south and 1.500 m from east to west. Some scholars argue that this is the location of Wu’an. 
+Geolocation: 36.639937567149886, 113.97777085391965
+武平
+《史记·赵世家》：“赵徙漳水、武平西。”“徙漳水、武平南。”武平是赵国地名，具体位置已经不可考，仅知道处于漳水流域。
+According to Shiji, Wuping located in the Zhang River Valley漳河. However, the specific location of this city is uncertain.  
+离石
+故治定在今天的离石区。
+Based on the transmitted texts, Lishi is located in present-day Lishi District, Lvliang. However, no city site has been reported in this region. 
+Geolocation: 37.51716800502462, 111.14669538830437
+新城
+《秦本纪》记录庄襄王三年“攻赵榆次、新城、狼盂，拔三十七城。”地在今山西朔县南。
+The Shiji records that in the third year of the King Zhuangxiang of Qin, Qin attacked Zhao’s Yuci榆次, Xincheng新城, and Langyu狼盂, capturing 37 cities. Wu Liangbao proposes that Xincheng is located on the south of present-day Shuo County朔县. 
+Geolocation: 39.272208931048404, 112.42566547168096
+于
+今山西阳曲县东北。《左传》昭公二十八年，“魏献子为政，分祁氏之田为七县….孟丙为盂大夫。杜预注，太原盂县。《元和郡县志》太原府：阳曲县“故盂城，汉盂县也，本春秋时晋大夫祁氏邑，在县东北八十里”。今人有定于阳曲县以北十五里大盂镇，暂从此说，存疑。
+According to the Zuozhuan, Mengbing was made high officer for Yu in the twenty-eighth year of Lord Zhao.Mengbing was made high officer for Yu.Yu is located on the northeast of Yangqu County阳曲县. Yuanhejuanxiantuzhi mentions that there is a city site located 80 li northeast of Yangqu County. Liu Weiyi mark the city site of the Yu County to present-day Dayu Town大盂镇. 
+Geolocation: 38.202251422550184, 112.75615904005608
+霍人
+今繁峙县东。《左传》襄公十年：“偪阳，妘姓也，使周内史选其族嗣，纳诸霍人，礼也。”《汉书·绛侯世家》，“击韩王信于代，降下霍人。以前至武泉。”杨伯俊认为霍人在繁峙县东郊，暂从。
+Geolocation: 39.194450454584995, 113.30895409559446
+大丌
+He Linyi proposes that Daji is Ji. According to the Zuozhuan, in the thirty-third year of Lord Xi, the Di attacked Jin and reached as far as Ji. In the eighth month, on the wuzi day, the Prince of Jin defeated the Di at Ji. Du Yu杜预 mentions that Ji is located on the northeast of Taigu County太谷县. 
+平陶
+山西文水，地在文水县西南二十里平陶村。
+Pingtao is located 10 km southeast of Wenshui County, near present-day Pingtao village. 
+Geolocation: 37.343057087499524, 111.97940426286546
+寿阴
+朱华认为寿阴在山西寿阳境内，暂从。
+The location of the city is uncertain. Zhu Hua proposes that it is in present-day Shouyang County寿阳县. 
+Geolocation: 37.90108100036989, 113.16221164883905
+文阳
+朱华认为在文水县境内，暂从。
+The location of the city site is uncertain. Zhu Hua proposes that it is in the present-day Wenshui County文水县. 
+Geolocation: 37.44305647278954, 112.02948999633749
+方足布
+涅：
+《水经·浊漳水注》引《竹书纪年》，“梁惠成王十二年，郑取屯留、尚子、涅。”《汉书·地理志》属上党郡，在武乡县西北。可能是今武乡故城。《地图集》记录，城址平面形状不详。地表残存城墙2段，其中一段残长约10米，基宽约7米，残高3~4米。墙体夯筑，夯层厚约0.15米。城址内采集有泥质灰陶盆、豆、甑及绳纹板瓦、筒瓦等残片。
+In Shuijingzhu, in the 11th year of the reign of King Huicheng, Zheng captured Tunliu, Shangzi, and Nie. Nie is in Shangdang prefecture in Hanshu, located on the northwest of the Wuxiang County. The atlas proposes that it is located in present-day Gucheng village. The plan of the city site is unclear. Two sections of the city wall remain visible on the surface. One section survives for approximately 10 meters in length, with a basal width of about 7 meters and a remaining height of 3–4 meters. The wall was constructed with rammed earth, with rammed layers approximately 0.15 meters thick. Fragments of fine gray pottery basins, dou vessels, steamers, cord-marked flat tiles, and cylindrical tiles were collected within the city site.[1]
+Geolocation: 36.94646113228423, 112.66485453135783
+长子
+位于今天长子县城西3公里孟家庄村北。北有雍河，南有浊漳河南源。城址东西3公里，南北0.5公里，占地面积1.5平方公里整体呈长方形，城基8-10米，夯层8-10厘米。城角残存大量东周时期的瓦片。孟家庄附近有发现大量战国墓葬，其中不少有随赞青铜礼器。1972、1973、1979，羊圈沟和牛家坡发掘大量墓葬，其中7号墓规模最大，包括鼎、壶等礼器。1989年又在孟家庄村北清理18座战国墓。
+Geolocation: 36.11119210230051, 112.84762262132867
+襄垣：
+《汉书·地理志》隶属上党郡，在今天襄垣县北。
+Geolocation: 36.52448597592109, 113.03643567917791
+潞：
+位于潞城区东北25公里西流乡与古城村一带。东西2公里，南北1.5公里，占地3平方公里。1983年陕西省考古研究所和晋东南地区文化局联合，进行了调查钻探和发掘。故城现存西城墙和北城墙一部分，西城墙长358米，北城墙长210米，城内方才及大量东周陶器。70年代当地农民取土发现西周晚期的“虞侯政”壶，墓葬年代集中在春秋中晚期，82年发现战国早期7号墓，总共13鼎，7+5组合。
+Geolocation: 36.426815566492564, 113.37008926984404
+中都
+《史记·秦本纪》，“秦伐取赵中都、西阳》。《水经注·汾水》记载，”侯甲水又西北迳中都县故城南，城临际水湄。《春秋·昭公二年》，晋侯执陈无宇于中都者也。汉文帝为代王，都此。武帝元封四年，上幸中都宫，殿上见光，赦中都死罪以下。“《括地志》云”中都故县在汾州平遥县西十二里。“这一位置在今天中都乡以南，此处有中都桥遗址，在县城以西5公里桥头村一带，桥身已经淤埋。中都桥附近有双林寺，原名中都寺，北齐武平二年重修。双林寺与中都桥可能与中都县治有关。
+Geolocation: 37.209684345566274, 112.13474332506024
+平阳
+《史记·韩世家》晋定公十五年“（韩）贞子徙居平阳“，韩哀侯二年”灭郑，因徙都新郑”。近年来在襄汾古城庄村附近发现不少带有“平市”戳印的陶器，战国时代的平阳应当就在此地。
+Geolocation: 35.938207372097175, 111.47310255622602
+安阳
+安阳位置有多种说法，均有可能。
+Geolocation: 40.535810176428086, 109.84095513177722
+𮟪
+以往释读为戈邑，李家浩改释为“代”。《水经注·㶟水》“《魏土地记》曰：代城北九十里有桑乾城，城西渡桑乾水，去城十里，有温汤，疗疾有验。…《魏土地记》曰：代城西九十里有平舒城，西南五里，代水所出，东北流，言代水非也。祁夷水又东北迳兰亭南，又东北迳石门关北，旧道出中山故关也。又东北流，水侧有故池，按《魏土地记》曰：代城西南三十里有代王鱼池，池西北有代王台，东去代城四十里。”根据文献和考古发现的城址比对，代城位于今天河北蔚县的代王城，城址呈椭圆形，东西3400米，南北2200米，周长9266米。调查简报根据地表采集遗物中秦汉陶器、瓦片、建筑材料较多而判断城址建于西汉早期。代王城附近有很丰富的东周遗存，在没有解剖城墙的情况下，对代王城年代的判断未必准确。以往有学者认为蔚县一带并未发现春战之际高等级遗存，因此代国的中心不在这一区域。然而近年来对大德庄等代王城附近的墓地发掘中发现了高等级贵族的墓葬，这一质疑并不成立。代在战国文献所见颇多。赵襄子又杀代王，兼并代国。
+Geolocation: 39.895801374312484, 114.67770764303596
+祁
+祁县故城，在今陕西祁县西六支乡祁城村。太平寰宇记卷四〇并州祁县：“汉祁县在东南五里故祁城是也，后汉迄后魏不改。”宋代祁县治所在祁县城区，祁城村正好在其东南五里处。今天祁城村附近有大片战国到汉代的遗址和墓群，总面积近72万平方米。
+16-A₁₆      祁城西遗址〔西六支乡祁城村西北约 200米 · 战国 · 县文物保护单位〕位于昌源河西岸台地上。面积约24万平方米，文化层厚0.3~1.2米。采集有泥质灰陶和夹砂灰陶片，其纹饰有绳纹，器形有直领鬲、高柄豆、窄平沿盆和喇叭口高领壶等。
+17-A,      祁城东遗址〔西六支乡祁城村东约200 米 · 汉代 · 县文物保护单位〕面积约28万平方米，文化层厚0.3~1.2米。断崖上暴露遗迹有陶窑、砖室墓等。采集有泥质灰陶钵、弦纹平折沿盆、豆及绳纹板瓦等残片。 (见《山西文物》1983年1期)
+21-B₂     祁城墓群〔西六支乡祁城村西北约400 米 · 战国-汉〕面积约20万平方米。断崖上暴露有战国土坑墓和汉代砖室墓。采集有泥质灰陶豆、罐、甑等残片。
+Geolocation: 37.34814052777941, 112.36417995603517
+长安
+其地不详
+平备
+其地不详
+邸
+李家浩认为邸就是西周金文中的坻，在今天河北元氏县。
+Geolocation: 37.77550893437734, 114.50791348801388
+土军
+《水经注·河水》吐京郡治。故城，即土军县之故城也。《元和郡县图志》“石楼县，本汉土军县也，属西河郡。晋省。后魏孝文帝于此城置吐京郡，即汉土军县。盖胡俗音讹，以军为京也。一般认为土军县治就在今天的石楼县治灵泉镇。这一区域没有报道过战国的遗存。县城以北的塔子上村曾出土过一批2件春战之际的青铜鼎。
+Geolocation: 36.99908974837604, 110.84772125952064
+干关
+《战国策·赵策一》“今燕尽收齐之河南，距沙丘而至巨鹿之界三百里，距于扞关，至于榆中千五百里。”《史记·赵世家》“秦之上郡距挺关，至于榆中者千五百里。”黄锡全考证，“干关”、“扞关”、“挺关”实为一地。《图集》将挺关和遗遗之门视为一地，标注在毛乌素沙漠南缘。原因未详。遗遗之门，据程恩泽《国策地名考》，按顾祖禹曰‘今陕西榆林镇废胜州北有榆溪塞，即当是国策所云出于遗遗之门，踰九限之固，绝五径之险者也。“暂以《图集》所标干关为准。
+平阴
+《史记·赵世家》“（幽缪王）五年，代地大动，自乐徐以西，北至平阴，台屋墙垣太半坏，地坼东西百三十步。《中国历史地图集》将平阴标在阳高县以南。朱本军认为《地图集》记录的阳高县古城遗址就是平阴县。古城遗址位于山前台地上。面积约42万平方米，文化层厚0.5~0.8米。采集有泥质灰陶弦纹折沿盆、罐和夹砂灰陶绳纹釜等残片。此处暂从朱本军。
+Geolocation: 40.138879908242465, 113.9629210837557
+平舒
+黄锡全将原来释作“平于”的方足布改释为“平舒”，认为是位于广灵县的汉代平舒县。正义引《括地志》，平舒故城在蔚州灵丘县北九十三里也。《地图集》将平舒故城标注在今作曈乡百疃南堡村西南。平面呈长方形，南北长约300  米，东西宽约200米。现存西南和西北墙角残段，残长约  90米，残高3~5米。墙体夯筑，夯层厚0.6~0.12米。采集有泥质灰陶罐、盆及绳纹板瓦等残片。据清《广灵县志》载，“汉置平舒县，晋末废”。应指此。
+Geolocation: 39.910108935314014, 114.30895757971702
+邬
+《左传·昭公二十八年》：“司马弥牟为邬大夫”。《水经·汾水注》“侯甲水又西，合于婴侯之水，迳邬县故城南，晋大夫司马弥牟之邑也。”吴良宝认为位于介休县东北。李晓杰根据成化《山西通志·卷十七古迹》及《大清一统志》将邬县故城标注在连福镇邬城店村。
+Geolocation: 37.10724214015365, 112.03819093780749
+北屈
+《左传·庄公二十八年》“公使夷吾居屈”。《水经注·河水》“河水南迳北屈县故城西。”杨伯峻《春秋左传注》“北屈在今吉县东北”。李晓杰将北屈定位在吉县车城乡麦城村.《地图集》描述“平面呈长方形，南北长约2000米，东西宽约1500米。现存城墙残段。城墙最长一段约80米，基宽5～7米，残高5～6.5米。墙体夯筑，夯层厚0.1～0.15米。采集有战国的泥质灰陶豆；汉代的泥质灰陶罐等残片及铜箭头等“。
+Geolocation: 36.191688069924666, 110.69586589724332
+北丌
+《左传·僖公三十三年》“晋人败狄于箕“。杜预注”太原阳邑县南有箕城“。在今天太谷县东北。李晓杰根据出土墓志和永乐《太原府志》考订，箕城位于太谷县小白乡白燕村。
+Geolocation: 37.447328946707806, 112.71106094113584
+唐是
+何琳仪读为“杨氏“，山西古县西南。山西省考古研究所曾对城址进行调查，发现城墙下叠压有春秋遗存，城内有丰富的战汉遗存。城址始建年代或在战国时期。
+Geolocation: 36.247400896345454, 111.68945936564613
+平城
+曾被释为王城。吴良宝改为平城。后晓荣指出，秦封泥有“平城丞印”，秦汉可能沿袭赵国的平城县。汉代平城县位置在今大同操场城，90年代曾经经过调查。
+Geolocation: 40.10630078479355, 113.30537836400293
+寿阴
+寿阳县境内，参上。
+宜阳
+位于宜阳县韩城镇。韩武子迁都宜阳，韩景侯迁都阳翟。战国晚期秦与韩曾围绕宜阳展开激烈的争夺战，最终归秦。1989年洛阳市第二文物工作队曾经对宜阳故城进行勘探，1991进行试掘。
+Geolocation: 34.49161450186632, 111.92877925174814
+隰城
+根据《地图集》，隰城位于穆村镇杨家坪村东北约2.5 千米。平面呈长方形，东西长约150米，南北宽约100米。现存东墙残段，残长约20 米，基宽3~4米，顶宽0.8~1.4米，残高1~5米。墙体夯筑，夯层厚0.08~0.10米。采集有泥质灰陶暗弦纹罐及外饰绳纹内饰布纹的板瓦等残片。杨家坪还曾发掘过东周铜器墓葬，铜礼器年代战国中期。清光绪《永宁州志》载，该城为汉代隰城县治所。
+Geolocation: 37.41759114185272, 110.86100426359009
+纶氏
+黄盛璋释为“纶氏”，《元和郡县图志》“颖阳县，古纶氏县。本夏之纶国也，少康之邑，在汉属颖川。”颖阳县为北魏献文帝所置，《地图集》定于颖阳村，曾出土过北魏“招抚局印”和“招抚副使之印”铜玺各一枚。吴良宝定位河南登封西南七十里之颖阳镇。
+Geolocation: 34.63649462521964, 113.65849040726171
+宅阳
+括地志云宅阳故城名北宅在郑州荥阳县东南十七里也。根据唐代荥阳县城的位置，将宅阳定在今天高新区万达广场附近。东赵战国城址在荥阳故城南大约8公里处，城址面积接近60万平方米。可能就是所谓的宅阳。
+Geolocation: 34.82361196588034, 113.57381232759029
+幵阳
+何琳仪释为“沃阳”。若依西汉沃阳城位置，战国沃阳城当在今天乌兰察布的双古城。
+Geolocation: 40.51537468000303, 112.72250761776579
+洀
+裘锡圭释做“洀”，认为是州。沁阳县东南四十里。
+Geolocation: 35.06581794250599, 112.93008151548322
+注城
+治城故城。在州西。本古注邑。史记：“魏文侯三十二年，败秦于注。”后汉志：“梁县有注城，后讹为治城。”北魏、晋治城县属汝北郡。水经注：“梁县北有注城，今置治城县是也。”高齐省入梁县。括地志：“注城在汝州梁县西十五里。”寰宇记：“注城南面已为汝水所毁。”
+Geolocation: 34.142046263190224, 112.86679429995453
+梁
+李家浩辨别战国时期的梁、大梁、少梁。认为兵器及铜器铭文中，梁实指韩国的“梁“，即南梁。“梁”又称“南梁”，为建城之始，地点位于今汝州市杨楼镇汝河南岸和芦沟河所夹的二级阶地，樊古城至杨古城村一带的南梁故城遗址，以别于魏国大梁（今河南开封市城区北）与少梁（今陕西韩城市南）之名。南梁位于今天汝州杨楼镇樊古城村，地表仍能见到城墙。以往调查发现过战国的冶铁遗址。
+Geolocation: 34.161451406315656, 112.76538158735455
+彘
+《水径·彘水注》，“又南入河东界。又南过永安县西。。故彘县也。周厉王流于彘，即此城也。王莽更名黄城。”《霍州志》“汉顺帝阳嘉三年，改曰永安县，霍伯之都也彘城，周厉王奔彘，即此。汉为彘县，在今城内西南隅。”李晓杰认为永安县城即是战国的彘。
+Geolocation: 36.575421920410875, 111.72478060248434.
+襄阴
+汉代定襄郡。位置不详。
+屯留
+定位在今天屯留县古城。屯留附近的西李高、东李高、鲍店一带有大量的战国墓葬群，其中鲍店还发现了战国早期的高等级贵族墓，可能是晋国公室的墓葬。
+Geolocation: 36.25943192883583, 112.90412096137788
+咎奴：
+地望不详。
+同是
+《左传·成公九年》“晋人执诸铜鞮”。《括地志》云，铜鞮故城在潞州铜县东十五里，州西六十五里。在今山西沁县南。王俊调查认为铜鞮当在古铜鞮水附近，具体位置挡在南池乡古城村南约200米与下尧村相接的古城坪上，此处有大片东周遗址，处一般灰坑以外，还发现有夯土。此处从王俊看法。
+Geolocation 36.42614657863702, 113.37040336549124
+皮氏
+《水经·汾水注》“魏襄王十二年，秦公孙爰率师伐我，围皮氏”，在今山西河津县。河津县志称，皮氏县城位于县西二里阳村。《括地志》皮氏故城在绛州龙门县西一百八十步。暂以河津县志为准。
+Geolocation: 35.58225668103926, 110.67360747350013
+酉枣
+即酸枣。《史记·秦始皇本纪》“五年，将军骜攻魏，定酸枣、燕、虚、长平、雍丘、山阳城，皆拔之，取二十城”。《括地志》“酸枣故城在滑州酸枣县北十五里古酸枣县南”。在今河南延津县南。
+Geolocation: 35.14136577834776, 114.20452041348454
+奇氏
+即猗氏。猗氏故城在今临猗县猗氏镇铁匠营村东。此处有一东周至汉代城址。寰宇记卷四六蒲州猗氏县：“地理志猗氏属河东郡，在今县二十里猗氏故城是也。”北宋猗氏县治今临猗县城区。铁匠营城址正在其南二十里处。
+Geolocation: 35.061994165124325, 110.77943127286957
+蒲子
+《左传·庄公二十八年》，“夏，（献公）使大子申生居曲沃，重耳居蒲城，夷吾居屈。”杜预注：“蒲，今平阳蒲子县，二屈居今平阳北屈县。或云：二当为北。”山西师范大学对隰县附近遗址进行调查，认为蒲子城址位于今天的隰县古城村。调查中发现了大量汉代砖瓦，部分带有“官匠”款的铭文，应当是汉代的县治所在。以往曾在古城村发现过带有“蒲”铭文的陶器和刻有“蒲关“二字的筒瓦。《隰县志》提到，该城面积1平方公里，夯土底部宽16~30米。采集丰富陶片。有“蒲尉”，“蒲”字陶文，可能是战国时期的蒲子县。
+Geolocation: 36.700343533791106, 110.94277733068412
+大梁
+以往认为梁即是大梁。李家浩辨别战国时期的梁、大梁、少梁。认为兵器及铜器铭文中，梁实指韩国的“梁“，即南梁。大梁则是指魏国的都城，位于今天的开封。
+Geolocation: 34.80557669420362, 114.30102339441821
+高都
+战国为魏国高都，汉代为高都县，因袭至隋代，改为泽州。高都位置在今泽州县高都镇附近。根据文物地图集、今天高都镇和附近的北义城镇附近有大量从新石器至汉代遗址，包括保付村、秦庄、北焦庄、大南社等遗址。其中大南社遗址面积达24万平方米，包含西周、东周遗存，可能即是高都故城所在。
+Geolocation: 35.59137713121943, 112.96456828906605
+𫊣阳
+于省吾释作“𫊣阳”，但认为读作渔阳。吴荣增认为应当是“虞阳”，即虞城，位于山西平陆。此类方足布大多发现在山西，其地望应当如吴荣曾所言，指虞城。《地图集》指出，虞城位于张店镇古城村。城址平面呈长方形，南北长2500 米，东西宽2000米。南、北城墙保存较好，其中南墙残长约300米，基宽15~20米。墙体夯筑，夯层厚0.06~ 0.08米。城中部有东西向的隔城墙，将古城分为南北二城，南城有大型夯土建筑遗迹，文化层堆积较厚，采集有西周晚期至东周早期的陶鬲和罐等残片。据清乾隆《平陆县志》记载，城为春秋时晋献公所灭的古虞国都城。
+Geolocation: 34.97509628309281, 111.21365534720621
+以往释做制、邾、郲等。李家浩认为是“氏祁”合文，指的是“虒祁”。《左传·昭公八年》，“晋侯方筑虒祁之宫：。杜预注”虒祁，地名也，在绛州西四十里，临汾水也。“李晓杰认为在虒祁在新绛横桥镇东昇村，但这一区域没有发现遗址，暂且存疑。
+Geolocation: 35.57457472150636, 111.2307516117892
+Xiang 
+He Linyi proposed that there were two places named Xiang in Henan that could be the issuing city for these coins. The Xiang located in present-day Jiyuan County was renamed Gaoping during the middle Warring States period. Therefore, Xiang in Changshe County is the most plausible minting city. This Xiang was located approximately 20 km southeast of Yushi County(He 1992).
+Geolocation: 34.37902665848549, 114.16875059341668
+Dongzhou東周
+King K’an enfeoffed his brother with Ho-nan thereby to prolong the position of the Duke of Zhou. “He (Duke Wei) then enfeoffed his youngest son with Kung 鞏, thereby to serve the king, and called him Duke Hui 惠 of East Chou(Sima 1994, 79).” The city located in present-day Kangdian Village, Kangdian Town, Gongyi City. It is named Kangbei City Site in the Altas of Chinese Cultural Relics. The eastern wall of the city has been destroyed by the Luo River. Part of the northern section of the western wall and the north western corner of the city wall are still preserved. Numerous remains of Warring States and Han-period pottery shards has been collected within the city (Guojia wenwuju 1991, 35). 
+Geolocation: 34.75576167552476, 112.9506069499937
+Liu 
+He Linyi proposed that Liu was located in the northwest of present-day Yanshi County, based on records in the Geography Records of Hanshu (He 2002, 76). 
+Geolocation: 34.7293240260119, 112.78451618492673
+Yi
+The character was used to transcribe into clerical script as Guo郭 or 莘. He Linyi transcribed it to Yi. The specific location is unknown. Probably located in the central of Henan Province(He 2002, 203).
+Fu 負阝
+The character was used to transcribe into clerical script as Zeng鄫, Lang 郎, Zheng鄭. He Linyi and Wu Liangbao transcribe it to Fu. But the location of the city is uncertain. 
+Beiqiu貝丘
+Zhang Han proposed that Beiqiu is a simplified form of Yuji. The location should be the same as the pointed-foot spade coins with the inscription Yuji.
+Guanyang冠陽
+Huang Xiquan transcribed it into clerical script as Guanyang according to the form of the character guan found in Baoshan Bamboo Slips nos. 156, 219, and others. Guanyangis pronounced "yuanyang" and is located southeast of present-day Hohhot. Li Yiyou proposed that Yuanyang is located in Jinhe Town, Babai Village. Archaeologists found the city and numerous remains from theWarring States to the Western Han periods(Y. Li 1992, 70). 
+Geolocation: 40.74969586609028, 111.8028486914162
+Beixun北尋
+He Linyi transcribed it into Beixun, proposing that the inscription indicates the Xun尋 city in the Shuijingzhu. Li Xiaojie used Kuodizhi and Henan Fuzhito mark the location of Xun at present-day Huiguo town回郭鎮, Beiluo village北羅村. However, there is no direct evidence to prove this assumption(X. Li 2021, 76). 
+Today, to the north of Gongluo Du, there is a stream from Xun Gu flowing east into the Luo Shui; it is called Xiaxun. Thus, there are the names Shangxun and Xiaxun; it is also called Beixun. Hence, the terms Nanxun and Beixun were established. There was also Xun, which was likely the former fief of Zhou dynasty official Xun Xi. 
+今巩洛渡北，有鄩谷水东入洛，谓之下鄩。故有上鄩、下鄩之名，亦谓之北鄩，于是有南鄩、北鄩之称矣。又有鄩城，盖周大夫鄩肸之旧邑。
+Geolocation: 34.68083604775812, 112.87079038915016
+燕下都
+Geolocation: 39.30671189251951, 115.5314403699175
+韩皋
+Geolocation: 39.395260021837665, 116.32021387926758
+襄平
+Geolocation: 41.27181863496425, 123.18660660408902
+广昌
+Geolocation: 39.35522181162929, 114.70505445191453
+重平
+Geolocation: 37.6275454947458, 116.43011697105231

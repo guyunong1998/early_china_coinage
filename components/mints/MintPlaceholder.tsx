@@ -9,6 +9,11 @@ type Section = {
 function getSections(mint: MintTown): Section[] {
   return [
     {
+      key: 'geolocation',
+      label: 'Geolocation established',
+      done: mint.lat != null && mint.lng != null,
+    },
+    {
       key: 'description',
       label: 'Site description',
       done: mint.description_en.length > 60,
@@ -96,15 +101,20 @@ export function MintPlaceholder({ mint }: { mint: MintTown }) {
 
       <div className="border-t border-dashed border-brand/30 bg-gray-50 px-4 py-3">
         <p className="text-xs text-gray-500">
-          <strong className="text-gray-700">How to add content:</strong> Edit{' '}
+          <strong className="text-gray-700">How to add content:</strong> Edit the entry for{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
+            {mint.mint_code}
+          </code>{' '}
+          in{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
+            lib/mint-dossiers.ts
+          </code>{' '}
+          (descriptions, geolocation, coin types, references). To add images or override
+          citations, add a matching entry in <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">MINT_OVERRIDES</code> in{' '}
           <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
             lib/mint-towns.ts
           </code>{' '}
-          and find the entry for{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-            {mint.mint_code}
-          </code>
-          . Place image files in{' '}
+          and place image files in{' '}
           <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
             public/images/mints/
           </code>

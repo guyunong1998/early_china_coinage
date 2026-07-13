@@ -4,11 +4,8 @@ import { useMemo, useState } from 'react'
 import { Tabs } from '@/components/ui/Tabs'
 import { displayValue, formatNumber } from '@/lib/format'
 import type { Context, Find, Source } from '@/lib/types'
-import type { MapSite, Site } from '@/lib/types'
 
 type SiteDetailTabsProps = {
-  site: Site
-  summary: MapSite | null
   contexts: Context[]
   finds: Find[]
   sources: Source[]
@@ -41,20 +38,7 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
   )
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[150px_1fr] gap-3 border-b border-gray-100 py-2 last:border-b-0">
-      <dt className="text-right text-sm font-semibold text-gray-700">{label}</dt>
-      <dd className="text-sm text-gray-800">{children}</dd>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-
 export function SiteDetailTabs({
-  site,
-  summary,
   contexts,
   finds,
   sources,
@@ -63,10 +47,6 @@ export function SiteDetailTabs({
     contexts.length === 1 ? contexts[0].context_code : 'all'
   )
   const hasMultipleContexts = contexts.length > 1
-  const selectedContextItem =
-    selectedContext === 'all'
-      ? null
-      : contexts.find((ctx) => ctx.context_code === selectedContext) ?? null
 
   const filteredContexts = useMemo(
     () =>
@@ -82,29 +62,6 @@ export function SiteDetailTabs({
         ? finds
         : finds.filter((find) => find.context_code === selectedContext),
     [finds, selectedContext]
-  )
-
-  // ── Details tab ──────────────────────────────────────────────────────────
-  const detailsContent = (
-    <dl>
-      <Row label="Major types">{displayValue(summary?.major_types_zh)}</Row>
-      <Row label="Minor types">{displayValue(summary?.minor_types_zh)}</Row>
-      <Row label="Inscriptions">{displayValue(summary?.inscriptions)}</Row>
-      <Row label="States">{displayValue(summary?.states_zh)}</Row>
-      <Row label="Mints">{displayValue(summary?.mints_zh)}</Row>
-      <Row label="Precision">{displayValue(site.precision_level ?? summary?.precision_level)}</Row>
-      <Row label="Context description">
-        {selectedContextItem ? (
-          biBlock(selectedContextItem.description_zh, selectedContextItem.description_en)
-        ) : hasMultipleContexts ? (
-          <span className="text-gray-500 italic">
-            Select one context above to view its description.
-          </span>
-        ) : (
-          <span className="text-gray-400">—</span>
-        )}
-      </Row>
-    </dl>
   )
 
   // ── Contexts tab ─────────────────────────────────────────────────────────
@@ -262,7 +219,7 @@ export function SiteDetailTabs({
       {hasMultipleContexts && (
         <div className="border border-brand/20 bg-white px-3 py-2 text-sm">
           <label htmlFor="context-filter" className="mr-2 font-semibold text-gray-700">
-            Context:
+            Archaeological unit:
           </label>
           <select
             id="context-filter"
@@ -283,7 +240,6 @@ export function SiteDetailTabs({
 
       <Tabs
         tabs={[
-          { id: 'details', label: 'Details', content: detailsContent },
           { id: 'contexts', label: `Contexts (${filteredContexts.length})`, content: contextsContent },
           { id: 'finds', label: `Finds (${filteredFinds.length})`, content: findsContent },
           { id: 'references', label: `References (${uniqueSources.length})`, content: referencesContent },

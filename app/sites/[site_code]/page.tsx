@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
+import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/site/HoardMintOriginsMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
 import { formatCoordinates, formatNumber } from '@/lib/format'
+import { getMintByNameZh } from '@/lib/mint-towns'
 import {
   getSite,
   getSiteContexts,
@@ -12,6 +14,7 @@ import {
   getSiteMapSummary,
   getSources,
 } from '@/lib/queries'
+import type { Find } from '@/lib/types'
 
 type PageProps = {
   params: Promise<{ site_code: string }>
@@ -23,6 +26,81 @@ function splitSourceCodes(raw: string | null | undefined): string[] {
     .split(/[、,，;；|]/)
     .map((s) => s.trim())
     .filter(Boolean)
+}
+
+const UNKNOWN_MINT_TOKENS = ['未知', '不详', '无', '—', '-', 'n/a', 'na', 'unknown', '']
+
+function findQuantity(find: Find) {
+  return find.quantity_total ?? find.quantity_estimated ?? find.quantity_min ?? 0
+}
+
+function coinTypeLabel(find: Find) {
+  return (
+    find.coin_types?.inscription?.trim() ||
+    find.coin_types?.minor_type_zh?.trim() ||
+    find.coin_types?.major_type_zh?.trim() ||
+    find.description_zh?.trim() ||
+    null
+  )
+}
+
+type MintOriginGroup = {
+  mint_zh: string
+  mint_en: string | null
+  quantity: number
+  findCount: number
+  coinTypes: Set<string>
+}
+
+/** Group a site's finds by the mint that issued each coin, for the "Coin Mint Origins" map. */
+function buildMintOrigins(finds: Find[]): {
+  matched: HoardMintOrigin[]
+  unmatched: MintOriginGroup[]
+} {
+  const groups = new Map<string, MintOriginGroup>()
+
+  finds.forEach((find) => {
+    const mintZh = find.coin_types?.mint_zh?.trim() ?? ''
+    if (UNKNOWN_MINT_TOKENS.includes(mintZh.toLowerCase())) return
+
+    if (!groups.has(mintZh)) {
+      groups.set(mintZh, {
+        mint_zh: mintZh,
+        mint_en: find.coin_types?.mint_en ?? null,
+        quantity: 0,
+        findCount: 0,
+        coinTypes: new Set(),
+      })
+    }
+    const group = groups.get(mintZh)!
+    group.quantity += findQuantity(find)
+    group.findCount += 1
+    const label = coinTypeLabel(find)
+    if (label) group.coinTypes.add(label)
+  })
+
+  const matched: HoardMintOrigin[] = []
+  const unmatched: MintOriginGroup[] = []
+
+  groups.forEach((group) => {
+    const mintTown = getMintByNameZh(group.mint_zh)
+    if (mintTown && mintTown.lat != null && mintTown.lng != null) {
+      matched.push({
+        mint_code: mintTown.mint_code,
+        mint_zh: group.mint_zh,
+        mint_en: group.mint_en ?? mintTown.name_en,
+        lat: mintTown.lat,
+        lng: mintTown.lng,
+        quantity: group.quantity,
+        findCount: group.findCount,
+        coinTypes: [...group.coinTypes],
+      })
+    } else {
+      unmatched.push(group)
+    }
+  })
+
+  return { matched, unmatched }
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -120,6 +198,9 @@ export default async function SitePage({ params }: PageProps) {
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
 
+  const mintOrigins =
+    summary?.lat != null && summary.lng != null ? buildMintOrigins(finds) : null
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-4">
@@ -200,10 +281,48 @@ export default async function SitePage({ params }: PageProps) {
         </DataCard>
       </div>
 
+      <div className="mt-6">
+        <DataCard title="Record Classification">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <dl>
+              <Row label="Major types">{bi(summary?.major_types_zh, null)}</Row>
+              <Row label="Minor types">{bi(summary?.minor_types_zh, null)}</Row>
+              <Row label="Inscriptions">{bi(summary?.inscriptions, null)}</Row>
+            </dl>
+            <dl>
+              <Row label="States">{bi(summary?.states_zh, null)}</Row>
+              <Row label="Mints">{bi(summary?.mints_zh, null)}</Row>
+              <Row label="Precision">{formatNumber(site.precision_level ?? summary?.precision_level)}</Row>
+            </dl>
+          </div>
+        </DataCard>
+      </div>
+
+      {mintOrigins && mintOrigins.matched.length > 0 && (
+        <div className="mt-6">
+          <DataCard title="Coin Mint Origins">
+            <HoardMintOriginsMap
+              site={{
+                site_code,
+                name_zh: site.site_name_zh,
+                name_en: site.site_name_en,
+                lat: summary!.lat as number,
+                lng: summary!.lng as number,
+              }}
+              mints={mintOrigins.matched}
+            />
+            {mintOrigins.unmatched.length > 0 && (
+              <p className="mt-3 text-xs text-gray-500">
+                Mint location not yet mapped for:{' '}
+                {mintOrigins.unmatched.map((m) => m.mint_zh).join('、')}
+              </p>
+            )}
+          </DataCard>
+        </div>
+      )}
+
       <div className="mt-8">
         <SiteDetailTabs
-          site={site}
-          summary={summary}
           contexts={contexts}
           finds={finds}
           sources={sources}

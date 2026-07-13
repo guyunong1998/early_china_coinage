@@ -8,6 +8,10 @@ export function MintsOverviewMap({ mints }: { mints: MintTown[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
 
+  const locatedMints = mints.filter(
+    (m): m is MintTown & { lat: number; lng: number } => m.lat != null && m.lng != null
+  )
+
   useEffect(() => {
     let cancelled = false
 
@@ -26,7 +30,7 @@ export function MintsOverviewMap({ mints }: { mints: MintTown[] }) {
 
       const bounds: [number, number][] = []
 
-      mints.forEach((mint) => {
+      locatedMints.forEach((mint) => {
         bounds.push([mint.lat, mint.lng])
 
         L.marker([mint.lat, mint.lng], {
@@ -65,7 +69,7 @@ export function MintsOverviewMap({ mints }: { mints: MintTown[] }) {
       mapInstanceRef.current?.remove()
       mapInstanceRef.current = null
     }
-  }, [mints])
+  }, [locatedMints])
 
   return <div ref={containerRef} style={{ height: '340px', width: '100%' }} />
 }
