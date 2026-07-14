@@ -8,10 +8,16 @@ const cards = [
     icon: '◎',
   },
   {
-    href: '/search',
+    href: '/map',
     label: 'Find Spots',
-    description: 'Browse and search all recorded find sites',
+    description: 'Interactive map of all georeferenced coin find sites',
     icon: '⊕',
+  },
+  {
+    href: '/heatmap',
+    label: 'Heatmap',
+    description: 'Pointed-foot spade production by mint town',
+    icon: '◉',
   },
   {
     href: '/about',
@@ -23,7 +29,7 @@ const cards = [
 
 export function NavCards() {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <Link
           key={card.href}

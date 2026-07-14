@@ -18,14 +18,17 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 md:flex">
-          <Link href="/about" className="hover:text-brand">
-            About
-          </Link>
-          <Link href="/search" className="hover:text-brand">
-            Search
+          <Link href="/mints" className="hover:text-brand">
+            Mint Town Location
           </Link>
           <Link href="/map" className="hover:text-brand">
-            Map
+            Find Spots
+          </Link>
+          <Link href="/heatmap" className="hover:text-brand">
+            Heatmap
+          </Link>
+          <Link href="/about" className="hover:text-brand">
+            About
           </Link>
         </nav>
 

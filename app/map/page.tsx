@@ -42,7 +42,7 @@ export default async function MapPage({ searchParams }: PageProps) {
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
       <div className="border-b border-brand/20 bg-white px-4 py-3">
-        <h1 className="font-serif text-xl font-semibold text-brand">Find Sites Map</h1>
+        <h1 className="font-serif text-xl font-semibold text-brand">Find Spots</h1>
         <p className="text-sm text-gray-600">{sites.length} georeferenced sites</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {precisionTabs.map((tab) => {

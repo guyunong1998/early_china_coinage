@@ -85,12 +85,13 @@ const NAME_EN: Record<string, string> = {
   zishi: 'Zishi', lin: 'Lin', xiangcheng: 'Xiangcheng', handan: 'Handan', dayin: 'Da Yin',
   yangyi: 'Yangyi', lvsi: 'Lvsi', lie: 'Lie', zhongyang: 'Zhongyang', wuan: "Wu'an",
   wuping: 'Wuping', lishi: 'Lishi', xincheng: 'Xincheng', yu: 'Yu', huoren: 'Huoren',
-  pingtao: 'Pingtao',
+  wenyang: 'Wenyang', shouyin: 'Shouyin', pingtao: 'Pingtao',
   nie: 'Nie', changzi: 'Changzi', xiangyuan: 'Xiangyuan', lu: 'Lu', zhongdu: 'Zhongdu',
   pingyang: 'Pingyang', anyang: 'Anyang', dai: 'Dai', tujun: 'Tujun', pingyin: 'Pingyin',
   pingshu: 'Pingshu', wuxian: 'Wu (邬)', beiqu: 'Beiqu', yiyang: 'Yiyang', xicheng: 'Xicheng',
   zhaiyang: 'Zhaiyang', tunliu: 'Tunliu', tongshi: 'Tongshi', pishi: 'Pishi', suanzao: 'Suanzao',
   qishi: 'Qishi', puzi: 'Puzi', daliang: 'Daliang', gaodu: 'Gaodu', yuyang: 'Yuyang',
+  zhi: 'Zhi',
   dongzhou: 'Dongzhou', guanyang: 'Guanyang', beixun: 'Beixun',
   yanduxia: 'Yandu Xia', hangao: 'Hangao', xiangping: 'Xiangping', guangchang: 'Guangchang',
   chongping: 'Chongping',
@@ -115,6 +116,8 @@ const MODERN_LOCATION: Record<string, string> = {
   wuan: "Wu'an, Handan, Hebei", wuping: 'Zhang River valley, Hebei (approximate)',
   lishi: 'Lishi District, Lvliang, Shanxi', xincheng: 'Shuo County, Shanxi',
   yu: 'Yangqu County, Taiyuan, Shanxi', huoren: 'Fanshi County, Xinzhou, Shanxi',
+  wenyang: 'Wenshui County, Lvliang, Shanxi (provisional, Zhu Hua)',
+  shouyin: 'Shouyang County, Jinzhong, Shanxi (provisional, Zhu Hua)',
   pingtao: 'Wenshui County, Lvliang, Shanxi',
   nie: 'Wuxiang County, Changzhi, Shanxi', changzi: 'Changzi County, Changzhi, Shanxi',
   xiangyuan: 'Xiangyuan County, Changzhi, Shanxi', lu: 'Lucheng District, Changzhi, Shanxi',
@@ -126,6 +129,7 @@ const MODERN_LOCATION: Record<string, string> = {
   yiyang: 'Yiyang County, Luoyang, Henan', xicheng: 'Lishi District, Lvliang, Shanxi',
   zhaiyang: 'Xingyang, Zhengzhou, Henan', tunliu: 'Tunliu County, Changzhi, Shanxi',
   tongshi: 'Qin County, Changzhi, Shanxi', pishi: 'Hejin, Yuncheng, Shanxi',
+  zhi: 'Huozhou, Linfen, Shanxi',
   suanzao: 'Yanjin County, Xinxiang, Henan', qishi: 'Linyi County, Yuncheng, Shanxi',
   puzi: 'Xi County, Lvliang, Shanxi', daliang: 'Kaifeng, Henan',
   gaodu: 'Zezhou County, Jincheng, Shanxi', yuyang: 'Pinglu County, Yuncheng, Shanxi',
@@ -198,11 +202,33 @@ export function getMintByCode(code: string): MintTown | undefined {
   return MINT_TOWNS.find((m) => m.mint_code === code)
 }
 
+/**
+ * Alternate mint names appearing on coins or in the database that refer to
+ * the same mint town as the canonical dossier name (name_zh).
+ */
+const MINT_NAME_ALIASES: Record<string, string> = {
+  阴: '大阴',
+  平州: '平周',
+  邯郸: '甘丹',
+  阳化: '阳曲',
+  彘邑: '彘',
+  藿人: '霍人',
+  土匀: '土军',
+}
+
+/** Map a coin/database mint label to the canonical dossier Chinese name. */
+export function resolveMintNameZh(nameZh: string): string {
+  const trimmed = nameZh.trim()
+  if (!trimmed) return trimmed
+  return MINT_NAME_ALIASES[trimmed] ?? trimmed
+}
+
 /** Look up a mint town by its Chinese name (as stored in coin_types.mint_zh). */
 export function getMintByNameZh(nameZh: string): MintTown | undefined {
   const trimmed = nameZh.trim()
   if (!trimmed) return undefined
-  return MINT_TOWNS.find((m) => m.name_zh === trimmed)
+  const canonical = resolveMintNameZh(trimmed)
+  return MINT_TOWNS.find((m) => m.name_zh === canonical)
 }
 
 export function searchMints(query: string): MintTown[] {

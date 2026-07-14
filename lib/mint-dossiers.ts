@@ -186,7 +186,7 @@ export const MINT_DOSSIERS: MintDossier[] = [
     mint_code: 'pingzhou',
     name_zh_doc: '平周',
     description_zh:
-      '平周县战国时期最早为魏国所置。《史记·魏世家》记录，襄王"十三年张仪相魏。…秦取我曲沃、平周"。战国晚期赵国铸有"平州"字样尖足布，可能也曾短暂占据平周。吴镇烽列举1978年陕西米脂县官庄发掘的牛季平墓画像石题记，说明东汉时期平周县应在今天米脂一带。东汉末年匈奴侵占西河，平周县从河西迁到河东。平周地望以吴镇烽说法为准，地点暂定为米脂县官庄。',
+      '平周县战国时期最早为魏国所置。《史记·魏世家》记录，襄王"十三年张仪相魏。…秦取我曲沃、平周"。战国晚期赵国铸有"平州"字样尖足布，即本城平周，可能也曾短暂占据平周。吴镇烽列举1978年陕西米脂县官庄发掘的牛季平墓画像石题记，说明东汉时期平周县应在今天米脂一带。东汉末年匈奴侵占西河，平周县从河西迁到河东。平周地望以吴镇烽说法为准，地点暂定为米脂县官庄。',
     description_en:
       'Pingzhou was first set by Wei in the Warring States period. In Shiji, Qin took over Quwo and Pingzhou in the 13th year of King Xiang\'s reign. Zhao issued the pointed-foot spades with Pingzhou inscription, implying that Zhao also shortly controlled Pingzhou. Based on the transmitted texts written in the Tang Dynasty, Pingzhou was located in the west of Jiexiu County, Shanxi Province. However, in recent years, Wu Zhenfeng challenged this argument based on excavated texts. The inscriptions on the pictorial stones from the Niu Jiping tomb at Guanzhuang, Mizhi, indicate that Pingzhou is located nearby. In the Late Eastern Han Dynasty, the invasion of the Xiongnu may have caused the relocation of Pingzhou County.',
     geolocation: '37.747722222372516, 110.16228242775668',
@@ -198,7 +198,7 @@ export const MINT_DOSSIERS: MintDossier[] = [
     mint_code: 'yangqu',
     name_zh_doc: '阳曲',
     description_zh:
-      '阳曲城定位在晋昌镇。根据《文物地图集》，城址今日犹在，平面呈方形。现南墙、西墙、北墙部分残存，总长约1000多米，残高1~6米。墙体夯筑，夯层厚0.09~0.12米。采集有泥质灰陶盆及绳纹板瓦等残片。',
+      '阳曲城定位在晋昌镇。根据《文物地图集》，城址今日犹在，平面呈方形。现南墙、西墙、北墙部分残存，总长约1000多米，残高1~6米。墙体夯筑，夯层厚0.09~0.12米。采集有泥质灰陶盆及绳纹板瓦等残片。尖足布铭文或作「阳化」，即阳曲。',
     description_en:
       'Yangqu is located in Jinchang town, Dingxiang County. According to the Atlas, the city wall is still on the ground. The plan is square, and the south, west, and north walls are still preserved. The remaining height of the city wall ranges from 1 to 6 meters. The wall was constructed with rammed earth, with rammed layers measuring 0.09–0.12 meters thick. Fragments of gray pottery shards and cord-marked tiles were collected.',
     geolocation: '38.48692489022878, 112.97113695203011',
@@ -276,7 +276,7 @@ export const MINT_DOSSIERS: MintDossier[] = [
     mint_code: 'dayin',
     name_zh_doc: '大阴',
     description_zh:
-      '大阴即"阴"地。《左传·僖公十五年》"晋阴饴甥会秦伯，盟于王城"。杜注"阴，晋地也。"《中国历史地图集》将其标注在山西霍县东南。阴地战国时属于赵国。',
+      '大阴即阴地。《左传·僖公十五年》"晋阴饴甥会秦伯，盟于王城"。杜注"阴，晋地也。"《中国历史地图集》将其标注在山西霍县东南。阴地战国时属于赵国。铭文或作「阴」「大阴」，皆指阴地。',
     description_en:
       'Da yin is Yin city. Zuozhuan: "In the tenth month, Yin Yi Sheng of Jin met with the Liege of Qin and swore a covenant at Wangcheng." Du Yu notes that Yin is a city of Jin. Yin is the fief of Yin Yi Sheng. The Cultural Relics Atlas of China marks Yin Dayin to the southeast of present-day Huo County. Yin belongs to Jin in the Spring and Autumn period, and then belongs to Zhao in the Warring States period. Weapon inscriptions show that Zhao was casting weapons in Da Yin.',
     geolocation: '36.57147046500399, 111.7553834556418',
@@ -356,6 +356,28 @@ export const MINT_DOSSIERS: MintDossier[] = [
     source_doc: '铸币城邑考证61.docx',
   },
   {
+    mint_code: 'wenyang',
+    name_zh_doc: '文阳',
+    description_zh: '城址不确定。朱华认为在文水县境内，暂从。',
+    description_en:
+      'The location of the city site is uncertain. Zhu Hua proposes that it is in the present-day Wenshui County.',
+    geolocation: '37.44305647278954, 112.02948999633749',
+    coin_types: ['Pointed-foot spades'],
+    location_note: 'Provisional location following Zhu Hua (Wenshui County)',
+    source_doc: '铸币城邑考证61.docx',
+  },
+  {
+    mint_code: 'shouyin',
+    name_zh_doc: '寿阴',
+    description_zh: '城址不确定。朱华认为寿阴在山西寿阳境内，暂从。',
+    description_en:
+      'The location of the city is uncertain. Zhu Hua proposes that it is in present-day Shouyang County.',
+    geolocation: '37.90108100036989, 113.16221164883905',
+    coin_types: ['Pointed-foot spades'],
+    location_note: 'Provisional location following Zhu Hua (Shouyang County)',
+    source_doc: '铸币城邑考证61.docx',
+  },
+  {
     mint_code: 'lishi',
     name_zh_doc: '离石',
     description_zh: '故治定在今天的离石区。',
@@ -391,8 +413,11 @@ export const MINT_DOSSIERS: MintDossier[] = [
     mint_code: 'huoren',
     name_zh_doc: '霍人',
     description_zh:
-      '今繁峙县东。《左传》襄公十年："偪阳，妘姓也，使周内史选其族嗣，纳诸霍人，礼也。"《汉书·绛侯世家》，"击韩王信于代，降下霍人。以前至武泉。"杨伯俊认为霍人在繁峙县东郊，暂从。',
+      '今繁峙县东。《左传》襄公十年："偪阳，妘姓也，使周内史选其族嗣，纳诸霍人，礼也。"《汉书·绛侯世家》，"击韩王信于代，降下霍人。以前至武泉。"杨伯俊认为霍人在繁峙县东郊，暂从。尖足布铭文或作「藿人」，即霍人。',
+    description_en:
+      'Huoren is located east of Fanshi County. Yang Bojun proposes the eastern suburbs of Fanshi County. Pointed-foot spade inscriptions sometimes read Huoren (藿人), which refers to this same mint.',
     geolocation: '39.194450454584995, 113.30895409559446',
+    coin_types: ['Pointed-foot spades'],
     references: ['《左传》', '《汉书·绛侯世家》'],
     source_doc: '铸币城邑考证61.docx',
   },
@@ -492,8 +517,11 @@ export const MINT_DOSSIERS: MintDossier[] = [
     mint_code: 'tujun',
     name_zh_doc: '土军',
     description_zh:
-      '《水经注·河水》吐京郡治。《元和郡县图志》"石楼县，本汉土军县也，属西河郡。晋省。后魏孝文帝于此城置吐京郡，即汉土军县。盖胡俗音讹，以军为京也。"一般认为土军县治就在今天的石楼县治灵泉镇。',
+      '《水经注·河水》吐京郡治。《元和郡县图志》"石楼县，本汉土军县也，属西河郡。晋省。后魏孝文帝于此城置吐京郡，即汉土军县。盖胡俗音讹，以军为京也。"一般认为土军县治就在今天的石楼县治灵泉镇。尖足布铭文作「土匀」，即土军。',
+    description_en:
+      'Tujun is identified with present-day Lingquan town, Shilou County. Pointed-foot spade inscriptions read Tujun (土匀), which refers to this same mint town.',
     geolocation: '36.99908974837604, 110.84772125952064',
+    coin_types: ['Pointed-foot spades', 'Square-foot spades'],
     references: ['《水经注·河水》', '《元和郡县图志》'],
     source_doc: '铸币城邑考证61.docx',
   },
@@ -582,6 +610,18 @@ export const MINT_DOSSIERS: MintDossier[] = [
     geolocation: '36.42614657863702, 113.37040336549124',
     coin_types: ['Square-foot spades'],
     references: ['《左传·成公九年》', '《括地志》'],
+    source_doc: '铸币城邑考证61.docx',
+  },
+  {
+    mint_code: 'zhi',
+    name_zh_doc: '彘',
+    description_zh:
+      '《水径·彘水注》，"又南入河东界。又南过永安县西。。故彘县也。周厉王流于彘，即此城也。王莽更名黄城。"《霍州志》"汉顺帝阳嘉三年，改曰永安县，霍伯之都也彘城，周厉王奔彘，即此。汉为彘县，在今城内西南隅。"李晓杰认为永安县城即是战国的彘。方足布铭文或作「彘邑」，即彘。',
+    description_en:
+      'Li Xiaojie identifies the Warring States city of Zhi with Yongan county seat in present-day Huozhou. Square-foot spade inscriptions sometimes read Zhiyi (彘邑), which refers to this same mint town.',
+    geolocation: '36.575421920410875, 111.72478060248434',
+    coin_types: ['Square-foot spades'],
+    references: ['《水径·彘水注》', '《霍州志》'],
     source_doc: '铸币城邑考证61.docx',
   },
   {
