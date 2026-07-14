@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
+import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getSitePrecision, isUnknownText } from '@/lib/city-boundaries'
 import { getMapSites } from '@/lib/queries'
 
@@ -32,18 +34,22 @@ export default async function MapPage({ searchParams }: PageProps) {
           return getSitePrecision(site) === currentPrecision
         })
 
-  const precisionTabs: Array<{ id: PrecisionFilter; label: string; count: number }> = [
-    { id: 'all', label: 'All', count: counts.all },
-    { id: 'city', label: 'City', count: counts.city },
-    { id: 'city_only', label: 'Only know city', count: counts.city_only },
-    { id: 'county_only', label: 'Only know county', count: counts.county_only },
+  const precisionTabs: Array<{ id: PrecisionFilter; key: DictionaryKey; count: number }> = [
+    { id: 'all', key: 'search.precision.all', count: counts.all },
+    { id: 'city', key: 'search.precision.city', count: counts.city },
+    { id: 'city_only', key: 'search.precision.cityOnly', count: counts.city_only },
+    { id: 'county_only', key: 'search.precision.countyOnly', count: counts.county_only },
   ]
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
       <div className="border-b border-brand/20 bg-white px-4 py-3">
-        <h1 className="font-serif text-xl font-semibold text-brand">Find Spots</h1>
-        <p className="text-sm text-gray-600">{sites.length} georeferenced sites</p>
+        <h1 className="font-serif text-xl font-semibold text-brand">
+          <T k="map.title" />
+        </h1>
+        <p className="text-sm text-gray-600">
+          <T k="map.count" vars={{ count: sites.length }} />
+        </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {precisionTabs.map((tab) => {
             const active = tab.id === currentPrecision
@@ -58,7 +64,7 @@ export default async function MapPage({ searchParams }: PageProps) {
                     : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
                 }`}
               >
-                {tab.label} ({tab.count})
+                <T k={tab.key} /> ({tab.count})
               </Link>
             )
           })}

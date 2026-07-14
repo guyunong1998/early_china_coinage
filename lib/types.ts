@@ -108,3 +108,12 @@ export type DatabaseStats = {
   totalCoins: number
   findCount: number
 }
+
+export type HeatmapFind = {
+  coin_type_code: string | null
+  quantity_total: number | null
+  quantity_min: number | null
+  quantity_estimated: number | null
+  presence: boolean | null
+  site_code: string
+}

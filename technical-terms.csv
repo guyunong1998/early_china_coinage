@@ -1,0 +1,291 @@
+Category,Chinese Term,Translation,Status,Source
+Major Type,布币,Spade coin,existing,database
+Major Type,大尖足布,Large Pointed-Foot Spade,existing,database
+Major Type,刀币,Knife coin,existing,database
+Major Type,方足布,Square-foot Spade,existing,database
+Major Type,弧背明刀,Curved-back Ming Knife,existing,database
+Major Type,圜钱,Round coin,existing,database
+Major Type,尖首刀,Pointed-tip Knife,existing,database
+Major Type,尖足布,Pointed-Foot Spade,existing,database
+Major Type,明刀,Ming Knife,existing,database
+Major Type,平首布,Flat-handle Spade,existing,database
+Major Type,齐大刀,Qi Large Knife,existing,database
+Major Type,钱范,Coin mold,existing,database
+Major Type,襄平,Xiangping,existing,database
+Major Type,蚁鼻钱,Ant-nose coin,existing,database
+Major Type,战国晚期,Late Warring States,existing,database
+Major Type,折背明刀,Straight-back Ming Knife,existing,database
+Major Type,针首刀,Needle-tip Knife,existing,database
+Major Type,直刀,Straight-back Knife,existing,database
+Minor Type,布币,Spade coin,existing,database
+Minor Type,大方足布,Large square-foot spade,existing,database
+Minor Type,大尖足布,Large pointed-foot spade,existing,database
+Minor Type,大型尖足布,Large pointed-foot spade,existing,database
+Minor Type,大型平肩空首布,Large flat-shoulder hollow-handle spade,existing,database
+Minor Type,大型原始刀币,Large early knife coin,existing,database
+Minor Type,刀币,Knife coin,existing,database
+Minor Type,刀币范,Knife coin mould,existing,database
+Minor Type,方足布,Square-foot flat-handle spade,existing,database
+Minor Type,弧背明刀,Curved-back Ming knife,existing,database
+Minor Type,滑石范,Huashifan,proposed,pinyin
+Minor Type,圜钱,Round coin,existing,database
+Minor Type,圜钱母范,Round-coin mother mold,existing,database
+Minor Type,尖首刀,Pointed-tip knife,existing,database
+Minor Type,尖足布,Pointed-foot flat-handle spade,existing,database
+Minor Type,尖足布钱范,Pointed-foot spade mould,existing,database
+Minor Type,空首布,Hollow-handle spade,existing,database
+Minor Type,明刀,Ming knife,existing,database
+Minor Type,平首布,Flat-handle spade,existing,database
+Minor Type,齐大刀,Qi large knife,existing,database
+Minor Type,齐明刀,Qi-Ming knife,existing,database
+Minor Type,钱范,Coin mold,existing,database
+Minor Type,桥足布,Bridge-foot spade,existing,database
+Minor Type,三孔布,Three-hole spade,existing,database
+Minor Type,耸肩空首布,Raised-shoulder hollow-handle spade,existing,database
+Minor Type,小型平肩空首布,Small flat-shoulder hollow-socket spade,existing,database
+Minor Type,蚁鼻钱,Ant-nose coin,existing,database
+Minor Type,圆足布,Round-foot spade,existing,database
+Minor Type,圆足布钱范,Round-foot spade mould,existing,database
+Minor Type,战国晚期,Late Warring States,existing,database
+Minor Type,折背明刀,Straight-back Ming knife,existing,database
+Minor Type,折背明刀钱范,Straight-back Ming knife mould,existing,database
+Minor Type,针首刀,Needle-tip knife,existing,database
+Minor Type,直刀,Straight-back knife,existing,database
+Minor Type,直刀钱范,Straight-knife coin mould,existing,database
+Inscription,安阳,Anyang,existing,database
+Inscription,安臧,Anzang,proposed,pinyin
+Inscription,白,Bai,existing,database
+Inscription,白化,Baihua,existing,database
+Inscription,白人,Bairen,existing,database
+Inscription,白人化,Bairen Hua,existing,database
+Inscription,半,Ban,proposed,pinyin
+Inscription,半两,Banliang,existing,database
+Inscription,北丌,Beiji,existing,database
+Inscription,北屈,Beiqu,existing,database
+Inscription,北兹釿,Bei Zi Jin,existing,database
+Inscription,贝丘,Beiqiu,existing,database
+Inscription,差阴,Chayin,existing,database
+Inscription,成白,Chengbai,existing,database
+Inscription,乘邑,Chengyi,proposed,pinyin
+Inscription,赤稗,Chibi,existing,database
+Inscription,大阴,Da Yin,existing,database
+Inscription,大阴半,Da Yin Ban,existing,database
+Inscription,代,Dai,existing,database
+Inscription,东周,Dongzhou,existing,database
+Inscription,二化,Erhua,existing,database
+Inscription,非,Fei,existing,database
+Inscription,分,Fen,existing,database
+Inscription,丰,Feng,proposed,pinyin
+Inscription,丰邑,Fengyi,proposed,pinyin
+Inscription,丰子,Fengzi,proposed,pinyin
+Inscription,甘丹,Gandan,existing,database
+Inscription,榦刀,Handao,existing,database
+Inscription,高都,Gaodu,existing,database
+Inscription,关,Guan,proposed,pinyin
+Inscription,冠阳,Guanyang,existing,database
+Inscription,邯郸,Gandan,existing,database
+Inscription,禾一釿,He Yijin,existing,database
+Inscription,郃,He,proposed,pinyin
+Inscription,货泉,Huoquan,existing,database
+Inscription,霍人,Huoren,existing,database
+Inscription,晋阳,Jinyang,existing,database
+Inscription,晋阳半,Jinyang Ban,existing,database
+Inscription,咎奴,Jiunu,proposed,pinyin
+Inscription,口氏,[Illegible] Shi,existing,database
+Inscription,口邑,[Illegible] Yi,existing,database
+Inscription,离石,Lishi,existing,database
+Inscription,梁,Liang Yi,existing,database
+Inscription,梁邑,Liangyi,existing,database
+Inscription,两甾,Liangzi,existing,database
+Inscription,埒,Lie,existing,database
+Inscription,蔺,Lin,existing,database
+Inscription,蔺半,Lin Ban,existing,database
+Inscription,蔺半化,Lin Ban Hua,existing,database
+Inscription,六,Liu,existing,database
+Inscription,潞,Lu,existing,database
+Inscription,虑虒,Lvsi,existing,database
+Inscription,虑虒半,Lvsi Ban,existing,database
+Inscription,纶氏,Lunshi,proposed,pinyin
+Inscription,马雍,Mayong,existing,database
+Inscription,明化,Minghua,existing,database
+Inscription,明四,Mingsi,existing,database
+Inscription,目,Mu,existing,database
+Inscription,涅,Nie,existing,database
+Inscription,皮氏,Pishi,existing,database
+Inscription,平备,Pingbei,existing,database
+Inscription,平陶,Pingtao,existing,database
+Inscription,平阳,Pingyang,existing,database
+Inscription,平阴,Pingyin,existing,database
+Inscription,平州,Pingzhou,existing,database
+Inscription,莆子,Puzi,existing,database
+Inscription,蒲子,Puzi,existing,database
+Inscription,祁,Qi,existing,database
+Inscription,齐法化,Qifahua,proposed,pinyin
+Inscription,奇氏,Qishi,proposed,pinyin
+Inscription,秦半两,Qin Ban Liang,existing,database
+Inscription,上,Shang,existing,database
+Inscription,寿阳,Shouyin,existing,database
+Inscription,寿阴,Shouyin,existing,database
+Inscription,巳,Si,existing,database
+Inscription,宋子,Songzi,existing,database
+Inscription,素面,"Sumian (plain, uninscribed)",existing,database
+Inscription,唐是,Tangshi,proposed,pinyin
+Inscription,同是,Tongshi,existing,database
+Inscription,土匀,Tuyun,existing,database
+Inscription,屯留,Tunliu,existing,database
+Inscription,王氏,Wangshi,existing,database
+Inscription,文阳,Wenyang,existing,database
+Inscription,邬,Wu,existing,database
+Inscription,五铢,Wuzhu,existing,database
+Inscription,武,Wu,proposed,pinyin
+Inscription,武安,Wu'an,existing,database
+Inscription,武平,Wuping,existing,database
+Inscription,西,Xi,existing,database
+Inscription,西都,Xidu,existing,database
+Inscription,隰城,Xicheng,existing,database
+Inscription,襄成,Xiangcheng,existing,database
+Inscription,襄城,Xiangcheng,existing,database
+Inscription,襄平,Xiangping,existing,database
+Inscription,襄阴,Xiangyin,existing,database
+Inscription,襄垣,Xiangyuan,existing,database
+Inscription,邪,Xie,existing,database
+Inscription,新城,Xincheng,existing,database
+Inscription,泫氏,Xuanshi,existing,database
+Inscription,炫氏,Xuanshi,existing,database
+Inscription,巽,Xun,existing,database
+Inscription,言阳新化,Yanyang Xinhua,existing,database
+Inscription,燕安阳,Yan Anyang,existing,database
+Inscription,阳曲,Yangqu,existing,database
+Inscription,阳邑,Yangyi,existing,database
+Inscription,一刀,Yidao,existing,database
+Inscription,一化,Yihua,existing,database
+Inscription,怡,Yi,existing,database
+Inscription,益昌,Yichang,existing,database
+Inscription,阴晋半釿,Yinjin Banjin,existing,database
+Inscription,右化,You Hua,existing,database
+Inscription,于,Yu,existing,database
+Inscription,渔阳,Yuyang,existing,database
+Inscription,榆半,Yu Ban,existing,database
+Inscription,榆即,Yuji,existing,database
+Inscription,榆即半,Yuji Ban,existing,database
+Inscription,垣,Yuan,existing,database
+Inscription,鄫,Zeng,existing,database
+Inscription,宅阳,Zhaiyang,existing,database
+Inscription,长子,Changzi,existing,database
+Inscription,制,Zhi,existing,database
+Inscription,彘,Zhi,existing,database
+Inscription,中都,Zhongdu,existing,database
+Inscription,中阳,Zhongyang,existing,database
+Inscription,邾,Lai,existing,database
+Inscription,铸,Zhu,existing,database
+Inscription,兹釿,Zi Jin,existing,database
+Inscription,兹氏,Zishi,existing,database
+Inscription,兹氏半,Zishi Ban,existing,database
+Mint,安阳,Anyang,existing,database
+Mint,柏人,Bairen,existing,database
+Mint,北屈,Beiqu,existing,database
+Mint,北兹,Beizi,existing,database
+Mint,赤稗,Chibi,existing,database
+Mint,大阴,Da Yin,existing,database
+Mint,代,Dai,existing,database
+Mint,东周,Dongzhou,existing,database
+Mint,分,Fen,existing,database
+Mint,负邑,Fuyi,existing,database
+Mint,甘丹,Gandan,existing,database
+Mint,高都,Gaodu,existing,database
+Mint,广昌,Guangchang,existing,database
+Mint,邯郸,Handan,existing,database
+Mint,韩号,Hanhao,existing,database
+Mint,霍人,Huoren,existing,database
+Mint,丌,Ji,existing,database
+Mint,晋阳,Jinyang,existing,database
+Mint,咎奴,Jiunu,existing,database
+Mint,郐,Kuai,existing,database
+Mint,离石,Lishi,existing,database
+Mint,梁,Liang,existing,database
+Mint,埒,Lie,existing,database
+Mint,蔺,Lin,existing,database
+Mint,灵寿,Lingshou,existing,database
+Mint,潞,Lu,existing,database
+Mint,虑虒,Lvsi,existing,database
+Mint,纶氏,Lunshi,existing,database
+Mint,马雍,Mayong,existing,database
+Mint,涅,Nie,existing,database
+Mint,皮氏,Pishi,existing,database
+Mint,平陶,Pingtao,existing,database
+Mint,平阳,Pingyang,existing,database
+Mint,平阴,Pingyin,existing,database
+Mint,平原,Pingyuan,existing,database
+Mint,平周,Pingzhou,existing,database
+Mint,坪阴,Pingyin,existing,database
+Mint,蒲子,Puzi,existing,database
+Mint,祁,Qi,existing,database
+Mint,少梁,Shaoliang,existing,database
+Mint,寿阴,Shouyin,existing,database
+Mint,虒祁,Siqi,existing,database
+Mint,宋子,Songzi,existing,database
+Mint,同是,Tongshi,existing,database
+Mint,土军,Tujun,existing,database
+Mint,屯留,Tunliu,existing,database
+Mint,王氏,Wangshi,existing,database
+Mint,文阳,Wenyang,existing,database
+Mint,邬,Wu,existing,database
+Mint,武,Wu,existing,database
+Mint,武安,Wu'an,existing,database
+Mint,武平,Wuping,existing,database
+Mint,西都,Xidu,existing,database
+Mint,隰城,Xicheng,existing,database
+Mint,襄城,Xiangcheng,existing,database
+Mint,襄平,Xiangping,existing,database
+Mint,襄垣,Xiangyuan,existing,database
+Mint,邪,Xie,existing,database
+Mint,新城,Xincheng,existing,database
+Mint,泫氏,Xuanshi,existing,database
+Mint,言阳,Yanyang,existing,database
+Mint,阳曲,Yangqu,existing,database
+Mint,阳邑,Yangyi,existing,database
+Mint,杨氏,Yangshi,existing,database
+Mint,猗氏,Yishi,existing,database
+Mint,怡,Yi,existing,database
+Mint,阴,Yin,existing,database
+Mint,阴晋,Yinjin,existing,database
+Mint,盂,Yu,existing,database
+Mint,榆即,Yuji,existing,database
+Mint,虞阳,Yuyang,existing,database
+Mint,垣,Yuan,existing,database
+Mint,原阳,Yuanyang,existing,database
+Mint,鄫,Zeng,existing,database
+Mint,宅阳,Zhaiyang,existing,database
+Mint,长子,Changzi,existing,database
+Mint,彘,Zhi,existing,database
+Mint,中都,Zhongdu,existing,database
+Mint,中阳,Zhongyang,existing,database
+Mint,铸,Zhu,existing,database
+Mint,兹氏,Zishi,existing,database
+State,楚,Chu,existing,database
+State,汉,Han,existing,database
+State,晋,Jin,existing,database
+State,齐,Qi,existing,database
+State,秦,Qin,existing,database
+State,三晋,San Jin,existing,database
+State,魏,Wei,existing,database
+State,新莽,Xin (Wang Mang),existing,database
+State,燕,Yan,existing,database
+State,赵,Zhao,existing,database
+State,中山,Zhongshan,existing,database
+State,周,Zhou,existing,database
+Site Type,不明,Unknown,existing,database
+Site Type,采集,Surface collection,existing,database
+Site Type,城址,City site,existing,database
+Site Type,地层,Stratum,existing,database
+Site Type,灰沟,Ash ditch,existing,database
+Site Type,灰坑,Ash pit,existing,database
+Site Type,窖藏,Hoard,existing,database
+Site Type,墓葬,Tomb,existing,database
+Site Type,遗址,Site,existing,database
+Period,汉代,Han dynasty,existing,database
+Period,战国,Warring States period,existing,database
+Period,战国—汉代,Warring States to Han dynasty,existing,database
+Period,战国（出自西汉墓封土，属再堆积）,Warring States period (recovered from the covering fill of a Western Han tomb; secondary deposit),existing,database
+Period,战国晚期,Late Warring States period,existing,database
+Period,战国中晚期,Mid-to-late Warring States period,existing,database

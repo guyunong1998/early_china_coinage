@@ -20,3 +20,11 @@ export function formatCoordinates(lat: number | null, lng: number | null) {
   if (lat == null || lng == null) return '—'
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 }
+
+export function splitCsv(value: string | null | undefined): string[] {
+  if (!value) return []
+  return value
+    .split(/[、,，;；|]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}

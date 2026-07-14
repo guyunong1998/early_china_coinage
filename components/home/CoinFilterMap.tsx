@@ -6,6 +6,8 @@ import { TYPOLOGY, ALL_MINTS } from '@/lib/typology-data'
 import type { TypologyL2, TypologyL3, TypologyLeaf } from '@/lib/typology-data'
 import type { MapSite } from '@/lib/types'
 import { toEnglishName } from '@/lib/name-translation'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { T } from '@/components/i18n/T'
 import {
   fetchCityBoundaryGeoJson,
   fetchCountyBoundaryGeoJson,
@@ -65,6 +67,7 @@ type TypeFilter = {
 // ─── main component ────────────────────────────────────────────────────────
 
 export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
+  const { t } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Map<string, Marker>>(new Map())
@@ -199,7 +202,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
               <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span style="color:#888">(${countyEn})</span>` : ''}</div>
               <div><strong>Coin type / 币类：</strong>${typeBilingual}</div>
               <div><strong>Quantity / 数量：</strong>${site.total_quantity_for_map ?? 0}</div>
-              <a href="/sites/${site.site_code}" style="color:#006d71;font-size:12px">View record →</a>
+              <a href="/sites/${site.site_code}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>
             </div>`
           )
 
@@ -282,6 +285,10 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       mapRef.current = null
       markersRef.current.clear()
     }
+    // `t` is deliberately omitted: re-running this would refetch every boundary
+    // geometry just to relabel a popup link, so it reflects the language active
+    // at mount/navigation rather than updating live on toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
 
   const activeFilter = mode === 'type' ? tf.inscription : mintFilter
@@ -302,7 +309,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
                   : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
               }`}
             >
-              {m === 'type' ? 'Filter by Coin Type' : 'Filter by Mint'}
+              <T k={m === 'type' ? 'coinFilterMap.byType' : 'coinFilterMap.byMint'} />
             </button>
           ))}
           {activeFilter && (
@@ -310,7 +317,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
               onClick={() => { setTf({ l1: '', l2: '', l3: '', inscription: '' }); setMintFilter('') }}
               className="ml-auto px-3 py-1.5 text-xs text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
             >
-              ✕ Clear filter
+              <T k="coinFilterMap.clearFilter" />
             </button>
           )}
         </div>
@@ -322,14 +329,14 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
             <div className="flex flex-wrap gap-2">
               <Select
                 value={tf.l1}
-                placeholder="1 · Coin category"
+                placeholder={t('coinFilterMap.category')}
                 options={l1Options}
                 onChange={(v) => { setTf({ l1: v, l2: '', l3: '', inscription: '' }) }}
               />
               {tf.l1 && l2Options.length > 0 && (
                 <Select
                   value={tf.l2}
-                  placeholder="2 · Sub-category"
+                  placeholder={t('coinFilterMap.subcategory')}
                   options={l2Options.map((x) => x.label_en)}
                   onChange={(v) => { setTf((p) => ({ ...p, l2: v, l3: '', inscription: '' })) }}
                 />
@@ -337,7 +344,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
               {tf.l2 && l3Options.length > 0 && (
                 <Select
                   value={tf.l3}
-                  placeholder="3 · Type"
+                  placeholder={t('coinFilterMap.type')}
                   options={l3Options.map((x) => x.label_en)}
                   onChange={(v) => { setTf((p) => ({ ...p, l3: v, inscription: '' })) }}
                 />
@@ -348,13 +355,13 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
             {(tf.l3 || (tf.l2 && l3Options.length === 0)) && inscriptionOptions.length > 0 && (
               <div>
                 <p className="mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  4 · Inscription ({inscriptionOptions.length})
+                  {t('coinFilterMap.inscriptionCount', { count: inscriptionOptions.length })}
                   {tf.inscription && (
                     <button
                       onClick={() => setTf((p) => ({ ...p, inscription: '' }))}
                       className="ml-2 normal-case font-normal text-gray-400 hover:text-brand"
                     >
-                      ✕ clear
+                      <T k="coinFilterMap.clear" />
                     </button>
                   )}
                 </p>
@@ -377,7 +384,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
                       </span>
                       {e.mint_zh && (
                         <span className={`shrink-0 text-xs ${tf.inscription === e.zh ? 'text-white/70' : 'text-brand/60'}`}>
-                          mint: {e.mint_zh}
+                          {t('coinFilterMap.mintLabel')} {e.mint_zh}
                         </span>
                       )}
                     </button>
@@ -393,14 +400,14 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           <div className="flex flex-wrap gap-2 text-sm">
             <input
               type="search"
-              placeholder="Search mint name…"
+              placeholder={t('coinFilterMap.searchMint')}
               value={mintSearch}
               onChange={(e) => setMintSearch(e.target.value)}
               className="rounded border border-brand/30 px-3 py-1.5 text-sm outline-none focus:border-brand"
             />
             <Select
               value={mintFilter}
-              placeholder="Select mint"
+              placeholder={t('coinFilterMap.selectMint')}
               options={filteredMints.map(
                 (m) => `${m.mint_zh}${m.mint_en ? ' (' + m.mint_en + ')' : ''}${m.state_zh ? ' — ' + m.state_zh : ''}`
               )}
@@ -415,12 +422,16 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-3 w-3 rounded-full bg-[#c0392b]" />
-              Match
-              {matchCount !== null && <strong className="ml-1 text-brand">({matchCount} sites)</strong>}
+              <T k="coinFilterMap.match" />
+              {matchCount !== null && (
+                <strong className="ml-1 text-brand">
+                  {t('coinFilterMap.matchSites', { count: matchCount })}
+                </strong>
+              )}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-3 w-3 rounded-full bg-[#b0b8b8]" />
-              No match
+              <T k="coinFilterMap.noMatch" />
             </span>
           </div>
         )}
