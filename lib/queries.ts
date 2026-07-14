@@ -12,27 +12,63 @@ function splitSourceCodes(raw: string | null | undefined): string[] {
     .filter(Boolean)
 }
 
-export async function getMapSites(): Promise<MapSite[]> {
-  const { data, error } = await supabase
-    .from('v_coin_map_sites')
-    .select(MAP_SITE_FIELDS)
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
+/**
+ * Supabase's PostgREST API caps responses at 1000 rows by default. Several
+ * tables here (sites, finds, contexts) exceed that, so a single
+ * un-paginated request silently drops everything past the cutoff — e.g.
+ * many Shanxi/Hebei/Shaanxi sites vanishing from the map. This pages
+ * through with `.range()` until a short (or empty) page signals the end.
+ */
+async function fetchAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  pageSize = 1000
+): Promise<T[]> {
+  const all: T[] = []
+  let from = 0
 
-  if (error) throw error
-  return data ?? []
+  while (true) {
+    const { data, error } = await fetchPage(from, from + pageSize - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    all.push(...data)
+    if (data.length < pageSize) break
+    from += pageSize
+  }
+
+  return all
+}
+
+export async function getMapSites(): Promise<MapSite[]> {
+  return fetchAllPages<MapSite>((from, to) =>
+    supabase
+      .from('v_coin_map_sites')
+      .select(MAP_SITE_FIELDS)
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .order('site_code')
+      .range(from, to)
+  )
+}
+
+/** Sums `total_quantity_for_map` across every row, paginating past PostgREST's 1000-row cap. */
+async function sumTotalQuantityForMap(): Promise<number> {
+  const rows = await fetchAllPages<{ total_quantity_for_map: number | null }>((from, to) =>
+    supabase
+      .from('v_coin_map_sites')
+      .select('site_code, total_quantity_for_map')
+      .order('site_code')
+      .range(from, to)
+  )
+  return rows.reduce((sum, row) => sum + (row.total_quantity_for_map ?? 0), 0)
 }
 
 export async function getDatabaseStats(): Promise<DatabaseStats> {
-  const [{ count: siteCount }, { count: findCount }, { data: quantities }] =
-    await Promise.all([
-      supabase.from('v_coin_map_sites').select('*', { count: 'exact', head: true }),
-      supabase.from('finds').select('*', { count: 'exact', head: true }),
-      supabase.from('v_coin_map_sites').select('total_quantity_for_map'),
-    ])
-
-  const totalCoins =
-    quantities?.reduce((sum, row) => sum + (row.total_quantity_for_map ?? 0), 0) ?? 0
+  const [{ count: siteCount }, { count: findCount }, totalCoins] = await Promise.all([
+    supabase.from('v_coin_map_sites').select('*', { count: 'exact', head: true }),
+    supabase.from('finds').select('*', { count: 'exact', head: true }),
+    sumTotalQuantityForMap(),
+  ])
 
   return {
     siteCount: siteCount ?? 0,
@@ -183,24 +219,32 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   const coinTypeCodes = mintedCoinTypes.map((row) => row.coin_type_code).filter(Boolean)
   if (coinTypeCodes.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
 
-  const { data: finds, error: findError } = await supabase
-    .from('finds')
-    .select('find_code, context_code, coin_type_code')
-    .in('coin_type_code', coinTypeCodes)
-
-  if (findError) throw findError
-  if (!finds || finds.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
+  const finds = await fetchAllPages<{
+    find_code: string
+    context_code: string
+    coin_type_code: string | null
+  }>((from, to) =>
+    supabase
+      .from('finds')
+      .select('find_code, context_code, coin_type_code')
+      .in('coin_type_code', coinTypeCodes)
+      .order('find_code')
+      .range(from, to)
+  )
+  if (finds.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
 
   const contextCodes = [...new Set(finds.map((f) => f.context_code).filter(Boolean))]
-  const { data: contexts, error: contextError } = await supabase
-    .from('contexts')
-    .select('context_code, site_code')
-    .in('context_code', contextCodes)
-
-  if (contextError) throw contextError
+  const contexts = await fetchAllPages<{ context_code: string; site_code: string }>((from, to) =>
+    supabase
+      .from('contexts')
+      .select('context_code, site_code')
+      .in('context_code', contextCodes)
+      .order('context_code')
+      .range(from, to)
+  )
 
   const contextToSite = new Map<string, string>()
-  ;(contexts ?? []).forEach((ctx) => contextToSite.set(ctx.context_code, ctx.site_code))
+  contexts.forEach((ctx) => contextToSite.set(ctx.context_code, ctx.site_code))
 
   const siteCodeSet = new Set<string>()
   const siteTypeSetMap = new Map<string, Set<string>>()
@@ -232,14 +276,16 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   const siteCodes = [...siteCodeSet]
   if (siteCodes.length === 0) return { sites: [], typeOptions: [], siteTypeKeys: {} }
 
-  const { data: sites, error: siteError } = await supabase
-    .from('v_coin_map_sites')
-    .select(MAP_SITE_FIELDS)
-    .in('site_code', siteCodes)
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
-
-  if (siteError) throw siteError
+  const sites = await fetchAllPages<MapSite>((from, to) =>
+    supabase
+      .from('v_coin_map_sites')
+      .select(MAP_SITE_FIELDS)
+      .in('site_code', siteCodes)
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .order('site_code')
+      .range(from, to)
+  )
 
   const siteTypeKeys: Record<string, string[]> = {}
   siteTypeSetMap.forEach((set, siteCode) => {
@@ -253,5 +299,5 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
     })
     .sort((a, b) => b.siteCount - a.siteCount || a.label.localeCompare(b.label, 'zh-CN'))
 
-  return { sites: sites ?? [], typeOptions, siteTypeKeys }
+  return { sites, typeOptions, siteTypeKeys }
 }
