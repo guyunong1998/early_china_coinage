@@ -137,7 +137,15 @@ type RenderGroup = {
  * the coin type, the outer ring subdivides each type by inscription (shaded
  * with tints of the parent type's color).
  */
-export function CoinTypePieChart({ data, size = 150 }: { data: PieGroup[]; size?: number }) {
+export function CoinTypePieChart({
+  data,
+  size = 150,
+  showLegend = true,
+}: {
+  data: PieGroup[]
+  size?: number
+  showLegend?: boolean
+}) {
   const total = data.reduce((sum, d) => sum + d.value, 0)
   if (total <= 0) return null
 
@@ -210,6 +218,7 @@ export function CoinTypePieChart({ data, size = 150 }: { data: PieGroup[]; size?
         )}
       </svg>
 
+      {showLegend && (
       <ul className="min-w-[180px] space-y-1.5 text-xs">
         {groups.map((g) => (
           <li key={g.label}>
@@ -256,6 +265,7 @@ export function CoinTypePieChart({ data, size = 150 }: { data: PieGroup[]; size?
           </li>
         ))}
       </ul>
+      )}
     </div>
   )
 }

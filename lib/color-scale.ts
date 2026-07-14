@@ -12,15 +12,17 @@ const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: re
 export const NO_DATA_COLOR = '#c5c5c5'
 export const NO_DATA_ALPHA = 0.18
 
-// Type is present in a context but quantities cannot be computed — solid-ish
-// gray translucent, clearly darker/more opaque than NO_DATA.
-export const PRESENT_UNQUANTIFIED_COLOR = 'rgba(120, 120, 120, 0.55)'
+// Type is present in a context but quantities cannot be computed — full
+// opacity so it doesn't read as "less certain" than quantified sites.
+export const PRESENT_UNQUANTIFIED_COLOR = '#9caa4a'
 
-// Context (or site) is entirely the selected type.
-export const PURE_MATCH_COLOR = '#a01515'
+// The site's only recorded coin (total quantity across all types = 1) is the
+// selected type — distinct from a large site that merely happens to be 100%
+// one type, which is a much less notable pattern.
+export const SINGLE_FIND_COLOR = '#7b3fa0'
 
-// Legacy aliases kept for older heatmap UI bits.
-export const ONE_OF_ONE_COLOR = PURE_MATCH_COLOR
+// Legacy alias kept for older heatmap UI bits.
+export const ONE_OF_ONE_COLOR = SINGLE_FIND_COLOR
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t

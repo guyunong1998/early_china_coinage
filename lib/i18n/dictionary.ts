@@ -120,6 +120,13 @@ export const DICTIONARY = {
   'filters.mint.title': { en: 'Mint', zh: '铸地' },
   'filters.apply': { en: 'Apply Filters', zh: '应用筛选' },
   'filters.searchPlaceholder': { en: 'Search…', zh: '搜索…' },
+  'filters.matchMode': { en: 'Match', zh: '匹配方式' },
+  'filters.mode.any': { en: 'Any', zh: '任一' },
+  'filters.mode.all': { en: 'All', zh: '全部' },
+  'search.sortBy': { en: 'Sort by', zh: '排序方式' },
+  'search.sort.name': { en: 'Name (A–Z)', zh: '名称（A–Z）' },
+  'search.sort.quantity': { en: 'Quantity (high–low)', zh: '数量（从高到低）' },
+  'search.sort.province': { en: 'Province (A–Z)', zh: '省份（A–Z）' },
 
   // ── pagination ────────────────────────────────────────────────────────
   'pagination.prev': { en: '‹ Prev', zh: '‹ 上一页' },
@@ -229,6 +236,11 @@ export const DICTIONARY = {
   'map.popup.pureMint': {
     en: 'Selected mint makes up entire context(s) at this site',
     zh: '该遗址相关出土单位内均为所选铸地',
+  },
+  'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
+  'map.popup.singleFind': {
+    en: 'This is the only recorded coin at this site',
+    zh: '该遗址仅有的一枚钱币记录',
   },
   'map.filter.l1': { en: '1 · Major category', zh: '1 · 大类' },
   'map.filter.l2': { en: '2 · Subcategory', zh: '2 · 中类' },

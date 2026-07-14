@@ -51,8 +51,8 @@ export default async function MintsPage() {
       )}
 
       {/* Overview map */}
-      <div className="mt-6 overflow-hidden border border-brand/20 bg-white shadow-sm">
-        <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+      <div className="panel mt-6 overflow-hidden">
+        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mints.overview" />
         </div>
         <MintsOverviewMap mints={mints} />

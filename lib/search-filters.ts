@@ -8,11 +8,17 @@ import type { SearchSite } from '@/lib/queries'
 
 export type { PrecisionFilter } from '@/lib/city-boundaries'
 
+/** 'any' = site matches if it has at least one selected value (OR); 'all' = must have every selected value (AND). */
+export type FacetMode = 'any' | 'all'
+
 export type FilterState = {
   precision: PrecisionFilter
   mints: string[]
+  mintsMode: FacetMode
   coinTypes: string[]
+  coinTypesMode: FacetMode
   states: string[]
+  statesMode: FacetMode
   regions: string[]
   periods: string[]
   siteTypes: string[]
@@ -20,6 +26,35 @@ export type FilterState = {
   maxQty: number | null
   onlySingle: boolean
   excludeSingle: boolean
+}
+
+export type SortOption = 'name' | 'quantity' | 'province'
+
+export function parseFacetMode(value: string | undefined): FacetMode {
+  return value === 'all' ? 'all' : 'any'
+}
+
+export function parseSortOption(value: string | undefined): SortOption {
+  return value === 'quantity' || value === 'province' ? value : 'name'
+}
+
+export function sortSites<T extends Pick<SearchSite, 'site_name_zh' | 'province_zh' | 'total_quantity_for_map'>>(
+  sites: T[],
+  sort: SortOption
+): T[] {
+  const sorted = [...sites]
+  switch (sort) {
+    case 'quantity':
+      sorted.sort((a, b) => (b.total_quantity_for_map ?? 0) - (a.total_quantity_for_map ?? 0))
+      break
+    case 'province':
+      sorted.sort((a, b) => (a.province_zh ?? '').localeCompare(b.province_zh ?? '', 'zh'))
+      break
+    case 'name':
+    default:
+      sorted.sort((a, b) => (a.site_name_zh ?? '').localeCompare(b.site_name_zh ?? '', 'zh'))
+  }
+  return sorted
 }
 
 export type FacetCategory =
@@ -51,21 +86,20 @@ export function siteCoinTypeValues(site: SearchSite): string[] {
   return [...splitCsv(site.major_types_zh), ...splitCsv(site.minor_types_zh), ...splitCsv(site.inscriptions)]
 }
 
+/** 'any' = at least one selected value present (OR); 'all' = every selected value present (AND). */
+function matchesFacet(values: string[], selected: string[], mode: FacetMode): boolean {
+  if (selected.length === 0) return true
+  return mode === 'all' ? selected.every((v) => values.includes(v)) : selected.some((v) => values.includes(v))
+}
+
 export function siteMatchesFilters(site: SearchSite, f: FilterState, skip?: FacetCategory): boolean {
   if (skip !== 'precision') {
     if (!siteMatchesPrecisionFilter(site, f.precision)) return false
   }
 
-  if (skip !== 'mint' && f.mints.length > 0) {
-    if (!f.mints.some((v) => splitCsv(site.mints_zh).includes(v))) return false
-  }
-  if (skip !== 'coinType' && f.coinTypes.length > 0) {
-    const values = siteCoinTypeValues(site)
-    if (!f.coinTypes.some((v) => values.includes(v))) return false
-  }
-  if (skip !== 'state' && f.states.length > 0) {
-    if (!f.states.some((v) => splitCsv(site.states_zh).includes(v))) return false
-  }
+  if (skip !== 'mint' && !matchesFacet(splitCsv(site.mints_zh), f.mints, f.mintsMode)) return false
+  if (skip !== 'coinType' && !matchesFacet(siteCoinTypeValues(site), f.coinTypes, f.coinTypesMode)) return false
+  if (skip !== 'state' && !matchesFacet(splitCsv(site.states_zh), f.states, f.statesMode)) return false
   if (skip !== 'region' && f.regions.length > 0) {
     const labels = getRegionLabels(site)
     if (!f.regions.some((r) => labels.includes(r))) return false

@@ -46,8 +46,8 @@ export default async function MintDetailPage({ params }: PageProps) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: Location card */}
-        <section className="overflow-hidden border border-brand bg-white">
-          <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+        <section className="panel overflow-hidden">
+          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             <T k="mintDetail.location" />
           </div>
           <div className="p-4">
@@ -82,8 +82,8 @@ export default async function MintDetailPage({ params }: PageProps) {
         </section>
 
         {/* Right: Information card */}
-        <section className="overflow-hidden border border-brand bg-white">
-          <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+        <section className="panel overflow-hidden">
+          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             <T k="mintDetail.information" />
           </div>
           <div className="p-4">
@@ -105,8 +105,8 @@ export default async function MintDetailPage({ params }: PageProps) {
       </div>
 
       {/* Description — dossier takes priority; falls back to mint.description_en */}
-      <section className="mt-6 overflow-hidden border border-brand bg-white">
-        <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+      <section className="panel mt-6 overflow-hidden">
+        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mintDetail.description" />
         </div>
         <div className="space-y-3 p-5">
@@ -147,8 +147,8 @@ export default async function MintDetailPage({ params }: PageProps) {
       </section>
 
       {/* Mint + issued-coin findspot distribution */}
-      <section className="mt-6 overflow-hidden border border-brand bg-white">
-        <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+      <section className="panel mt-6 overflow-hidden">
+        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           Issued Coin Distribution
         </div>
         <div className="p-5">
@@ -179,8 +179,8 @@ export default async function MintDetailPage({ params }: PageProps) {
 
       {/* Maps & Images */}
       {mint.images && mint.images.length > 0 && (
-        <section className="mt-6 overflow-hidden border border-brand bg-white">
-          <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+        <section className="panel mt-6 overflow-hidden">
+          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             <T k="mintDetail.mapsImages" />
           </div>
           <div className="p-5">
@@ -198,8 +198,8 @@ export default async function MintDetailPage({ params }: PageProps) {
         const dossierRefs = dossier?.references ?? []
         const hasAny = mintRefs.length > 0 || dossierRefs.length > 0
         return (
-          <section className="mt-6 overflow-hidden border border-brand bg-white">
-            <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+          <section className="panel mt-6 overflow-hidden">
+            <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
               <T k="mintDetail.references" />
             </div>
             <div className="p-5">

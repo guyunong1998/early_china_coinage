@@ -3,7 +3,7 @@ import { SearchableCheckboxList } from '@/components/search/SearchableCheckboxLi
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import type { FacetOption } from '@/lib/search-filters'
+import type { FacetMode, FacetOption } from '@/lib/search-filters'
 
 const SEARCH_THRESHOLD = 15
 
@@ -16,6 +16,12 @@ type SelectedState = {
   siteTypes: string[]
 }
 
+type ModesState = {
+  mints: FacetMode
+  coinTypes: FacetMode
+  states: FacetMode
+}
+
 export function SearchFilters({
   mintOptions,
   coinTypeOptions,
@@ -24,6 +30,7 @@ export function SearchFilters({
   periodOptions,
   siteTypeOptions,
   selected,
+  modes,
   minQty,
   maxQty,
   onlySingle,
@@ -36,13 +43,14 @@ export function SearchFilters({
   periodOptions: FacetOption[]
   siteTypeOptions: FacetOption[]
   selected: SelectedState
+  modes: ModesState
   minQty: number | null
   maxQty: number | null
   onlySingle: boolean
   excludeSingle: boolean
 }) {
   return (
-    <div className="divide-y divide-brand/10 border border-brand/20 bg-white">
+    <div className="panel divide-y divide-brand/10">
       <FacetGroup titleKey="filters.quantity.title">
         <div className="flex items-center gap-2">
           <TranslatedInput
@@ -78,9 +86,25 @@ export function SearchFilters({
         name="coinType"
         options={coinTypeOptions}
         selected={selected.coinTypes}
+        mode={modes.coinTypes}
+        modeName="coinTypeMode"
       />
-      <CheckboxFacetGroup titleKey="filters.state.title" name="state" options={stateOptions} selected={selected.states} />
-      <CheckboxFacetGroup titleKey="filters.mint.title" name="mint" options={mintOptions} selected={selected.mints} />
+      <CheckboxFacetGroup
+        titleKey="filters.state.title"
+        name="state"
+        options={stateOptions}
+        selected={selected.states}
+        mode={modes.states}
+        modeName="stateMode"
+      />
+      <CheckboxFacetGroup
+        titleKey="filters.mint.title"
+        name="mint"
+        options={mintOptions}
+        selected={selected.mints}
+        mode={modes.mints}
+        modeName="mintMode"
+      />
 
       <div className="p-4">
         <button
@@ -126,11 +150,15 @@ function CheckboxFacetGroup({
   name,
   options,
   selected,
+  mode,
+  modeName,
 }: {
   titleKey: DictionaryKey
   name: string
   options: FacetOption[]
   selected: string[]
+  mode?: FacetMode
+  modeName?: string
 }) {
   if (options.length === 0) return null
 
@@ -140,6 +168,33 @@ function CheckboxFacetGroup({
         <T k={titleKey} /> ({options.length})
       </summary>
       <div className="mt-3">
+        {mode && modeName && (
+          <div className="mb-2 flex items-center gap-3 text-[11px] text-gray-500">
+            <span className="font-semibold uppercase tracking-wide">
+              <T k="filters.matchMode" />
+            </span>
+            <label className="flex items-center gap-1 normal-case">
+              <input
+                type="radio"
+                name={modeName}
+                value="any"
+                defaultChecked={mode !== 'all'}
+                className="accent-brand"
+              />
+              <T k="filters.mode.any" />
+            </label>
+            <label className="flex items-center gap-1 normal-case">
+              <input
+                type="radio"
+                name={modeName}
+                value="all"
+                defaultChecked={mode === 'all'}
+                className="accent-brand"
+              />
+              <T k="filters.mode.all" />
+            </label>
+          </div>
+        )}
         {options.length > SEARCH_THRESHOLD ? (
           <SearchableCheckboxList name={name} options={options} selected={selected} />
         ) : (

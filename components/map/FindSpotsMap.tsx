@@ -10,8 +10,8 @@ import {
   NO_DATA_ALPHA,
   NO_DATA_COLOR,
   PRESENT_UNQUANTIFIED_COLOR,
-  PURE_MATCH_COLOR,
   RAMP_LEGEND_STOPS,
+  SINGLE_FIND_COLOR,
   hexToRgba,
   ratioToColor,
 } from '@/lib/color-scale'
@@ -39,6 +39,22 @@ import type { CoinType, HeatmapFind, MapSite } from '@/lib/types'
 type FilterMode = 'type' | 'mint'
 type ViewMode = 'points' | 'density'
 
+/**
+ * Presentation-layer state: `pure` (from context-heatmap.ts) only means "every
+ * find in this context/site matches" — it says nothing about how many coins
+ * that is. A site whose *only* recorded coin (across all types) matches the
+ * filter is a much more notable "single find" and gets its own color; a
+ * larger all-match site just renders like any other 100%-ratio site.
+ */
+type DisplayState = SiteHeatState | { kind: 'single-find' }
+
+function toDisplayState(state: SiteHeatState, site: MapSite | undefined): DisplayState {
+  if (state.kind === 'pure' && site?.total_quantity_for_map === 1) {
+    return { kind: 'single-find' }
+  }
+  return state
+}
+
 const DENSITY_GRADIENT: Record<number, string> = {
   0.15: '#f0d56a',
   0.4: '#e39a2b',
@@ -48,7 +64,7 @@ const DENSITY_GRADIENT: Record<number, string> = {
 }
 
 /** Intensity for leaflet.heat; null = omit from the density mass. */
-function heatIntensity(state: SiteHeatState, site: MapSite): number | null {
+function heatIntensity(state: DisplayState, site: MapSite): number | null {
   switch (state.kind) {
     case 'no-filter': {
       const qty = site.total_quantity_for_map ?? 0
@@ -60,6 +76,7 @@ function heatIntensity(state: SiteHeatState, site: MapSite): number | null {
     case 'unquantified':
       return 0.4
     case 'pure':
+    case 'single-find':
       return 1
     case 'ratio':
       return Math.max(0.08, state.ratio)
@@ -122,7 +139,7 @@ function buildPopupHtml(site: MapSite, statusLine: string | null, t: TFunction):
   `
 }
 
-function stateColor(state: SiteHeatState): string {
+function stateColor(state: DisplayState): string {
   switch (state.kind) {
     case 'no-filter':
       return '#365727'
@@ -130,14 +147,16 @@ function stateColor(state: SiteHeatState): string {
       return hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
     case 'unquantified':
       return PRESENT_UNQUANTIFIED_COLOR
+    case 'single-find':
+      return SINGLE_FIND_COLOR
     case 'pure':
-      return PURE_MATCH_COLOR
+      return ratioToColor(1)
     case 'ratio':
       return ratioToColor(state.ratio)
   }
 }
 
-function stateSize(state: SiteHeatState): number {
+function stateSize(state: DisplayState): number {
   switch (state.kind) {
     case 'no-filter':
       return 12
@@ -145,14 +164,16 @@ function stateSize(state: SiteHeatState): number {
       return 9
     case 'unquantified':
       return 12
-    case 'pure':
+    case 'single-find':
       return 14
+    case 'pure':
+      return 16
     case 'ratio':
       return 11 + Math.round(state.ratio * 5)
   }
 }
 
-function statePopupLine(state: SiteHeatState, mode: FilterMode, t: TFunction): string | null {
+function statePopupLine(state: DisplayState, mode: FilterMode, t: TFunction): string | null {
   switch (state.kind) {
     case 'no-filter':
       return null
@@ -160,6 +181,8 @@ function statePopupLine(state: SiteHeatState, mode: FilterMode, t: TFunction): s
       return t('heatmap.popup.noRecord')
     case 'unquantified':
       return t('heatmap.popup.presentNoCount')
+    case 'single-find':
+      return t('map.popup.singleFind')
     case 'pure':
       return t(mode === 'mint' ? 'map.popup.pureMint' : 'map.popup.pureContext')
     case 'ratio':
@@ -234,8 +257,8 @@ export function FindSpotsMap({
     const points: [number, number, number][] = []
     sites.forEach((site) => {
       if (site.lat == null || site.lng == null) return
-      const state: SiteHeatState = siteStates?.get(site.site_code) ?? { kind: 'no-filter' }
-      const intensity = heatIntensity(state, site)
+      const rawState: SiteHeatState = siteStates?.get(site.site_code) ?? { kind: 'no-filter' }
+      const intensity = heatIntensity(toDisplayState(rawState, site), site)
       if (intensity == null) return
       points.push([site.lat, site.lng, intensity])
     })
@@ -261,8 +284,9 @@ export function FindSpotsMap({
       await import('leaflet.heat')
 
       markersRef.current.forEach((marker, code) => {
-        const state: SiteHeatState = siteStates?.get(code) ?? { kind: 'no-filter' }
         const site = sites.find((s) => s.site_code === code)
+        const rawState: SiteHeatState = siteStates?.get(code) ?? { kind: 'no-filter' }
+        const state = toDisplayState(rawState, site)
         const inDensity = viewMode === 'density'
         const color = inDensity
           ? state.kind === 'no-data'
@@ -281,29 +305,42 @@ export function FindSpotsMap({
         )
         marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
         marker.setZIndexOffset(
-          state.kind === 'no-data' ? -1000 : state.kind === 'pure' || state.kind === 'ratio' ? 500 : 0
+          state.kind === 'no-data'
+            ? -1000
+            : state.kind === 'pure' || state.kind === 'single-find' || state.kind === 'ratio'
+              ? 500
+              : 0
         )
 
         if (!site) return
         marker.setPopupContent(buildPopupHtml(site, statePopupLine(state, mode, t), t))
       })
 
-      if (viewMode === 'density') {
-        if (!heatLayerRef.current) {
-          heatLayerRef.current = L.heatLayer(densityLatLngs, {
-            radius: 32,
-            blur: 26,
-            maxZoom: 9,
-            max: 1,
-            minOpacity: 0.25,
-            gradient: DENSITY_GRADIENT,
-          }).addTo(map)
-        } else {
-          heatLayerRef.current.setLatLngs(densityLatLngs)
-          if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
+      try {
+        if (viewMode === 'density' && densityLatLngs.length > 0) {
+          if (!heatLayerRef.current) {
+            heatLayerRef.current = L.heatLayer(densityLatLngs, {
+              radius: 32,
+              blur: 26,
+              maxZoom: 9,
+              max: 1,
+              minOpacity: 0.25,
+              gradient: DENSITY_GRADIENT,
+            }).addTo(map)
+          } else {
+            heatLayerRef.current.setLatLngs(densityLatLngs)
+            if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
+          }
+        } else if (heatLayerRef.current) {
+          map.removeLayer(heatLayerRef.current)
+          heatLayerRef.current = null
         }
-      } else if (heatLayerRef.current) {
-        map.removeLayer(heatLayerRef.current)
+      } catch (err) {
+        // leaflet.heat is a legacy global-style plugin patched onto `L` above;
+        // fail soft (log + skip the overlay) rather than crash the whole map
+        // if that patching ever doesn't line up in a given environment.
+        console.error('Failed to render the density heat overlay:', err)
+        heatLayerRef.current = null
       }
     })
   }, [siteStates, sites, mode, t, viewMode, densityLatLngs])
@@ -567,9 +604,9 @@ export function FindSpotsMap({
                 <span className="flex items-center gap-1">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: PURE_MATCH_COLOR }}
+                    style={{ background: SINGLE_FIND_COLOR }}
                   />
-                  <T k={mode === 'mint' ? 'map.legend.pureMint' : 'map.legend.pure'} />
+                  <T k="map.legend.singleFind" />
                 </span>
                 <span className="flex items-center gap-1">
                   <span

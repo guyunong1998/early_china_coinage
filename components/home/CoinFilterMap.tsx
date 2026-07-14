@@ -272,7 +272,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
   const activeFilter = mode === 'type' ? tf.l1 : mintFilter
 
   return (
-    <div className="overflow-hidden border border-brand/20">
+    <div className="panel overflow-hidden">
       {/* ── filter panel ── */}
       <div className="border-b border-brand/20 bg-white px-4 py-3">
         {/* Mode tabs */}

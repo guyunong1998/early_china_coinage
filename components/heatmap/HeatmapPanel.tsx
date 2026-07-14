@@ -106,7 +106,7 @@ export function HeatmapPanel({ database, ansPointed, ansSquare }: HeatmapPanelPr
         )}
       </div>
 
-      <div className="overflow-hidden border border-brand/20 bg-white shadow-sm">
+      <div className="panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
           <span>Mint Production Heatmap</span>
           {source === 'ans' && (

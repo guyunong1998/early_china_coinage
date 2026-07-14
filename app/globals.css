@@ -128,13 +128,11 @@ a {
   background: var(--paper);
   border: 5px dotted var(--brand);
   /* box-shadow: var(--shadow); */
-  /* transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; */
 }
 
-.panel:hover {
+.panel.group:hover {
   border: 3px solid var(--brand);
   /* box-shadow: 0 4px 16px rgba(35, 34, 32, 0.09); */
-  /* transform: translateY(-1px); */
 }
 
 /* The label bar at the top of a panel (see DataCard.tsx) — a quiet tinted
@@ -207,6 +205,7 @@ button:not(:disabled):hover {
    ============================================================================ */
 .leaflet-container {
   font-family: inherit;
+  /* border: 3px solid var(--brand); */
 }
 
 .marker-cluster-small,
@@ -221,14 +220,4 @@ button:not(:disabled):hover {
   background-color: color-mix(in srgb, var(--brand) 85%, transparent);
   color: white;
   font-weight: 700;
-}
-
-.search-input {
-  background: var(--paper);
-  border: 6px double;
-}
-.search-button {
-    background: var(--paper);
-    border: 6px double;
-    color: var(--brand-dark);
 }

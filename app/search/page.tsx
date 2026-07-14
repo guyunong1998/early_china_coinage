@@ -2,18 +2,24 @@ import Link from 'next/link'
 import { DataCard } from '@/components/ui/DataCard'
 import { Pagination } from '@/components/ui/Pagination'
 import { SearchFilters } from '@/components/search/SearchFilters'
+import { SortSelect } from '@/components/search/SortSelect'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
+import { CoinTypePieChart, type PieGroup } from '@/components/site/CoinTypePieChart'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
 import { displayValue, formatNumber, splitCsv } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
-import { getAllSites, getCoinTypes, searchSites } from '@/lib/queries'
+import { getAllSites, getCoinTypes, getFindsForHeatmap, searchSites } from '@/lib/queries'
+import type { HeatmapFind } from '@/lib/types'
 import {
   buildFacetOptions,
   getRegionLabels,
+  parseFacetMode,
+  parseSortOption,
   siteCoinTypeValues,
   siteMatchesFilters,
+  sortSites,
   withEnglish,
   type FilterState,
   type PrecisionFilter,
@@ -50,8 +56,11 @@ type PageProps = {
     q?: string
     precision?: string
     mint?: string | string[]
+    mintMode?: string
     coinType?: string | string[]
+    coinTypeMode?: string
     state?: string | string[]
+    stateMode?: string
     region?: string | string[]
     period?: string | string[]
     siteType?: string | string[]
@@ -59,6 +68,7 @@ type PageProps = {
     maxQty?: string
     onlySingle?: string
     excludeSingle?: string
+    sort?: string
     page?: string
   }>
 }
@@ -76,8 +86,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const filters: FilterState = {
     precision,
     mints: toArray(params.mint),
+    mintsMode: parseFacetMode(params.mintMode),
     coinTypes: toArray(params.coinType),
+    coinTypesMode: parseFacetMode(params.coinTypeMode),
     states: toArray(params.state),
+    statesMode: parseFacetMode(params.stateMode),
     regions: toArray(params.region),
     periods: toArray(params.period),
     siteTypes: toArray(params.siteType),
@@ -86,12 +99,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
     onlySingle: params.onlySingle === '1',
     excludeSingle: params.excludeSingle === '1',
   }
+  const sort = parseSortOption(params.sort)
 
   const currentPage = Math.max(1, Number(params.page) || 1)
 
-  const [baseResults, coinTypes] = await Promise.all([
+  const [baseResults, coinTypes, allFinds] = await Promise.all([
     q ? searchSites(q) : getAllSites(),
     getCoinTypes(),
+    getFindsForHeatmap(),
   ])
 
   // English lookups so filter items can show both languages regardless of
@@ -126,7 +141,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const precisionScoped = baseResults.filter((site) => siteMatchesFilters(site, filters, 'precision'))
   const counts = countSitesByPrecision(precisionScoped)
 
-  const filtered = baseResults.filter((site) => siteMatchesFilters(site, filters))
+  const filtered = sortSites(
+    baseResults.filter((site) => siteMatchesFilters(site, filters)),
+    sort
+  )
 
   const mintOptions = withEnglish(
     buildFacetOptions(baseResults, filters, 'mint', (s) => splitCsv(s.mints_zh), filters.mints),
@@ -163,6 +181,37 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const page = Math.min(currentPage, totalPages)
   const pageResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  // Simplified per-site pie data (major coin type only, no inscription
+  // breakdown) for the visible page — cheap since it's just an in-memory
+  // group-by over the already-fetched finds, scoped to the 20 visible sites.
+  const majorTypeByCode = new Map<string, { zh: string; en: string | null }>()
+  coinTypes.forEach((c) => {
+    if (c.major_type_zh) majorTypeByCode.set(c.coin_type_code, { zh: c.major_type_zh, en: c.major_type_en })
+  })
+  const visibleCodes = new Set(pageResults.map((s) => s.site_code))
+  const findsBySite = new Map<string, HeatmapFind[]>()
+  allFinds.forEach((f) => {
+    if (!visibleCodes.has(f.site_code)) return
+    const list = findsBySite.get(f.site_code) ?? []
+    list.push(f)
+    findsBySite.set(f.site_code, list)
+  })
+
+  function buildSitePie(siteCode: string): PieGroup[] {
+    const finds = findsBySite.get(siteCode) ?? []
+    const totals = new Map<string, { label: string; labelEn?: string | null; value: number }>()
+    finds.forEach((f) => {
+      const qty = f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? (f.presence ? 1 : null)
+      if (qty == null || qty <= 0) return
+      const info = f.coin_type_code ? majorTypeByCode.get(f.coin_type_code) : undefined
+      const label = info?.zh ?? '未知'
+      const existing = totals.get(label)
+      if (existing) existing.value += qty
+      else totals.set(label, { label, labelEn: info?.en, value: qty })
+    })
+    return [...totals.values()].map((g) => ({ ...g, children: [] }))
+  }
+
   const precisionTabs: Array<{ id: PrecisionFilter; key: DictionaryKey; count: number }> = [
     { id: 'all', key: 'map.precision.all', count: counts.all },
     { id: 'site', key: 'map.precision.site', count: counts.site },
@@ -174,8 +223,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
     const p = new URLSearchParams()
     if (q) p.set('q', q)
     filters.mints.forEach((v) => p.append('mint', v))
+    if (filters.mintsMode !== 'any') p.set('mintMode', filters.mintsMode)
     filters.coinTypes.forEach((v) => p.append('coinType', v))
+    if (filters.coinTypesMode !== 'any') p.set('coinTypeMode', filters.coinTypesMode)
     filters.states.forEach((v) => p.append('state', v))
+    if (filters.statesMode !== 'any') p.set('stateMode', filters.statesMode)
     filters.regions.forEach((v) => p.append('region', v))
     filters.periods.forEach((v) => p.append('period', v))
     filters.siteTypes.forEach((v) => p.append('siteType', v))
@@ -184,6 +236,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     if (filters.onlySingle) p.set('onlySingle', '1')
     if (filters.excludeSingle) p.set('excludeSingle', '1')
     if (filters.precision !== 'all') p.set('precision', filters.precision)
+    if (sort !== 'name') p.set('sort', sort)
     Object.entries(overrides).forEach(([key, value]) => {
       if (value === undefined) p.delete(key)
       else p.set(key, value)
@@ -265,6 +318,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 periods: filters.periods,
                 siteTypes: filters.siteTypes,
               }}
+              modes={{
+                mints: filters.mintsMode,
+                coinTypes: filters.coinTypesMode,
+                states: filters.statesMode,
+              }}
               minQty={filters.minQty}
               maxQty={filters.maxQty}
               onlySingle={filters.onlySingle}
@@ -273,8 +331,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <div className="mb-6 overflow-hidden border border-brand/20">
+            <div className="panel mb-6 overflow-hidden">
               <CoinMapSection sites={filtered} height="360px" fitBounds />
+            </div>
+
+            <div className="mb-3 flex items-center justify-end">
+              <SortSelect value={sort} />
             </div>
 
             <div className="space-y-4">
@@ -283,40 +345,58 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 const provinceEn = toEnglishName(site.province_zh, site.province_en)
                 const cityEn = toEnglishName(site.city_zh, site.city_en)
                 const countyEn = toEnglishName(site.county_zh, site.county_en)
+                const pieData = buildSitePie(site.site_code)
 
                 return (
-                  <DataCard key={site.site_code} title={site.site_code}>
-                    <div className="space-y-1 text-sm leading-6 text-gray-800">
-                      <p>
-                        <span className="font-semibold">Site name / 遗址：</span>
-                        <Link href={`/sites/${site.site_code}`} className="text-brand hover:underline">
+                  <DataCard
+                    key={site.site_code}
+                    title={
+                      <span className="flex flex-wrap items-baseline gap-x-2">
+                        <Link href={`/sites/${site.site_code}`} className="hover:underline">
                           {displayValue(site.site_name_zh)}
                         </Link>
-                        {nameEn && <span className="ml-2 italic text-gray-400">{nameEn}</span>}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Province / 省：</span>
-                        {displayValue(site.province_zh)}
-                        {provinceEn && <span className="text-gray-400"> ({provinceEn})</span>}
-                      </p>
-                      <p>
-                        <span className="font-semibold">City / 市：</span>
-                        {displayValue(site.city_zh)}
-                        {cityEn && <span className="text-gray-400"> ({cityEn})</span>}
-                      </p>
-                      <p>
-                        <span className="font-semibold">County / 县：</span>
-                        {displayValue(site.county_zh)}
-                        {countyEn && <span className="text-gray-400"> ({countyEn})</span>}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Coin type / 币类：</span>
-                        {formatCoinTypeBilingual(site.major_types_zh)}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Quantity / 数量：</span>
-                        {formatNumber(site.total_quantity_for_map)}
-                      </p>
+                        {nameEn && (
+                          <span className="text-xs font-normal normal-case italic tracking-normal opacity-70">
+                            {nameEn}
+                          </span>
+                        )}
+                        <span className="text-xs font-normal normal-case tracking-normal opacity-50">
+                          {site.site_code}
+                        </span>
+                      </span>
+                    }
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="min-w-[200px] flex-1 space-y-1 text-sm leading-6 text-gray-800">
+                        <p>
+                          <span className="font-semibold">Province / 省：</span>
+                          {displayValue(site.province_zh)}
+                          {provinceEn && <span className="text-gray-400"> ({provinceEn})</span>}
+                        </p>
+                        <p>
+                          <span className="font-semibold">City / 市：</span>
+                          {displayValue(site.city_zh)}
+                          {cityEn && <span className="text-gray-400"> ({cityEn})</span>}
+                        </p>
+                        <p>
+                          <span className="font-semibold">County / 县：</span>
+                          {displayValue(site.county_zh)}
+                          {countyEn && <span className="text-gray-400"> ({countyEn})</span>}
+                        </p>
+                        <p>
+                          <span className="font-semibold">Coin type / 币类：</span>
+                          {formatCoinTypeBilingual(site.major_types_zh)}
+                        </p>
+                        <p>
+                          <span className="font-semibold">Quantity / 数量：</span>
+                          {formatNumber(site.total_quantity_for_map)}
+                        </p>
+                      </div>
+                      {pieData.length > 0 && (
+                        <div className="shrink-0">
+                          <CoinTypePieChart data={pieData} size={64} showLegend={false} />
+                        </div>
+                      )}
                     </div>
                     <Link
                       href={`/sites/${site.site_code}`}
