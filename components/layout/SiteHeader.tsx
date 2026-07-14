@@ -4,7 +4,7 @@ import { LanguageToggle } from '@/components/i18n/LanguageToggle'
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-brand/20 bg-white shadow-sm">
+    <header className="site-header">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
         <Link href="/" className="group flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">

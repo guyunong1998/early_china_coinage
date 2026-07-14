@@ -20,7 +20,7 @@ export function CoinTypeCard({
     .join(' · ')
 
   return (
-    <div className="flex flex-col overflow-hidden border border-brand/20 bg-white">
+    <div className="panel flex flex-col overflow-hidden">
       <div className="border-b border-brand/10 px-4 py-3">
         <h3 className="font-semibold text-gray-900">{displayValue(title)}</h3>
         {titleEn && <p className="text-xs italic text-gray-500">{titleEn}</p>}

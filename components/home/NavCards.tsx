@@ -30,7 +30,7 @@ export function NavCards() {
         <Link
           key={card.href}
           href={card.href}
-          className="group flex flex-col border border-brand/25 bg-white px-5 py-4 shadow-sm transition hover:border-brand hover:shadow-md"
+          className="panel group flex flex-col px-5 py-4"
         >
           <span className="text-xl text-brand/50">{card.icon}</span>
           <h2 className="mt-2 font-serif text-sm font-semibold text-gray-900 group-hover:text-brand">

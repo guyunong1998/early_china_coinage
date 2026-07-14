@@ -13,15 +13,11 @@ export function SearchForm({ compact = false, defaultValue = '' }: SearchFormPro
         name="q"
         defaultValue={defaultValue}
         placeholderKey={compact ? 'search.placeholderCompact' : 'search.placeholder'}
-        className={`w-full border border-brand/30 bg-white px-3 text-sm text-gray-800 outline-none focus:border-brand ${
-          compact ? 'rounded-l py-2' : 'rounded-l py-3'
-        }`}
+        className={`search-input w-full px-3 text-sm text-gray-800 ${compact ? 'py-2' : 'py-3'}`}
       />
       <button
         type="submit"
-        className={`bg-brand px-4 font-semibold text-white hover:bg-brand-dark ${
-          compact ? 'rounded-r py-2 text-sm' : 'rounded-r py-3'
-        }`}
+        className={`search-button px-4 font-semibold ${compact ? 'py-2 text-sm' : 'py-3'}`}
       >
         →
       </button>

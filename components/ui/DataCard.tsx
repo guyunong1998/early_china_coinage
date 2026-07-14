@@ -9,8 +9,8 @@ type DataCardProps = {
 
 export function DataCard({ title, children, className = '', id }: DataCardProps) {
   return (
-    <section id={id} className={`overflow-hidden border border-brand bg-white ${className}`}>
-      <div className="inline-block bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
+    <section id={id} className={`panel overflow-hidden ${className}`}>
+      <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
         {title}
       </div>
       <div className="p-4">{children}</div>
