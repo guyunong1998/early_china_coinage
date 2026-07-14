@@ -192,9 +192,7 @@ export function CoinTypePieChart({ data, size = 150 }: { data: PieGroup[]; size?
             d={describeSlice(cx, cy, rMid, g.startAngle, clampSpan(g.startAngle, g.endAngle))}
             fill={g.color}
           >
-            <title>
-              {g.label}: {g.value} ({Math.round((g.value / total) * 100)}%)
-            </title>
+            <title>{`${g.label}: ${g.value} (${Math.round((g.value / total) * 100)}%)`}</title>
           </path>
         ))}
         {groups.flatMap((g) =>
@@ -206,9 +204,7 @@ export function CoinTypePieChart({ data, size = 150 }: { data: PieGroup[]; size?
               stroke="white"
               strokeWidth={0.5}
             >
-              <title>
-                {g.label} · {c.label}: {c.value} ({Math.round((c.value / total) * 100)}%)
-              </title>
+              <title>{`${g.label} · ${c.label}: ${c.value} (${Math.round((c.value / total) * 100)}%)`}</title>
             </path>
           ))
         )}
