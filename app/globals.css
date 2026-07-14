@@ -1,30 +1,210 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   EARLY CHINESE COIN FINDS — CLEAN CATALOGUE THEME
+   ----------------------------------------------------------------------------
+   This file is organized so the whole site's look can be tuned from the
+   handful of variables at the top of each section — you shouldn't need to
+   touch component files to restyle things. Sections:
+
+     1. TYPOGRAPHY    — which loaded font is used where
+     2. COLOR PALETTE — every color the site uses, named by role
+     3. BASE          — page background + default text
+     4. CARDS/PANELS  — the shared "card" look, used everywhere
+     5. BUTTONS       — shared hover treatment, applies to every <button>
+     6. NAV & SEARCH  — header bar + search input/button
+     7. MAP OVERRIDES — third-party Leaflet styling, retinted to match
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. TYPOGRAPHY
+   ----------------------------------------------------------------------------
+   Fonts are *loaded* in app/layout.tsx (next/font/google), which exposes each
+   one as a CSS variable (--font-geist-sans, --font-playfair, --font-spectral).
+   This file just decides which loaded variable is "sans" vs "serif" — so you
+   can swap the whole site's typography by editing the two lines below.
+
+   Clean-catalogue pairing: Geist Sans for body copy (crisp, modern, easy to
+   scan) with Spectral reserved for headings (the `font-serif` utility) — a
+   plain-sans / elegant-serif split is the classic museum-catalogue formula.
+   Playfair Display is also loaded if you want a more decorative heading font.
+   ============================================================================ */
 :root {
-  --background: #f4f6f6;
-  --foreground: #1f2933;
-  --brand: #006d71;
-  --brand-dark: #005458;
-  --brand-light: #e6f3f3;
-  --card-border: #006d71;
+  --font-sans: var(--font-geist-sans);  /* body text */
+  --font-serif: var(--font-spectral);   /* headings (the `font-serif` utility) */
 }
 
+
+/* ============================================================================
+   2. COLOR PALETTE — sage/teal primary, bronze used sparingly
+   ----------------------------------------------------------------------------
+   Every color on the site traces back to one of these variables. To retheme,
+   change values here — components use Tailwind utilities like `bg-brand` /
+   `text-accent` / `border-brand`, which read these through the @theme block
+   further down, so a single edit here cascades everywhere.
+
+   There is deliberately only ONE color doing heavy lifting (--brand, the
+   sage/teal). --accent (bronze) is a rare-use second accent — reach for it
+   for the occasional highlight, not for everyday buttons/links/borders.
+   ============================================================================ */
+:root {
+  /* --- Surfaces & text --- */
+  --background: #ffffff;   /* page background — flat white */
+  --paper: #ffffff;         /* card/item surface — a slightly cream tone against the white page */
+  --foreground: #232220;   /* near-black body text (a hair warm, not stark) */
+  --muted: #75705f;        /* secondary/muted text (dates, captions, meta) */
+
+  /* --- Primary accent: sage/teal green — the only color used broadly --- */
+  --brand: #365727;
+  --brand-dark: #23453f;
+  --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
+
+  /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
+     the default interactive color) --- */
+  --accent: #8a5a2b;
+  --accent-dark: #6b4520;
+  --accent-light: #efe0c3;
+
+  /* Shared shadow + radius so cards/inputs/buttons stay visually consistent */
+  --shadow: 0 1px 2px rgba(35, 34, 32, 0.04), 0 2px 8px rgba(35, 34, 32, 0.06);
+  --radius: 10px;
+
+  /* Card border color, split so hover can swap it (see section 4) */
+  --card-border: var(--brand);
+  --card-border-hover: var(--brand-light);
+}
+
+/* Hand this palette to Tailwind so `bg-brand`, `text-accent`, `border-paper`,
+   etc. are all available as utility classes across every component. */
 @theme inline {
   --color-background: var(--background);
+  --color-paper: var(--paper);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-light: var(--brand-light);
-  --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-playfair);
+
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-light: var(--accent-light);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
 }
 
+
+/* ============================================================================
+   3. BASE
+   ----------------------------------------------------------------------------
+   Flat white page. If you want the faint paper grain back, add a
+   `background-image: repeating-linear-gradient(...)` here.
+   ============================================================================ */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+a {
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+
+/* ============================================================================
+   4. CARDS / PANELS
+   ----------------------------------------------------------------------------
+   The `.panel` class is the site's one shared "card"/"item" look: a cream
+   surface, a thin quiet border, rounded corners, and a soft shadow that lifts
+   slightly on hover as the border shifts to the primary accent. It's applied
+   by components/ui/DataCard.tsx, so anything built on DataCard gets this for
+   free. Add `.panel` to any other bordered box to bring it into the same
+   style; tweak --paper / --card-border / --card-border-hover / --radius above
+   to retheme all of them at once.
+   ============================================================================ */
+.panel {
+  background: var(--paper);
+  border: 5px dotted var(--brand);
+  /* box-shadow: var(--shadow); */
+  /* transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; */
+}
+
+.panel:hover {
+  border: 3px solid var(--brand);
+  /* box-shadow: 0 4px 16px rgba(35, 34, 32, 0.09); */
+  /* transform: translateY(-1px); */
+}
+
+/* The label bar at the top of a panel (see DataCard.tsx) — a quiet tinted
+   strip rather than a bold color block, to keep the catalogue feel calm. */
+.panel-header {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+
+/* ============================================================================
+   5. BUTTONS
+   ----------------------------------------------------------------------------
+   One shared hover treatment for every <button> on the site — clean and
+   quiet (a soft accent-tinted background + slight lift), no per-component
+   work needed.
+   ============================================================================ */
+button:not(:disabled) {
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:not(:disabled):hover {
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+
+/* ============================================================================
+   6. NAV & SEARCH
+   ----------------------------------------------------------------------------
+   The header bar and the search input+button share a look defined here —
+   edit these instead of components/layout/SiteHeader.tsx or
+   components/ui/SearchForm.tsx to retheme either one.
+   ============================================================================ */
+.site-header {
+  background: var(--background);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.search-input {
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius) 0 0 var(--radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.search-button {
+  background: var(--brand);
+  color: var(--paper);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  transition: background-color 0.15s ease;
+}
+
+.search-button:hover {
+  background: var(--brand-dark);
+}
+
+
+/* ============================================================================
+   7. MAP OVERRIDES (Leaflet)
+   ----------------------------------------------------------------------------
+   Leaflet ships its own CSS; these overrides just retint its cluster bubbles
+   to match the palette above instead of leaving them in Leaflet's default blue.
+   ============================================================================ */
 .leaflet-container {
   font-family: inherit;
 }
@@ -32,13 +212,23 @@ body {
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  background-color: rgba(0, 109, 113, 0.25);
+  background-color: color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
 .marker-cluster-small div,
 .marker-cluster-medium div,
 .marker-cluster-large div {
-  background-color: rgba(0, 109, 113, 0.85);
+  background-color: color-mix(in srgb, var(--brand) 85%, transparent);
   color: white;
   font-weight: 700;
+}
+
+.search-input {
+  background: var(--paper);
+  border: 6px double;
+}
+.search-button {
+    background: var(--paper);
+    border: 6px double;
+    color: var(--brand-dark);
 }

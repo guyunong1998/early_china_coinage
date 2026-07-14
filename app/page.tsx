@@ -1,20 +1,20 @@
-import { DatabaseStatsBar } from '@/components/home/DatabaseStatsBar'
 import { HeroBanner } from '@/components/home/HeroBanner'
 import { NavCards } from '@/components/home/NavCards'
-import { getDatabaseStats } from '@/lib/queries'
+import { CoinFilterMap } from '@/components/home/CoinFilterMap'
+import { getMapSites } from '@/lib/queries'
 
 export default async function Home() {
-  const stats = await getDatabaseStats()
+  const sites = await getMapSites()
 
   return (
     <>
       <HeroBanner />
 
-      <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mx-auto max-w-5xl px-4 py-6">
         <NavCards />
 
-        <div className="mt-6">
-          <DatabaseStatsBar stats={stats} />
+        <div className="mt-4">
+          <CoinFilterMap sites={sites} />
         </div>
       </div>
     </>

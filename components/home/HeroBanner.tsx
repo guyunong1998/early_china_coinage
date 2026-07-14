@@ -1,10 +1,18 @@
 import { SearchForm } from '@/components/ui/SearchForm'
 import { T } from '@/components/i18n/T'
+import { getDatabaseStats } from '@/lib/queries'
+import { formatNumber } from '@/lib/format'
 
-export function HeroBanner() {
+export async function HeroBanner() {
+  const stats = await getDatabaseStats()
+  const statsVars = {
+    coins: formatNumber(stats.totalCoins),
+    sites: formatNumber(stats.siteCount),
+    finds: formatNumber(stats.findCount),
+  }
+
   return (
     <section className="relative overflow-hidden bg-brand text-white">
-      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(0,45,48,0.92),rgba(0,109,113,0.75)),url('/images/hero-coins.svg')] bg-cover bg-center" />
       <div className="relative mx-auto grid max-w-5xl gap-8 px-4 py-14">
         <div>
           <p className="mb-2 text-sm uppercase tracking-[0.25em] text-brand-light/90">
@@ -17,9 +25,12 @@ export function HeroBanner() {
             <T k="hero.description" />
           </p>
         </div>
-        <div className="rounded bg-white/95 px-5 py-4 shadow-lg">
+        <div className="px-5 py-4">
           <SearchForm />
         </div>
+        <p className="text-center text-sm text-white/90">
+          <T k={stats.findCount > 0 ? 'stats.summaryWithFinds' : 'stats.summary'} vars={statsVars} />
+        </p>
       </div>
     </section>
   )

@@ -230,12 +230,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
             name="q"
             defaultValue={q}
             placeholderKey="search.placeholder"
-            className="w-full rounded-l border border-brand/30 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand"
+            className="search-input w-full px-3 py-3 text-sm text-gray-800"
           />
-          <button
-            type="submit"
-            className="rounded-r bg-brand px-4 py-3 font-semibold text-white hover:bg-brand-dark"
-          >
+          <button type="submit" className="search-button px-4 py-3 font-semibold">
             →
           </button>
         </div>

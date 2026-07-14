@@ -51,7 +51,7 @@ export function MintListClient({ all }: { all: MintTown[] }) {
             <Link
               key={mint.mint_code}
               href={`/mints/${mint.mint_code}`}
-              className="group flex flex-col border border-brand/20 bg-white p-5 shadow-sm transition hover:border-brand hover:shadow-md"
+              className="panel group flex flex-col p-5"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
