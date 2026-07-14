@@ -1,7 +1,4 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 
 type SearchFormProps = {
   compact?: boolean
@@ -9,23 +6,13 @@ type SearchFormProps = {
 }
 
 export function SearchForm({ compact = false, defaultValue = '' }: SearchFormProps) {
-  const router = useRouter()
-  const [query, setQuery] = useState(defaultValue)
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    const trimmed = query.trim()
-    if (!trimmed) return
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`)
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="flex w-full gap-0">
-      <input
+    <form action="/search" method="get" className="flex w-full gap-0">
+      <TranslatedInput
         type="search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={compact ? 'Search sites…' : 'Search by site, province, type, inscription…'}
+        name="q"
+        defaultValue={defaultValue}
+        placeholderKey={compact ? 'search.placeholderCompact' : 'search.placeholder'}
         className={`w-full border border-brand/30 bg-white px-3 text-sm text-gray-800 outline-none focus:border-brand ${
           compact ? 'rounded-l py-2' : 'rounded-l py-3'
         }`}

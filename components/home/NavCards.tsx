@@ -1,22 +1,24 @@
 import Link from 'next/link'
+import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
-const cards = [
+const cards: { href: string; labelKey: DictionaryKey; descKey: DictionaryKey; icon: string }[] = [
   {
     href: '/mints',
-    label: 'Mint Town Location',
-    description: 'Geographic distribution of coin-producing centres',
+    labelKey: 'navcards.mints.label',
+    descKey: 'navcards.mints.desc',
     icon: '◎',
   },
   {
-    href: '/search',
-    label: 'Find Spots',
-    description: 'Browse and search all recorded find sites',
+    href: '/heatmap',
+    labelKey: 'navcards.heatmap.label',
+    descKey: 'navcards.heatmap.desc',
     icon: '⊕',
   },
   {
     href: '/about',
-    label: 'About',
-    description: 'Project scope, team, and collaborations',
+    labelKey: 'navcards.about.label',
+    descKey: 'navcards.about.desc',
     icon: '◈',
   },
 ]
@@ -32,9 +34,11 @@ export function NavCards() {
         >
           <span className="text-xl text-brand/50">{card.icon}</span>
           <h2 className="mt-2 font-serif text-sm font-semibold text-gray-900 group-hover:text-brand">
-            {card.label}
+            <T k={card.labelKey} />
           </h2>
-          <p className="mt-1 text-xs leading-4 text-gray-500">{card.description}</p>
+          <p className="mt-1 text-xs leading-4 text-gray-500">
+            <T k={card.descKey} />
+          </p>
           <span className="mt-3 text-xs text-brand opacity-0 transition group-hover:opacity-100">
             →
           </span>

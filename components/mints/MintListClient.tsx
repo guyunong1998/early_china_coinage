@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { searchMints } from '@/lib/mint-towns'
 import type { MintTown } from '@/lib/mint-towns'
 
@@ -20,6 +22,7 @@ function stateColor(state_en: string) {
 }
 
 export function MintListClient({ all }: { all: MintTown[] }) {
+  const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const results = query ? searchMints(query) : all
 
@@ -31,7 +34,7 @@ export function MintListClient({ all }: { all: MintTown[] }) {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, state, coin type…"
+          placeholder={t('mintList.searchPlaceholder')}
           className="w-full rounded-l border border-brand/30 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-brand"
         />
         <span className="flex items-center rounded-r border border-l-0 border-brand/30 bg-white px-3 text-gray-400 text-sm">
@@ -41,7 +44,7 @@ export function MintListClient({ all }: { all: MintTown[] }) {
 
       {/* Grid */}
       {results.length === 0 ? (
-        <p className="text-sm text-gray-500">No mint towns match &ldquo;{query}&rdquo;.</p>
+        <p className="text-sm text-gray-500">{t('mintList.noResults', { query })}</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((mint) => (
@@ -77,13 +80,13 @@ export function MintListClient({ all }: { all: MintTown[] }) {
                 ))}
                 {mint.description_en.length <= 60 && (
                   <span className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-400">
-                    In preparation
+                    <T k="mintList.inPreparation" />
                   </span>
                 )}
               </div>
 
               <span className="mt-4 text-xs text-brand opacity-0 transition group-hover:opacity-100">
-                View details →
+                <T k="mintList.viewDetails" />
               </span>
             </Link>
           ))}

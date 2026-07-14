@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 type DataCardProps = {
-  title: string
+  title: ReactNode
   children: ReactNode
   className?: string
   id?: string

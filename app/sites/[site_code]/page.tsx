@@ -4,6 +4,8 @@ import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
+import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { formatCoordinates, formatNumber } from '@/lib/format'
 import {
   getSite,
@@ -66,10 +68,12 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
 
 // ── row component ─────────────────────────────────────────────────────────
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ labelKey, children }: { labelKey: DictionaryKey; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[140px_1fr] gap-3 border-b border-gray-100 py-2 last:border-b-0">
-      <dt className="text-right text-sm font-semibold text-gray-700">{label}</dt>
+      <dt className="text-right text-sm font-semibold text-gray-700">
+        <T k={labelKey} />
+      </dt>
       <dd className="text-sm text-gray-800">{children}</dd>
     </div>
   )
@@ -124,7 +128,7 @@ export default async function SitePage({ params }: PageProps) {
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-4">
         <Link href="/" className="text-sm text-brand hover:underline">
-          ← Back to database
+          <T k="site.back" />
         </Link>
       </div>
 
@@ -150,13 +154,13 @@ export default async function SitePage({ params }: PageProps) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* ── Location ── */}
-        <DataCard title="Location">
+        <DataCard title={<T k="site.location.title" />}>
           <dl>
-            <Row label="Province">{bi(site.province_zh, site.province_en)}</Row>
-            <Row label="City">{bi(site.city_zh, site.city_en)}</Row>
-            <Row label="County">{bi(site.county_zh, site.county_en)}</Row>
-            <Row label="Lat / Long">{formatCoordinates(site.lat, site.lng)}</Row>
-            <Row label="Location details">
+            <Row labelKey="site.row.province">{bi(site.province_zh, site.province_en)}</Row>
+            <Row labelKey="site.row.city">{bi(site.city_zh, site.city_en)}</Row>
+            <Row labelKey="site.row.county">{bi(site.county_zh, site.county_en)}</Row>
+            <Row labelKey="site.row.latLong">{formatCoordinates(site.lat, site.lng)}</Row>
+            <Row labelKey="site.row.locationDetails">
               {biBlock(site.location_detail_zh, site.location_detail_en)}
             </Row>
           </dl>
@@ -173,21 +177,21 @@ export default async function SitePage({ params }: PageProps) {
         </DataCard>
 
         {/* ── Information ── */}
-        <DataCard title="Information">
+        <DataCard title={<T k="site.information.title" />}>
           <dl>
-            <Row label="ID">
+            <Row labelKey="site.row.id">
               <span className="font-mono text-xs">{site.site_code}</span>
             </Row>
-            <Row label="Permalink">
+            <Row labelKey="site.row.permalink">
               <span className="break-all text-xs">
                 {permalink}
                 <CopyButton value={permalink} />
               </span>
             </Row>
-            <Row label="Site type">{bi(site.site_type_zh ?? summary?.site_type_zh, site.site_type_en ?? summary?.site_type_en)}</Row>
-            <Row label="Period">{bi(site.period_zh, site.period_en)}</Row>
-            <Row label="Find records">{formatNumber(summary?.find_record_count ?? finds.length)}</Row>
-            <Row label="Total coins">{formatNumber(totalCoins)}</Row>
+            <Row labelKey="site.row.siteType">{bi(site.site_type_zh ?? summary?.site_type_zh, site.site_type_en ?? summary?.site_type_en)}</Row>
+            <Row labelKey="site.row.period">{bi(site.period_zh, site.period_en)}</Row>
+            <Row labelKey="site.row.findRecords">{formatNumber(summary?.find_record_count ?? finds.length)}</Row>
+            <Row labelKey="site.row.totalCoins">{formatNumber(totalCoins)}</Row>
           </dl>
 
           {/* Keep description area visible: prefer remark, fallback to description */}

@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
 import SinglePointMap from '@/components/map/SinglePointMap'
+import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getMintByCode } from '@/lib/mint-towns'
 
 type PageProps = {
@@ -28,7 +30,7 @@ export default async function MintDetailPage({ params }: PageProps) {
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="mb-4">
         <Link href="/mints" className="text-sm text-brand hover:underline">
-          ← Mint Town Locations
+          <T k="mintDetail.back" />
         </Link>
       </div>
 
@@ -36,14 +38,14 @@ export default async function MintDetailPage({ params }: PageProps) {
         {/* Left: Location card */}
         <section className="overflow-hidden border border-brand bg-white">
           <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-            Location
+            <T k="mintDetail.location" />
           </div>
           <div className="p-4">
             <dl>
-              <Row label="State" value={`${mint.state_zh} (${mint.state_en})`} />
-              <Row label="Modern location" value={mint.modern_location_en} />
+              <Row labelKey="mintDetail.row.state" value={`${mint.state_zh} (${mint.state_en})`} />
+              <Row labelKey="mintDetail.row.modernLocation" value={mint.modern_location_en} />
               <Row
-                label="Coordinates"
+                labelKey="mintDetail.row.coordinates"
                 value={`${mint.lat.toFixed(6)}, ${mint.lng.toFixed(6)}`}
               />
             </dl>
@@ -62,15 +64,15 @@ export default async function MintDetailPage({ params }: PageProps) {
         {/* Right: Information card */}
         <section className="overflow-hidden border border-brand bg-white">
           <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-            Information
+            <T k="mintDetail.information" />
           </div>
           <div className="p-4">
             <dl>
-              <Row label="Chinese name" value={mint.name_zh} />
-              <Row label="Romanisation" value={mint.name_en} />
-              <Row label="State" value={`${mint.state_en} (${mint.state_zh})`} />
+              <Row labelKey="mintDetail.row.chineseName" value={mint.name_zh} />
+              <Row labelKey="mintDetail.row.romanisation" value={mint.name_en} />
+              <Row labelKey="mintDetail.row.state" value={`${mint.state_en} (${mint.state_zh})`} />
               <Row
-                label="Coin types"
+                labelKey="mintDetail.row.coinTypes"
                 value={
                   mint.coin_types.length > 0
                     ? mint.coin_types.join(', ')
@@ -85,7 +87,7 @@ export default async function MintDetailPage({ params }: PageProps) {
       {/* Description */}
       <section className="mt-6 overflow-hidden border border-brand bg-white">
         <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-          Description
+          <T k="mintDetail.description" />
         </div>
         <div className="p-5">
           <p className="leading-7 text-gray-800">{mint.description_en}</p>
@@ -96,7 +98,7 @@ export default async function MintDetailPage({ params }: PageProps) {
       {mint.images && mint.images.length > 0 && (
         <section className="mt-6 overflow-hidden border border-brand bg-white">
           <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-            Maps &amp; Images
+            <T k="mintDetail.mapsImages" />
           </div>
           <div className="p-5">
             <MintImageGallery images={mint.images} />
@@ -110,11 +112,13 @@ export default async function MintDetailPage({ params }: PageProps) {
       {/* References */}
       <section className="mt-6 overflow-hidden border border-brand bg-white">
         <div className="bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-          References
+          <T k="mintDetail.references" />
         </div>
         <div className="p-5">
           {mint.references.length === 0 ? (
-            <p className="text-sm text-gray-500">No references recorded yet.</p>
+            <p className="text-sm text-gray-500">
+              <T k="mintDetail.noReferences" />
+            </p>
           ) : (
             <ol className="space-y-4">
               {mint.references.map((ref, i) => (
@@ -141,10 +145,12 @@ export default async function MintDetailPage({ params }: PageProps) {
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ labelKey, value }: { labelKey: DictionaryKey; value: string }) {
   return (
     <div className="grid grid-cols-[130px_1fr] gap-3 border-b border-gray-100 py-2 last:border-b-0">
-      <dt className="text-right text-sm font-semibold text-gray-700">{label}</dt>
+      <dt className="text-right text-sm font-semibold text-gray-700">
+        <T k={labelKey} />
+      </dt>
       <dd className="text-sm text-gray-800">{value}</dd>
     </div>
   )

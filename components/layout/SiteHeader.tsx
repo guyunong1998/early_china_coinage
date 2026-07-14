@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { SearchForm } from '@/components/ui/SearchForm'
+import { T } from '@/components/i18n/T'
+import { LanguageToggle } from '@/components/i18n/LanguageToggle'
 
 export function SiteHeader() {
   return (
@@ -17,20 +18,22 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 md:flex">
-          <Link href="/about" className="hover:text-brand">
-            About
-          </Link>
-          <Link href="/search" className="hover:text-brand">
-            Search
-          </Link>
-          <Link href="/map" className="hover:text-brand">
-            Map
-          </Link>
-        </nav>
-
-        <div className="hidden w-64 lg:block">
-          <SearchForm compact />
+        <div className="flex items-center gap-6">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 md:flex">
+            <Link href="/about" className="hover:text-brand">
+              <T k="nav.about" />
+            </Link>
+            <Link href="/search" className="hover:text-brand">
+              <T k="nav.search" />
+            </Link>
+            <Link href="/map" className="hover:text-brand">
+              <T k="nav.map" />
+            </Link>
+            <Link href="/heatmap" className="hover:text-brand">
+              <T k="nav.heatmap" />
+            </Link>
+          </nav>
+          <LanguageToggle />
         </div>
       </div>
     </header>
