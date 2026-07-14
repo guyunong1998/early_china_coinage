@@ -108,6 +108,8 @@ export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLea
   if (l4 || l3) return l3?.entries ?? []
   if (l2 && l2.children.length === 0) return l2.entries ?? []
   if (l2) return l2.children.flatMap((c) => c.entries ?? [])
+  // L1 leaf (e.g. Round Coin 圜钱): use entries attached on L1 if present
+  if (l1 && l1.children.length === 0) return l1.entries ?? []
   if (l1) {
     return (l1.children ?? []).flatMap((child) =>
       child.children.length === 0
@@ -116,6 +118,19 @@ export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLea
     )
   }
   return []
+}
+
+/**
+ * True when inscription filtering should be offered for the selection.
+ * L3/L4 always qualify (inscriptions live on L3). L1/L2 qualify only when
+ * they are leaves (no further type children) — e.g. Round Coin 圜钱.
+ */
+export function isTypologyLeafSelection(sel: TypologyFilterSelection): boolean {
+  const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
+  if (!l1) return false
+  if (l4 || l3) return true
+  if (l2) return (l2.children?.length ?? 0) === 0
+  return (l1.children?.length ?? 0) === 0
 }
 
 export function hasTypologyFilter(sel: TypologyFilterSelection): boolean {
@@ -224,9 +239,23 @@ export function getL4Options(sel: TypologyFilterSelection, lang: 'en' | 'zh') {
   }))
 }
 
-export function getInscriptionOptions(sel: TypologyFilterSelection) {
+export type InscriptionOption = {
+  zh: string
+  en: string
+  mint_zh: string | null
+}
+
+/**
+ * Inscription choices for the current typology selection.
+ * Falls back to DB coin_types when Typology.xlsx has no entries for this branch
+ * (e.g. Round Coin 圜钱 is an L1 leaf with no 国别判断 rows).
+ */
+export function getInscriptionOptions(
+  sel: TypologyFilterSelection,
+  coinTypes?: CoinType[]
+): InscriptionOption[] {
   const seen = new Set<string>()
-  return getInscriptionEntries(sel)
+  const fromTypology = getInscriptionEntries(sel)
     .filter((e) => e.inscription_zh)
     .filter((e) => {
       if (seen.has(e.inscription_zh!)) return false
@@ -238,6 +267,24 @@ export function getInscriptionOptions(sel: TypologyFilterSelection) {
       en: e.inscription_en ?? e.inscription_zh!,
       mint_zh: e.mint_zh,
     }))
+
+  if (fromTypology.length > 0 || !coinTypes?.length || !sel.l1) return fromTypology
+
+  // Type-only match (ignore inscription) so the list covers the whole selection
+  const typeOnly: TypologyFilterSelection = { ...sel, inscription: '' }
+  const fromDb: InscriptionOption[] = []
+  coinTypes.forEach((coin) => {
+    if (!coinMatchesTypologyFilter(coin, typeOnly)) return
+    const zh = (coin.inscription ?? '').trim()
+    if (!zh || seen.has(zh)) return
+    seen.add(zh)
+    fromDb.push({
+      zh,
+      en: (coin.inscription_en ?? zh).trim() || zh,
+      mint_zh: coin.mint_zh,
+    })
+  })
+  return fromDb.sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
 }
 
 /** Deepest selected typology node label for display. */

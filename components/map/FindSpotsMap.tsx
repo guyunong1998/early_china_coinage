@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Map as LeafletMap, Marker } from 'leaflet'
+import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import { TypologyFilterBar } from '@/components/map/TypologyFilterBar'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -37,6 +37,34 @@ import {
 import type { CoinType, HeatmapFind, MapSite } from '@/lib/types'
 
 type FilterMode = 'type' | 'mint'
+type ViewMode = 'points' | 'density'
+
+const DENSITY_GRADIENT: Record<number, string> = {
+  0.15: '#f0d56a',
+  0.4: '#e39a2b',
+  0.65: '#d04a1c',
+  0.85: '#a01515',
+  1: '#6e0c0c',
+}
+
+/** Intensity for leaflet.heat; null = omit from the density mass. */
+function heatIntensity(state: SiteHeatState, site: MapSite): number | null {
+  switch (state.kind) {
+    case 'no-filter': {
+      const qty = site.total_quantity_for_map ?? 0
+      if (qty <= 0) return 0.35
+      return Math.min(1, 0.35 + Math.log10(qty + 1) / 4)
+    }
+    case 'no-data':
+      return null
+    case 'unquantified':
+      return 0.4
+    case 'pure':
+      return 1
+    case 'ratio':
+      return Math.max(0.08, state.ratio)
+  }
+}
 
 function dot(color: string, size = 14) {
   return `<div style="
@@ -158,8 +186,10 @@ export function FindSpotsMap({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Map<string, Marker>>(new Map())
+  const heatLayerRef = useRef<HeatLayer | null>(null)
 
   const [mode, setMode] = useState<FilterMode>('type')
+  const [viewMode, setViewMode] = useState<ViewMode>('points')
   const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [mintFilter, setMintFilter] = useState('')
   const [mintSearch, setMintSearch] = useState('')
@@ -200,6 +230,18 @@ export function FindSpotsMap({
     return { foundCount, totalCount: sites.length }
   }, [siteStates, sites])
 
+  const densityLatLngs = useMemo(() => {
+    const points: [number, number, number][] = []
+    sites.forEach((site) => {
+      if (site.lat == null || site.lng == null) return
+      const state: SiteHeatState = siteStates?.get(site.site_code) ?? { kind: 'no-filter' }
+      const intensity = heatIntensity(state, site)
+      if (intensity == null) return
+      points.push([site.lat, site.lng, intensity])
+    })
+    return points
+  }, [sites, siteStates])
+
   function clearFilters() {
     setSel(emptyTypologySelection())
     setMintFilter('')
@@ -209,30 +251,62 @@ export function FindSpotsMap({
   useEffect(() => {
     if (!mapRef.current) return
 
-    import('leaflet').then(({ default: L }) => {
+    import('leaflet').then(async ({ default: L }) => {
+      const map = mapRef.current
+      if (!map) return
+
+      // Ensure leaflet.heat attaches to this Leaflet instance
+      const g = globalThis as typeof globalThis & { L?: typeof L }
+      g.L = L
+      await import('leaflet.heat')
+
       markersRef.current.forEach((marker, code) => {
         const state: SiteHeatState = siteStates?.get(code) ?? { kind: 'no-filter' }
-        const color = stateColor(state)
-        const size = stateSize(state)
+        const site = sites.find((s) => s.site_code === code)
+        const inDensity = viewMode === 'density'
+        const color = inDensity
+          ? state.kind === 'no-data'
+            ? 'transparent'
+            : 'rgba(40,40,40,0.45)'
+          : stateColor(state)
+        const size = inDensity ? (state.kind === 'no-data' ? 0 : 7) : stateSize(state)
 
         marker.setIcon(
           L.divIcon({
             className: '',
-            html: dot(color, size),
+            html: size > 0 ? dot(color, size) : '',
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
           })
         )
+        marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
         marker.setZIndexOffset(
           state.kind === 'no-data' ? -1000 : state.kind === 'pure' || state.kind === 'ratio' ? 500 : 0
         )
 
-        const site = sites.find((s) => s.site_code === code)
         if (!site) return
         marker.setPopupContent(buildPopupHtml(site, statePopupLine(state, mode, t), t))
       })
+
+      if (viewMode === 'density') {
+        if (!heatLayerRef.current) {
+          heatLayerRef.current = L.heatLayer(densityLatLngs, {
+            radius: 32,
+            blur: 26,
+            maxZoom: 9,
+            max: 1,
+            minOpacity: 0.25,
+            gradient: DENSITY_GRADIENT,
+          }).addTo(map)
+        } else {
+          heatLayerRef.current.setLatLngs(densityLatLngs)
+          if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
+        }
+      } else if (heatLayerRef.current) {
+        map.removeLayer(heatLayerRef.current)
+      }
     })
-  }, [siteStates, sites, mode, t])
+  }, [siteStates, sites, mode, t, viewMode, densityLatLngs])
 
   useEffect(() => {
     let cancelled = false
@@ -339,6 +413,7 @@ export function FindSpotsMap({
     const markers = markersRef.current
     return () => {
       cancelled = true
+      heatLayerRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
       markers.clear()
@@ -346,113 +421,192 @@ export function FindSpotsMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden border border-brand/20 bg-white">
-      <div className="shrink-0 border-b border-brand/20 px-4 py-3">
-        <p className="mb-2 text-xs text-gray-600">
-          <T k="map.filter.hint" />
-        </p>
+  // Keep Leaflet sized correctly when the sidebar/map split changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const id = window.setTimeout(() => map.invalidateSize(), 80)
+    return () => window.clearTimeout(id)
+  }, [viewMode, filterActive, mode])
 
-        <div className="mb-3 flex flex-wrap items-center gap-0">
-          {(['type', 'mint'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => {
-                setMode(m)
-                clearFilters()
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold border transition ${
-                mode === m
-                  ? 'bg-brand text-white border-brand'
-                  : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
-              }`}
-            >
-              <T k={m === 'type' ? 'map.filter.byType' : 'map.filter.byMint'} />
-            </button>
-          ))}
-          {filterActive && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="ml-auto px-3 py-1.5 text-xs text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
-            >
-              <T k="heatmap.clearFilter" />
-            </button>
+  useEffect(() => {
+    function onResize() {
+      mapRef.current?.invalidateSize()
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white lg:flex-row">
+      {/* Filters: top strip on mobile, left sidebar on desktop */}
+      <aside className="flex max-h-[42%] shrink-0 flex-col overflow-hidden border-b border-brand/20 lg:max-h-none lg:w-[19.5rem] lg:border-b-0 lg:border-r xl:w-[22rem]">
+        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5 sm:px-3.5">
+          <p className="text-[11px] leading-snug text-gray-500">
+            <T k="map.filter.hint" />
+          </p>
+
+          <div className="flex flex-wrap items-center gap-1">
+            {(['type', 'mint'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMode(m)
+                  clearFilters()
+                }}
+                className={`px-2.5 py-1 text-[11px] font-semibold border transition ${
+                  mode === m
+                    ? 'bg-brand text-white border-brand'
+                    : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
+                }`}
+              >
+                <T k={m === 'type' ? 'map.filter.byType' : 'map.filter.byMint'} />
+              </button>
+            ))}
+            {filterActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ml-auto px-2 py-1 text-[11px] text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
+              >
+                <T k="heatmap.clearFilter" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              <T k="map.view.label" />
+            </span>
+            {(['points', 'density'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setViewMode(v)}
+                className={`px-2 py-0.5 text-[11px] font-semibold border transition ${
+                  viewMode === v
+                    ? 'bg-brand text-white border-brand'
+                    : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
+                }`}
+              >
+                <T k={v === 'points' ? 'map.view.points' : 'map.view.density'} />
+              </button>
+            ))}
+          </div>
+
+          {mode === 'type' && (
+            <TypologyFilterBar
+              sel={sel}
+              onChange={setSel}
+              showInscriptionList
+              coinTypes={coinTypes}
+              compact
+            />
+          )}
+
+          {mode === 'mint' && (
+            <div className="flex flex-col gap-2 text-sm">
+              <input
+                type="search"
+                placeholder={t('map.filter.searchMint')}
+                value={mintSearch}
+                onChange={(e) => setMintSearch(e.target.value)}
+                className="w-full rounded border border-brand/30 px-2.5 py-1.5 text-sm outline-none focus:border-brand"
+              />
+              <select
+                value={mintFilter}
+                onChange={(e) => setMintFilter(e.target.value)}
+                className="w-full rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="">{t('map.filter.selectMint')}</option>
+                {filteredMints.map((m) => (
+                  <option key={m.mint_zh} value={m.mint_zh}>
+                    {formatMintOptionLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {filterActive && foundInSummary && (
+            <p className="text-xs text-gray-700">
+              <T
+                k="heatmap.foundIn"
+                vars={{ found: foundInSummary.foundCount, total: foundInSummary.totalCount }}
+              />
+            </p>
           )}
         </div>
+      </aside>
 
-        {mode === 'type' && (
-          <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList />
-        )}
+      {/* Map canvas — dominant area */}
+      <div className="relative min-h-[58%] flex-1 lg:min-h-0">
+        <div
+          ref={containerRef}
+          className="absolute inset-0"
+          style={height !== '100%' ? { height } : undefined}
+        />
 
-        {mode === 'mint' && (
-          <div className="flex flex-wrap gap-2 text-sm">
-            <input
-              type="search"
-              placeholder={t('map.filter.searchMint')}
-              value={mintSearch}
-              onChange={(e) => setMintSearch(e.target.value)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm outline-none focus:border-brand"
-            />
-            <select
-              value={mintFilter}
-              onChange={(e) => setMintFilter(e.target.value)}
-              className="min-w-[14rem] rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
-            >
-              <option value="">{t('map.filter.selectMint')}</option>
-              {filteredMints.map((m) => (
-                <option key={m.mint_zh} value={m.mint_zh}>
-                  {formatMintOptionLabel(m)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {filterActive && foundInSummary && (
-          <p className="mt-2 text-sm text-gray-700">
-            <T
-              k="heatmap.foundIn"
-              vars={{ found: foundInSummary.foundCount, total: foundInSummary.totalCount }}
-            />
-          </p>
-        )}
-
-        {filterActive && (
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
-            <span className="font-semibold uppercase tracking-wide text-gray-500">
-              <T k="map.legend.title" />
-            </span>
-            {RAMP_LEGEND_STOPS.map((stop) => (
-              <span key={stop.ratio} className="flex items-center gap-1.5">
-                <span className="inline-block h-3 w-3 rounded-full" style={{ background: stop.color }} />
-                {Math.round(stop.ratio * 100)}%
-              </span>
-            ))}
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ background: PURE_MATCH_COLOR }} />
-              <T k={mode === 'mint' ? 'map.legend.pureMint' : 'map.legend.pure'} />
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ background: PRESENT_UNQUANTIFIED_COLOR }}
-              />
-              <T k="heatmap.legend.presentNoCount" />
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-              />
-              <T k="heatmap.legend.noData" />
-            </span>
+        {(filterActive || viewMode === 'density') && (
+          <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-[500] flex flex-wrap items-center gap-x-3 gap-y-1 rounded bg-white/90 px-2.5 py-1.5 text-[11px] text-gray-600 shadow-sm backdrop-blur-sm sm:right-auto sm:max-w-[min(100%-1.5rem,36rem)]">
+            {filterActive && viewMode === 'points' && (
+              <>
+                <span className="font-semibold uppercase tracking-wide text-gray-500">
+                  <T k="map.legend.title" />
+                </span>
+                {RAMP_LEGEND_STOPS.map((stop) => (
+                  <span key={stop.ratio} className="flex items-center gap-1">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ background: stop.color }}
+                    />
+                    {Math.round(stop.ratio * 100)}%
+                  </span>
+                ))}
+                <span className="flex items-center gap-1">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: PURE_MATCH_COLOR }}
+                  />
+                  <T k={mode === 'mint' ? 'map.legend.pureMint' : 'map.legend.pure'} />
+                </span>
+                <span className="flex items-center gap-1">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: PRESENT_UNQUANTIFIED_COLOR }}
+                  />
+                  <T k="heatmap.legend.presentNoCount" />
+                </span>
+                <span className="flex items-center gap-1">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
+                  />
+                  <T k="heatmap.legend.noData" />
+                </span>
+              </>
+            )}
+            {viewMode === 'density' && (
+              <>
+                <span className="font-semibold uppercase tracking-wide text-gray-500">
+                  <T k="map.legend.density" />
+                </span>
+                <span
+                  className="inline-block h-2 w-28 rounded-sm"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, #f0d56a 0%, #e39a2b 40%, #d04a1c 65%, #a01515 85%, #6e0c0c 100%)',
+                  }}
+                />
+                <span className="text-gray-500">
+                  <T k="map.legend.densityHint" />
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
-
-      <div ref={containerRef} className="min-h-0 flex-1" style={{ height, width: '100%' }} />
     </div>
   )
 }

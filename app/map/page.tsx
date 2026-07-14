@@ -41,37 +41,37 @@ export default async function MapPage({ searchParams }: PageProps) {
   const sites = allSites.filter((site) => siteMatchesPrecisionFilter(site, currentPrecision))
 
   return (
-    <div className="flex h-[calc(100vh-57px)] flex-col">
-      <div className="shrink-0 border-b border-brand/20 bg-white px-4 py-3">
-        <h1 className="font-serif text-xl font-semibold text-brand">
-          <T k="map.title" />
-        </h1>
-        <p className="text-sm text-gray-600">
-          <T k="map.count" vars={{ count: sites.length }} />
-        </p>
-        <div className="mt-2">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <T k="map.precision.label" />
+    <div className="flex h-[calc(100dvh-4.5rem)] flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-brand/20 bg-white px-3 py-1.5 sm:px-4">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <h1 className="font-serif text-base font-semibold text-brand sm:text-lg">
+            <T k="map.title" />
+          </h1>
+          <p className="truncate text-xs text-gray-500">
+            <T k="map.count" vars={{ count: sites.length }} />
           </p>
-          <div className="flex flex-wrap gap-2">
-            {PRECISION_TABS.map((tab) => {
-              const active = tab.id === currentPrecision
-              const href = `/map${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
-              return (
-                <Link
-                  key={tab.id}
-                  href={href}
-                  className={`rounded border px-3 py-1 text-xs transition ${
-                    active
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-                  }`}
-                >
-                  <T k={tab.key} /> ({counts[tab.id]})
-                </Link>
-              )
-            })}
-          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+          <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            <T k="map.precision.label" />
+          </span>
+          {PRECISION_TABS.map((tab) => {
+            const active = tab.id === currentPrecision
+            const href = `/map${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
+            return (
+              <Link
+                key={tab.id}
+                href={href}
+                className={`rounded border px-2 py-0.5 text-[11px] transition sm:px-2.5 sm:text-xs ${
+                  active
+                    ? 'border-brand bg-brand text-white'
+                    : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
+                }`}
+              >
+                <T k={tab.key} /> ({counts[tab.id]})
+              </Link>
+            )
+          })}
         </div>
       </div>
       <FindSpotsMap sites={sites} coinTypes={coinTypes} finds={finds} />

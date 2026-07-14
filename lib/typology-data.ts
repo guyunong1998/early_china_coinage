@@ -35,6 +35,8 @@ export type TypologyL2 = {
 export type TypologyL1 = {
   label_en: string
   label_zh: string
+  /** Present when L1 is a leaf (no L2 children), e.g. Round Coin. */
+  entries?: TypologyLeaf[]
   children: TypologyL2[]
 }
 

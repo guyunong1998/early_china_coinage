@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Playfair_Display, Geist, Geist_Mono, Spectral } from 'next/font/google'
 import './globals.css'
 import 'leaflet/dist/leaflet.css'
-import { SiteFooter } from '@/components/layout/SiteFooter'
+import { ConditionalFooter } from '@/components/layout/ConditionalFooter'
 import { SiteHeader } from '@/components/layout/SiteHeader'
 import { LanguageProvider } from '@/lib/i18n/LanguageContext'
 
@@ -52,7 +52,7 @@ export default function RootLayout({
         <LanguageProvider>
           <SiteHeader />
           <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <ConditionalFooter />
         </LanguageProvider>
       </body>
     </html>

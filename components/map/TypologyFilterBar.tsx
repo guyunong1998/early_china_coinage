@@ -9,14 +9,21 @@ import {
   getL2Options,
   getL3Options,
   getL4Options,
+  isTypologyLeafSelection,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
+import type { CoinType } from '@/lib/types'
 
 type TypologyFilterBarProps = {
   sel: TypologyFilterSelection
   onChange: (sel: TypologyFilterSelection) => void
   /** Show inscription list below dropdowns (find spots page). */
   showInscriptionList?: boolean
+  /**
+   * When Typology.xlsx has no inscription rows for a leaf category
+   * (e.g. Round Coin), options are taken from these DB coin types.
+   */
+  coinTypes?: CoinType[]
   compact?: boolean
 }
 
@@ -24,6 +31,7 @@ export function TypologyFilterBar({
   sel,
   onChange,
   showInscriptionList = false,
+  coinTypes,
   compact = false,
 }: TypologyFilterBarProps) {
   const { lang, t } = useLanguage()
@@ -32,15 +40,15 @@ export function TypologyFilterBar({
   const l2Options = getL2Options(sel, lang)
   const l3Options = getL3Options(sel, lang)
   const l4Options = getL4Options(sel, lang)
-  const inscriptionOptions = getInscriptionOptions(sel)
+  const inscriptionOptions = getInscriptionOptions(sel, coinTypes)
 
   const hasFilter = !!sel.l1
-  // Show inscriptions once the deepest chosen type node is reached (L3/L4,
-  // or L2 with no children). Filtering still applies at every parent level.
+  // Show inscriptions at any typology leaf — including L1-only categories
+  // like Round Coin (圜钱) that have no L2/L3 children.
   const showInscriptions =
     showInscriptionList &&
     inscriptionOptions.length > 0 &&
-    (!!sel.l4 || !!sel.l3 || (!!sel.l2 && l3Options.length === 0))
+    isTypologyLeafSelection(sel)
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -100,7 +108,11 @@ export function TypologyFilterBar({
               </button>
             )}
           </p>
-          <div className="max-h-36 overflow-y-auto border border-brand/20 bg-white">
+          <div
+            className={`overflow-y-auto border border-brand/20 bg-white ${
+              compact ? 'max-h-28' : 'max-h-36'
+            }`}
+          >
             {inscriptionOptions.map((e) => (
               <button
                 key={e.zh}

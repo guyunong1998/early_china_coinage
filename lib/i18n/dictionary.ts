@@ -217,6 +217,14 @@ export const DICTIONARY = {
   'map.filter.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.selectMint': { en: 'Select mint', zh: '选择铸地' },
+  'map.view.points': { en: 'Points', zh: '点状' },
+  'map.view.density': { en: 'Density mass', zh: '密度色块' },
+  'map.view.label': { en: 'Display', zh: '显示' },
+  'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
+  'map.legend.densityHint': {
+    en: 'Brighter / redder where matching sites cluster; weighted by share.',
+    zh: '匹配遗址越集中、占比越高，颜色越亮越红。',
+  },
   'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.popup.pureMint': {
     en: 'Selected mint makes up entire context(s) at this site',

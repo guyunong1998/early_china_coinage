@@ -124,7 +124,7 @@ termRows.forEach((row) => {
   }
 })
 
-// L2 types with no L3 children (e.g. 尖首刀, 圜钱) carry entries directly
+// L2 types with no L3 children (e.g. 尖首刀) carry entries directly
 typology.forEach((l1) => {
   l1.children.forEach((l2) => {
     if (l2.children.length === 0) {
@@ -133,6 +133,11 @@ typology.forEach((l1) => {
       l2.entries = byType[type_key] || []
     }
   })
+  // L1 leaf (e.g. Round Coin 圜钱 — listed only at Level 1)
+  if (l1.children.length === 0) {
+    const type_key = l1.label_zh || l1.label_en
+    l1.entries = byType[type_key] || []
+  }
 })
 
 const header = `// AUTO-GENERATED from Typology.xlsx — do not edit manually
