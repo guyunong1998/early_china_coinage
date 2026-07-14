@@ -69,6 +69,104 @@ export async function getMapSites(): Promise<MapSite[]> {
   )
 }
 
+type SitePrecisionRow = {
+  site_code: string
+  site_name_zh: string | null
+  site_name_en: string | null
+  province_zh: string | null
+  province_en: string | null
+  city_zh: string | null
+  city_en: string | null
+  county_zh: string | null
+  county_en: string | null
+  location_detail_zh: string | null
+  location_detail_en: string | null
+  lat: number | null
+  lng: number | null
+  precision_level: number | null
+  site_type_zh: string | null
+  site_type_en: string | null
+}
+
+function siteRowToMapSite(row: SitePrecisionRow): MapSite {
+  return {
+    site_code: row.site_code,
+    site_name_zh: row.site_name_zh,
+    site_name_en: row.site_name_en,
+    province_zh: row.province_zh,
+    province_en: row.province_en,
+    city_zh: row.city_zh,
+    city_en: row.city_en,
+    county_zh: row.county_zh,
+    county_en: row.county_en,
+    location_detail_zh: row.location_detail_zh,
+    location_detail_en: row.location_detail_en,
+    lat: row.lat,
+    lng: row.lng,
+    precision_level: row.precision_level,
+    site_type_zh: row.site_type_zh,
+    site_type_en: row.site_type_en,
+    find_record_count: null,
+    total_quantity_for_map: null,
+    major_types_zh: null,
+    minor_types_zh: null,
+    inscriptions: null,
+    states_zh: null,
+    mints_zh: null,
+  }
+}
+
+/** Sites tagged 不明单位 / county=不明 that may be missing from v_coin_map_sites. */
+async function getPrecisionSupplementSites(): Promise<MapSite[]> {
+  const [nameTagged, countyTagged] = await Promise.all([
+    fetchAllPages<SitePrecisionRow>((from, to) =>
+      supabase
+        .from('sites')
+        .select(
+          'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en'
+        )
+        .ilike('site_name_zh', '%不明单位%')
+        .order('site_code')
+        .range(from, to)
+    ),
+    fetchAllPages<SitePrecisionRow>((from, to) =>
+      supabase
+        .from('sites')
+        .select(
+          'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en'
+        )
+        .eq('county_zh', '不明')
+        .order('site_code')
+        .range(from, to)
+    ),
+  ])
+
+  const byCode = new Map<string, MapSite>()
+  ;[...nameTagged, ...countyTagged].forEach((row) => {
+    byCode.set(row.site_code, siteRowToMapSite(row))
+  })
+  return [...byCode.values()]
+}
+
+function mergeMapSites(base: MapSite[], extras: MapSite[]): MapSite[] {
+  const byCode = new Map<string, MapSite>()
+  base.forEach((site) => byCode.set(site.site_code, site))
+  extras.forEach((site) => {
+    if (!byCode.has(site.site_code)) byCode.set(site.site_code, site)
+  })
+  return [...byCode.values()].sort((a, b) => a.site_code.localeCompare(b.site_code))
+}
+
+/**
+ * Find Spots map sites: georeferenced view rows, plus any precision-tagged
+ * rows from `sites` that the map view omits (e.g. 「不明单位」 without coords).
+ * County-level count should match the sites table (39 × 不明单位).
+ */
+export async function getFindSpotsMapSites(): Promise<MapSite[]> {
+  const [mapped, supplements] = await Promise.all([getMapSites(), getPrecisionSupplementSites()])
+  return mergeMapSites(mapped, supplements)
+}
+
 /** Sums `total_quantity_for_map` across every row, paginating past PostgREST's 1000-row cap. */
 async function sumTotalQuantityForMap(): Promise<number> {
   const rows = await fetchAllPages<{ total_quantity_for_map: number | null }>((from, to) =>
@@ -82,10 +180,13 @@ async function sumTotalQuantityForMap(): Promise<number> {
 }
 
 export async function getAllSites(): Promise<SearchSite[]> {
-  const sites = await fetchAllPages<MapSite>((from, to) =>
-    supabase.from('v_coin_map_sites').select(MAP_SITE_FIELDS).order('site_name_zh').range(from, to)
-  )
-  return attachPeriods(sites)
+  const [sites, supplements] = await Promise.all([
+    fetchAllPages<MapSite>((from, to) =>
+      supabase.from('v_coin_map_sites').select(MAP_SITE_FIELDS).order('site_name_zh').range(from, to)
+    ),
+    getPrecisionSupplementSites(),
+  ])
+  return attachPeriods(mergeMapSites(sites, supplements))
 }
 
 export async function getDatabaseStats(): Promise<DatabaseStats> {
@@ -218,30 +319,32 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
 }
 
 export async function getCoinTypes(): Promise<CoinType[]> {
-  const { data, error } = await supabase
-    .from('coin_types')
-    .select('*')
-    .order('major_type_zh')
-    .order('minor_type_zh')
-    .order('inscription')
-
-  if (error) throw error
-  return data ?? []
+  return fetchAllPages<CoinType>((from, to) =>
+    supabase
+      .from('coin_types')
+      .select('*')
+      .order('major_type_zh')
+      .order('minor_type_zh')
+      .order('inscription')
+      .order('coin_type_code')
+      .range(from, to)
+  )
 }
 
 export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
   const rows = await fetchAllPages<{
     coin_type_code: string | null
+    context_code: string | null
     quantity_total: number | null
     quantity_min: number | null
     quantity_estimated: number | null
-    presence: string | null
+    presence: string | boolean | null
     contexts: { site_code: string } | { site_code: string }[]
   }>((from, to) =>
     supabase
       .from('finds')
       .select(
-        'coin_type_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
+        'coin_type_code, context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
       )
       .order('find_code')
       .range(from, to)
@@ -251,6 +354,7 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
     const context = Array.isArray(row.contexts) ? row.contexts[0] : row.contexts
     return {
       coin_type_code: row.coin_type_code,
+      context_code: row.context_code,
       quantity_total: row.quantity_total,
       quantity_min: row.quantity_min,
       quantity_estimated: row.quantity_estimated,

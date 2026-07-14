@@ -3,9 +3,9 @@ import { getAnsPointedSpadeMintStats, getAnsSquareSpadeMintStats } from '@/lib/a
 import { getPointedSpadeMintStats } from '@/lib/pointed-spade-data'
 
 export const metadata = {
-  title: 'Spade Coin Heatmap | Early Chinese Coin Finds',
+  title: 'Heatmap | Early Chinese Coin Finds',
   description:
-    'Distribution of spade coins by mint town — database finds, ANS pointed-foot spades (尖足布), or ANS square-foot spades (方足布).',
+    'Distribution of spade coins by mint town — database finds or the ANS pointed-foot / square-foot catalogues.',
 }
 
 export default async function HeatmapPage() {
@@ -18,7 +18,7 @@ export default async function HeatmapPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-2">
-        <h1 className="font-serif text-3xl font-semibold text-brand">Spade Coin Heatmap</h1>
+        <h1 className="font-serif text-3xl font-semibold text-brand">Heatmap</h1>
       </div>
 
       <HeatmapPanel

@@ -223,6 +223,21 @@ export function resolveMintNameZh(nameZh: string): string {
   return MINT_NAME_ALIASES[trimmed] ?? trimmed
 }
 
+/** All Chinese labels that refer to the same mint (DB + dossier aliases). */
+export function getMintNameVariants(nameZh: string): string[] {
+  const trimmed = nameZh.trim()
+  if (!trimmed) return []
+  const canonical = resolveMintNameZh(trimmed)
+  const variants = new Set<string>([trimmed, canonical])
+  for (const [alias, canon] of Object.entries(MINT_NAME_ALIASES)) {
+    if (canon === canonical || alias === trimmed || alias === canonical || canon === trimmed) {
+      variants.add(alias)
+      variants.add(canon)
+    }
+  }
+  return [...variants]
+}
+
 /** Look up a mint town by its Chinese name (as stored in coin_types.mint_zh). */
 export function getMintByNameZh(nameZh: string): MintTown | undefined {
   const trimmed = nameZh.trim()

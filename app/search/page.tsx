@@ -5,7 +5,7 @@ import { SearchFilters } from '@/components/search/SearchFilters'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
-import { isUnknownText, getSitePrecision } from '@/lib/city-boundaries'
+import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
 import { displayValue, formatNumber, splitCsv } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
 import { getAllSites, getCoinTypes, searchSites } from '@/lib/queries'
@@ -71,11 +71,7 @@ function toArray(value: string | string[] | undefined): string[] {
 export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams
   const q = params.q ?? ''
-  const precisionParam = params.precision ?? 'all'
-  const precision: PrecisionFilter =
-    precisionParam === 'city' || precisionParam === 'city_only' || precisionParam === 'county_only'
-      ? precisionParam
-      : 'all'
+  const precision = parsePrecisionFilter(params.precision)
 
   const filters: FilterState = {
     precision,
@@ -128,12 +124,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   })
 
   const precisionScoped = baseResults.filter((site) => siteMatchesFilters(site, filters, 'precision'))
-  const counts = {
-    all: precisionScoped.length,
-    city: precisionScoped.filter((site) => !isUnknownText(site.city_zh)).length,
-    city_only: precisionScoped.filter((site) => getSitePrecision(site) === 'city_only').length,
-    county_only: precisionScoped.filter((site) => getSitePrecision(site) === 'county_only').length,
-  }
+  const counts = countSitesByPrecision(precisionScoped)
 
   const filtered = baseResults.filter((site) => siteMatchesFilters(site, filters))
 
@@ -173,10 +164,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const pageResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const precisionTabs: Array<{ id: PrecisionFilter; key: DictionaryKey; count: number }> = [
-    { id: 'all', key: 'search.precision.all', count: counts.all },
-    { id: 'city', key: 'search.precision.city', count: counts.city },
-    { id: 'city_only', key: 'search.precision.cityOnly', count: counts.city_only },
-    { id: 'county_only', key: 'search.precision.countyOnly', count: counts.county_only },
+    { id: 'all', key: 'map.precision.all', count: counts.all },
+    { id: 'site', key: 'map.precision.site', count: counts.site },
+    { id: 'county', key: 'map.precision.county', count: counts.county },
+    { id: 'city', key: 'map.precision.city', count: counts.city },
   ]
 
   function buildHref(overrides: Record<string, string | undefined>) {

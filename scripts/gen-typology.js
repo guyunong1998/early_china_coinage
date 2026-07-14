@@ -1,69 +1,130 @@
-// Run: node scripts/gen-typology.js
+/**
+ * Regenerate lib/typology-data.ts from Typology.xlsx
+ *
+ *   node scripts/gen-typology.js [path/to/Typology.xlsx]
+ */
 const XLSX = require('xlsx')
 const fs = require('fs')
+const path = require('path')
 
-const wb = XLSX.readFile('C:\\Users\\25589\\Documents\\数据库表格\\Dongbei\\Typology.xlsx')
+const input =
+  process.argv[2] ||
+  path.join(process.env.USERPROFILE || '', 'Documents', 'Typology.xlsx')
 
-// --- 国别判断: type_zh → [{inscription, mint, state}] ---
-const attrRows = XLSX.utils.sheet_to_json(wb.Sheets['国别判断'], { header: 1 }).slice(1)
+const wb = XLSX.readFile(input)
+
+// --- 国别判断: Type → [{inscription, mint, state}] ---
+const attrSheet = wb.Sheets['国别判断']
+const attrRows = XLSX.utils.sheet_to_json(attrSheet, { defval: '' })
 const byType = {}
-attrRows.forEach((r) => {
-  const [type_zh, insc_zh, insc_en, mint_zh, mint_en, state_zh, state_en] = r
-  if (!type_zh) return
-  if (!byType[type_zh]) byType[type_zh] = []
-  byType[type_zh].push({
-    inscription_zh: insc_zh || null,
-    inscription_en: insc_en || null,
-    mint_zh: mint_zh || null,
-    mint_en: mint_en || null,
-    state_zh: state_zh || null,
-    state_en: state_en || null,
-  })
-})
-
-// Unique mints
 const allMints = []
 const mintSeen = new Set()
+
 attrRows.forEach((r) => {
-  const [, , , mint_zh, mint_en, state_zh, state_en] = r
+  const type_zh = (r.Type || r.type_zh || '').trim()
+  if (!type_zh) return
+
+  const insc_zh = (r.Inscription || r.inscription_zh || '').trim() || null
+  const insc_en = (r['Inscription-English'] || r.inscription_en || '').trim() || null
+  const mint_zh = (r.Mint || r.mint_zh || '').trim() || null
+  const mint_en = (r['Mint-English'] || r.mint_en || '').trim() || null
+  const state_zh = (r.State || r.state_zh || '').trim() || null
+  const state_en = (r['English translation'] || r.state_en || '').trim() || null
+
+  if (!byType[type_zh]) byType[type_zh] = []
+  byType[type_zh].push({
+    inscription_zh: insc_zh,
+    inscription_en: insc_en,
+    mint_zh,
+    mint_en: mint_en || null,
+    state_zh,
+    state_en: state_en || null,
+  })
+
   if (mint_zh && !mintSeen.has(mint_zh)) {
     mintSeen.add(mint_zh)
-    allMints.push({ mint_zh, mint_en: mint_en || null, state_zh: state_zh || null, state_en: state_en || null })
+    allMints.push({
+      mint_zh,
+      mint_en: mint_en || null,
+      state_zh,
+      state_en: state_en || null,
+    })
   }
 })
 
-// --- Build Level 1/2/3 hierarchy ---
-function split(s) {
-  if (!s) return { en: '', zh: '' }
-  const m = s.match(/^([A-Za-z0-9\-' ]+)\s*(.*)$/)
-  return m ? { en: m[1].trim(), zh: m[2].trim() } : { en: s, zh: '' }
+const L1_ZH = {
+  'Spade Coin': '布币',
+  'Knife-Shaped Coin': '刀币',
+  'Round Coin': '圜钱',
+  'Ant-nose Coin': '蚁鼻钱',
+  'Gold Plate': '金版',
 }
 
-const typRows = XLSX.utils.sheet_to_json(wb.Sheets['钱币分类术语'], { header: 1 }).slice(1)
-const typology = []
-let curL1 = null, curL2 = null
+// --- Build Level 1–4 hierarchy from 钱币分类术语 ---
+function split(s) {
+  if (!s) return { en: '', zh: '' }
+  const trimmed = String(s).trim()
+  const m = trimmed.match(/^([A-Za-z][A-Za-z0-9\-' ]*)\s+([\u4e00-\u9fff].*)$/)
+  if (m) return { en: m[1].trim(), zh: m[2].trim() }
+  const m2 = trimmed.match(/^([A-Za-z][A-Za-z0-9\-' ]*)\s*([\u4e00-\u9fff].*)$/)
+  if (m2 && m2[2]) return { en: m2[1].trim(), zh: m2[2].trim() }
+  if (/[\u4e00-\u9fff]/.test(trimmed)) return { en: '', zh: trimmed }
+  return { en: trimmed, zh: '' }
+}
 
-typRows.forEach((row) => {
-  const [l1raw, l2raw, l3raw] = row
+const termSheet = wb.Sheets['钱币分类术语']
+const termRows = XLSX.utils.sheet_to_json(termSheet, { defval: '' })
+const typology = []
+let curL1 = null
+let curL2 = null
+let curL3 = null
+
+termRows.forEach((row) => {
+  const l1raw = row['Level 1']
+  const l2raw = row['Level 2']
+  const l3raw = row['Level 3']
+  const l4raw = row['Level 4']
+
   if (l1raw) {
     const p = split(l1raw)
-    curL1 = { label_en: p.en, label_zh: p.zh, children: [] }
+    curL1 = {
+      label_en: p.en,
+      label_zh: p.zh || L1_ZH[p.en] || '',
+      children: [],
+    }
     typology.push(curL1)
     curL2 = null
+    curL3 = null
   }
   if (l2raw && curL1) {
     const p = split(l2raw)
     curL2 = { label_en: p.en, label_zh: p.zh, children: [] }
     curL1.children.push(curL2)
+    curL3 = null
   }
   if (l3raw && curL2) {
     const p = split(l3raw)
     const type_key = p.zh || p.en
-    curL2.children.push({ label_en: p.en, label_zh: p.zh, type_key, entries: byType[type_key] || [] })
+    curL3 = {
+      label_en: p.en,
+      label_zh: p.zh,
+      type_key,
+      entries: byType[type_key] || [],
+      children: [],
+    }
+    curL2.children.push(curL3)
+  }
+  if (l4raw && curL3) {
+    const p = split(l4raw)
+    curL3.children.push({
+      label_en: p.en,
+      label_zh: p.zh,
+      filter_key: p.zh || p.en,
+    })
   }
 })
 
-// Attach entries for L2 types that have no L3 children (e.g. direct knife types)
+// L2 types with no L3 children (e.g. 尖首刀, 圜钱) carry entries directly
 typology.forEach((l1) => {
   l1.children.forEach((l2) => {
     if (l2.children.length === 0) {
@@ -86,11 +147,18 @@ export type TypologyLeaf = {
   state_en: string | null
 }
 
+export type TypologyL4 = {
+  label_en: string
+  label_zh: string
+  filter_key: string
+}
+
 export type TypologyL3 = {
   label_en: string
   label_zh: string
   type_key: string
   entries: TypologyLeaf[]
+  children: TypologyL4[]
 }
 
 export type TypologyL2 = {
@@ -125,7 +193,7 @@ const out =
   JSON.stringify(allMints, null, 2) +
   '\n'
 
-fs.writeFileSync('lib/typology-data.ts', out)
-console.log('Written lib/typology-data.ts')
-console.log('L1 types:', typology.map((x) => x.label_en))
+fs.writeFileSync(path.join(__dirname, '..', 'lib', 'typology-data.ts'), out)
+console.log('Written lib/typology-data.ts from', input)
+console.log('L1 types:', typology.map((x) => x.label_zh || x.label_en))
 console.log('Mints:', allMints.length)

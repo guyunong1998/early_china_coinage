@@ -1,8 +1,12 @@
-import { getSitePrecision, isUnknownText } from '@/lib/city-boundaries'
+import {
+  isUnknownText,
+  siteMatchesPrecisionFilter,
+  type PrecisionFilter,
+} from '@/lib/city-boundaries'
 import { splitCsv } from '@/lib/format'
 import type { SearchSite } from '@/lib/queries'
 
-export type PrecisionFilter = 'all' | 'city' | 'city_only' | 'county_only'
+export type { PrecisionFilter } from '@/lib/city-boundaries'
 
 export type FilterState = {
   precision: PrecisionFilter
@@ -49,9 +53,7 @@ export function siteCoinTypeValues(site: SearchSite): string[] {
 
 export function siteMatchesFilters(site: SearchSite, f: FilterState, skip?: FacetCategory): boolean {
   if (skip !== 'precision') {
-    if (f.precision === 'city' && isUnknownText(site.city_zh)) return false
-    if (f.precision === 'city_only' && getSitePrecision(site) !== 'city_only') return false
-    if (f.precision === 'county_only' && getSitePrecision(site) !== 'county_only') return false
+    if (!siteMatchesPrecisionFilter(site, f.precision)) return false
   }
 
   if (skip !== 'mint' && f.mints.length > 0) {

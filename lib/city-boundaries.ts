@@ -10,7 +10,17 @@ const boundaryCache = new Map<string, GeoJsonObject | null>()
 
 const UNKNOWN_TOKENS = ['未知', '不详', '无', '—', '-', 'n/a', 'na', 'unknown']
 
-export type PrecisionFilter = 'all' | 'city' | 'city_only' | 'county_only'
+/** Mutually exclusive geolocation precision derived from site naming conventions. */
+export type SitePrecisionLevel = 'site' | 'county' | 'city'
+
+export type PrecisionFilter = 'all' | SitePrecisionLevel
+
+export type PrecisionSiteFields = {
+  site_name_zh: string | null
+  county_zh: string | null
+  city_zh?: string | null
+  location_detail_zh?: string | null
+}
 
 export function isUnknownText(value: string | null | undefined) {
   if (!value) return true
@@ -19,38 +29,73 @@ export function isUnknownText(value: string | null | undefined) {
   return UNKNOWN_TOKENS.includes(v)
 }
 
-/**
- * Rule requested by user:
- * city known + county unknown + specific location unknown => show city boundary.
- */
-export function shouldShowCityBoundary(site: MapSite) {
-  return (
-    !isUnknownText(site.city_zh) &&
-    isUnknownText(site.county_zh) &&
-    isUnknownText(site.location_detail_zh)
-  )
+/** County field is the placeholder 不明 → only city (or coarser) is known. */
+export function isCountyUnknown(countyZh: string | null | undefined) {
+  return (countyZh ?? '').trim() === '不明'
+}
+
+/** Site name contains 不明单位 → findspot only resolved to county, not a specific unit. */
+export function isCountyLevelSiteName(siteNameZh: string | null | undefined) {
+  return (siteNameZh ?? '').includes('不明单位')
 }
 
 /**
- * County known + specific location unknown => show county boundary.
+ * Exclusive precision bucket for a find spot:
+ * - county: site name contains 「不明单位」(takes priority even when county_zh is 不明)
+ * - city: county_zh is exactly 「不明」
+ * - site: all other findspots (resolved to a specific unit/site)
  */
-export function shouldShowCountyBoundary(site: MapSite) {
-  return !isUnknownText(site.county_zh) && isUnknownText(site.location_detail_zh)
+export function getSitePrecisionLevel(site: PrecisionSiteFields): SitePrecisionLevel {
+  // Name rule first — user counts all 「不明单位」 rows as county-level (39 in sites table).
+  if (isCountyLevelSiteName(site.site_name_zh)) return 'county'
+  if (isCountyUnknown(site.county_zh)) return 'city'
+  return 'site'
 }
 
-export function getSitePrecision(site: {
-  city_zh: string | null
-  county_zh: string | null
-  location_detail_zh: string | null
-}): PrecisionFilter {
-  const cityKnown = !isUnknownText(site.city_zh)
-  const countyKnown = !isUnknownText(site.county_zh)
-  const detailKnown = !isUnknownText(site.location_detail_zh)
+export function siteMatchesPrecisionFilter(
+  site: PrecisionSiteFields,
+  filter: PrecisionFilter
+): boolean {
+  if (filter === 'all') return true
+  return getSitePrecisionLevel(site) === filter
+}
 
-  if (cityKnown && !countyKnown) return 'city_only'
-  if (countyKnown && !detailKnown) return 'county_only'
-  if (cityKnown) return 'city'
+export function parsePrecisionFilter(value: string | undefined | null): PrecisionFilter {
+  if (value === 'site' || value === 'county' || value === 'city') return value
+  // Legacy query params from earlier UI
+  if (value === 'city_only') return 'city'
+  if (value === 'county_only') return 'county'
   return 'all'
+}
+
+export function countSitesByPrecision(
+  sites: PrecisionSiteFields[]
+): Record<PrecisionFilter, number> {
+  const counts: Record<PrecisionFilter, number> = {
+    all: sites.length,
+    site: 0,
+    county: 0,
+    city: 0,
+  }
+  sites.forEach((site) => {
+    counts[getSitePrecisionLevel(site)] += 1
+  })
+  return counts
+}
+
+/** @deprecated Use getSitePrecisionLevel */
+export function getSitePrecision(site: PrecisionSiteFields): SitePrecisionLevel {
+  return getSitePrecisionLevel(site)
+}
+
+/** City-level precision: draw the city admin boundary. */
+export function shouldShowCityBoundary(site: MapSite) {
+  return getSitePrecisionLevel(site) === 'city' && !!site.city_zh?.trim()
+}
+
+/** County-level precision: draw the county admin boundary. */
+export function shouldShowCountyBoundary(site: MapSite) {
+  return getSitePrecisionLevel(site) === 'county' && !!site.county_zh?.trim() && !isCountyUnknown(site.county_zh)
 }
 
 function cacheKey(level: 'city' | 'county', nameZh: string, provinceZh?: string | null, cityZh?: string | null) {
@@ -105,4 +150,3 @@ export async function fetchCountyBoundaryGeoJson(
   const key = cacheKey('county', countyZh, provinceZh, cityZh)
   return fetchBoundaryGeoJson(key, [countyZh, cityZh, provinceZh])
 }
-

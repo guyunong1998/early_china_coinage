@@ -6,9 +6,9 @@ export const DICTIONARY = {
   'nav.search': { en: 'Search', zh: '搜索' },
   'nav.map': { en: 'Find Spots', zh: '出土遗址' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
-  'nav.spadeHeatmap': { en: 'Spade Heatmap', zh: '布币热力图' },
-  'nav.coinTypes': { en: 'Coin Types', zh: '币种分布' },
+  'nav.spadeHeatmap': { en: 'Heatmap', zh: '热力图' },
   'nav.heatmap': { en: 'Heatmap', zh: '热力图' },
+  'nav.coinTypes': { en: 'Coin Types', zh: '币种分布' },
 
   // ── hero banner ───────────────────────────────────────────────────────
   'hero.tagline': { en: 'Archaeological Dataset', zh: '考古数据集' },
@@ -30,10 +30,10 @@ export const DICTIONARY = {
     en: 'Interactive map of all georeferenced coin find sites',
     zh: '所有已定位钱币出土遗址的交互地图',
   },
-  'navcards.spadeHeatmap.label': { en: 'Spade Coin Heatmap', zh: '布币热力图' },
+  'navcards.spadeHeatmap.label': { en: 'Heatmap', zh: '热力图' },
   'navcards.spadeHeatmap.desc': {
-    en: 'Pointed-foot and square-foot spade production by mint town',
-    zh: '尖足布与方足布各铸币城邑的产量分布',
+    en: 'Mint production from database finds or the ANS spade catalogue',
+    zh: '数据库出土记录或 ANS 布币目录的铸币城邑产量分布',
   },
   'navcards.heatmap.label': { en: 'Coin Type Heatmap', zh: '币种热力图' },
   'navcards.heatmap.desc': {
@@ -98,10 +98,15 @@ export const DICTIONARY = {
   'search.coins': { en: 'coins', zh: '枚钱币' },
   'search.types': { en: 'Types:', zh: '类型：' },
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
+  'map.precision.label': { en: 'Location precision', zh: '定位精度' },
+  'map.precision.all': { en: 'All', zh: '全部' },
+  'map.precision.site': { en: 'Specified to site', zh: '精确到遗址' },
+  'map.precision.county': { en: 'Specified to county (不明单位)', zh: '精确到区县（不明单位）' },
+  'map.precision.city': { en: 'Specified to city (县=不明)', zh: '精确到城市（县=不明）' },
   'search.precision.all': { en: 'All', zh: '全部' },
-  'search.precision.city': { en: 'City', zh: '已知城市' },
-  'search.precision.cityOnly': { en: 'Only know city', zh: '仅知城市' },
-  'search.precision.countyOnly': { en: 'Only know county', zh: '仅知区县' },
+  'search.precision.site': { en: 'Specified to site', zh: '精确到遗址' },
+  'search.precision.county': { en: 'Specified to county (不明单位)', zh: '精确到区县（不明单位）' },
+  'search.precision.city': { en: 'Specified to city (县=不明)', zh: '精确到城市（县=不明）' },
 
   // ── search filters ────────────────────────────────────────────────────
   'filters.quantity.title': { en: 'Number of Coins', zh: '钱币数量' },
@@ -204,6 +209,30 @@ export const DICTIONARY = {
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
+  'map.filter.hint': {
+    en: 'Filter by coin type or mint. Sites colour by context: all matching = red; mixed contexts use quantity share (redder = higher); present but uncounted = grey; absent = faint grey.',
+    zh: '按币种或铸地筛选。按出土单位着色：单位内全为所选=红；混合单位按数量占比（越高越红）；有所选但无法计量=灰半透明；不含所选=浅灰。',
+  },
+  'map.filter.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
+  'map.filter.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
+  'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
+  'map.filter.selectMint': { en: 'Select mint', zh: '选择铸地' },
+  'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
+  'map.popup.pureMint': {
+    en: 'Selected mint makes up entire context(s) at this site',
+    zh: '该遗址相关出土单位内均为所选铸地',
+  },
+  'map.filter.l1': { en: '1 · Major category', zh: '1 · 大类' },
+  'map.filter.l2': { en: '2 · Subcategory', zh: '2 · 中类' },
+  'map.filter.l3': { en: '3 · Type', zh: '3 · 类型' },
+  'map.filter.l4': { en: '4 · Variant', zh: '4 · 形制' },
+  'map.filter.inscription': { en: '5 · Inscription ({count})', zh: '5 · 铭文（{count}）' },
+  'map.legend.title': { en: 'Share within contexts:', zh: '出土单位内占比：' },
+  'map.legend.pure': { en: 'Context all this type', zh: '单位内全为此类' },
+  'map.popup.pureContext': {
+    en: 'Selected type makes up entire context(s) at this site',
+    zh: '该遗址相关出土单位内均为所选币种',
+  },
 
   // ── mints page ────────────────────────────────────────────────────────
   'mints.title': { en: 'Mint Town Locations', zh: '铸币城邑位置' },

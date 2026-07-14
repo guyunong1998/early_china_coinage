@@ -7,15 +7,20 @@
 const RAMP_LIGHT: [number, number, number] = [0xd9, 0xa4, 0x06] // low ratio: yellow
 const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: red
 
-// Site has no record of the selected type at all. Rendered at low opacity
-// (see NO_DATA_ALPHA) so it recedes rather than competing with real data.
-export const NO_DATA_COLOR = '#b0b8b8'
-export const NO_DATA_ALPHA = 0.2
+// Site/context has no record of the selected type at all. Very faint so it
+// recedes behind real data.
+export const NO_DATA_COLOR = '#c5c5c5'
+export const NO_DATA_ALPHA = 0.18
 
-// Reserved status-like colors, validated for CVD separation (worst all-pairs
-// ΔE ~16, above the 12 target) from the ramp and from each other.
-export const PRESENT_UNQUANTIFIED_COLOR = '#FF66C4' // pink
-export const ONE_OF_ONE_COLOR = '#aa00ff'           // magenta
+// Type is present in a context but quantities cannot be computed — solid-ish
+// gray translucent, clearly darker/more opaque than NO_DATA.
+export const PRESENT_UNQUANTIFIED_COLOR = 'rgba(120, 120, 120, 0.55)'
+
+// Context (or site) is entirely the selected type.
+export const PURE_MATCH_COLOR = '#a01515'
+
+// Legacy aliases kept for older heatmap UI bits.
+export const ONE_OF_ONE_COLOR = PURE_MATCH_COLOR
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t
@@ -43,13 +48,8 @@ export function ratioToColor(ratio: number): string {
   ])
 }
 
-export const RAMP_LEGEND_STOPS = [
-  { ratio: 0.00, color: '#8B0000' },
-  { ratio: 0.10, color: '#B3001B' },
-  { ratio: 0.25, color: '#D7191C' },
-  { ratio: 0.40, color: '#F03B20' },
-  { ratio: 0.55, color: '#FD6A02' },
-  { ratio: 0.70, color: '#FF8C00' },
-  { ratio: 0.85, color: '#FFB000' },
-  { ratio: 1.00, color: '#FFF200' },
-]
+/** Legend stops matching ratioToColor (low % = yellow, high % = red). */
+export const RAMP_LEGEND_STOPS = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
+  ratio,
+  color: ratioToColor(ratio),
+}))

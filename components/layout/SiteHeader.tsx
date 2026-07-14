@@ -29,9 +29,6 @@ export function SiteHeader() {
             <Link href="/heatmap" className="hover:text-brand">
               <T k="nav.spadeHeatmap" />
             </Link>
-            <Link href="/coin-types" className="hover:text-brand">
-              <T k="nav.coinTypes" />
-            </Link>
             <Link href="/search" className="hover:text-brand">
               <T k="nav.search" />
             </Link>

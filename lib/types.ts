@@ -116,4 +116,5 @@ export type HeatmapFind = {
   quantity_estimated: number | null
   presence: boolean | null
   site_code: string
+  context_code: string | null
 }

@@ -1,78 +1,80 @@
 import Link from 'next/link'
-import { CoinMapSection } from '@/components/map/CoinMapSection'
+import { FindSpotsMap } from '@/components/map/FindSpotsMap'
 import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import { getSitePrecision, isUnknownText } from '@/lib/city-boundaries'
-import { getMapSites } from '@/lib/queries'
+import {
+  countSitesByPrecision,
+  parsePrecisionFilter,
+  siteMatchesPrecisionFilter,
+  type PrecisionFilter,
+} from '@/lib/city-boundaries'
+import { getCoinTypes, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
 
-type PrecisionFilter = 'all' | 'city' | 'city_only' | 'county_only'
+const PRECISION_TABS: Array<{ id: PrecisionFilter; key: DictionaryKey }> = [
+  { id: 'all', key: 'map.precision.all' },
+  { id: 'site', key: 'map.precision.site' },
+  { id: 'county', key: 'map.precision.county' },
+  { id: 'city', key: 'map.precision.city' },
+]
 
 type PageProps = {
   searchParams: Promise<{ precision?: string }>
 }
 
+export const metadata = {
+  title: 'Find Spots | Early Chinese Coin Finds',
+  description:
+    'Interactive map of georeferenced coin find sites with typology-based coin type filtering.',
+}
+
 export default async function MapPage({ searchParams }: PageProps) {
-  const { precision = 'all' } = await searchParams
-  const currentPrecision: PrecisionFilter =
-    precision === 'city' || precision === 'city_only' || precision === 'county_only'
-      ? precision
-      : 'all'
+  const { precision: precisionParam } = await searchParams
+  const currentPrecision = parsePrecisionFilter(precisionParam)
 
-  const allSites = await getMapSites()
-  const counts = {
-    all: allSites.length,
-    city: allSites.filter((site) => !isUnknownText(site.city_zh)).length,
-    city_only: allSites.filter((site) => getSitePrecision(site) === 'city_only').length,
-    county_only: allSites.filter((site) => getSitePrecision(site) === 'county_only').length,
-  }
+  const [allSites, coinTypes, finds] = await Promise.all([
+    getFindSpotsMapSites(),
+    getCoinTypes(),
+    getFindsForHeatmap(),
+  ])
 
-  const sites =
-    currentPrecision === 'all'
-      ? allSites
-      : allSites.filter((site) => {
-          if (currentPrecision === 'city') return !isUnknownText(site.city_zh)
-          return getSitePrecision(site) === currentPrecision
-        })
-
-  const precisionTabs: Array<{ id: PrecisionFilter; key: DictionaryKey; count: number }> = [
-    { id: 'all', key: 'search.precision.all', count: counts.all },
-    { id: 'city', key: 'search.precision.city', count: counts.city },
-    { id: 'city_only', key: 'search.precision.cityOnly', count: counts.city_only },
-    { id: 'county_only', key: 'search.precision.countyOnly', count: counts.county_only },
-  ]
+  const counts = countSitesByPrecision(allSites)
+  const sites = allSites.filter((site) => siteMatchesPrecisionFilter(site, currentPrecision))
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
-      <div className="border-b border-brand/20 bg-white px-4 py-3">
+      <div className="shrink-0 border-b border-brand/20 bg-white px-4 py-3">
         <h1 className="font-serif text-xl font-semibold text-brand">
           <T k="map.title" />
         </h1>
         <p className="text-sm text-gray-600">
           <T k="map.count" vars={{ count: sites.length }} />
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {precisionTabs.map((tab) => {
-            const active = tab.id === currentPrecision
-            const href = `/map${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
-            return (
-              <Link
-                key={tab.id}
-                href={href}
-                className={`rounded border px-3 py-1 text-xs transition ${
-                  active
-                    ? 'border-brand bg-brand text-white'
-                    : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-                }`}
-              >
-                <T k={tab.key} /> ({tab.count})
-              </Link>
-            )
-          })}
+        <div className="mt-2">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <T k="map.precision.label" />
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PRECISION_TABS.map((tab) => {
+              const active = tab.id === currentPrecision
+              const href = `/map${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
+              return (
+                <Link
+                  key={tab.id}
+                  href={href}
+                  className={`rounded border px-3 py-1 text-xs transition ${
+                    active
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
+                  }`}
+                >
+                  <T k={tab.key} /> ({counts[tab.id]})
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
-      <div className="flex-1">
-        <CoinMapSection sites={sites} height="100%" />
-      </div>
+      <FindSpotsMap sites={sites} coinTypes={coinTypes} finds={finds} />
     </div>
   )
 }

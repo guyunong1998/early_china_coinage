@@ -2,9 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { Map as LeafletMap, Marker } from 'leaflet'
-import { TYPOLOGY, ALL_MINTS } from '@/lib/typology-data'
-import type { TypologyL2, TypologyL3, TypologyLeaf } from '@/lib/typology-data'
+import { ALL_MINTS } from '@/lib/typology-data'
 import type { MapSite } from '@/lib/types'
+import { TypologyFilterBar } from '@/components/map/TypologyFilterBar'
+import {
+  emptyTypologySelection,
+  siteMatchesTypologyFilter,
+  type TypologyFilterSelection,
+} from '@/lib/typology-filter'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { T } from '@/components/i18n/T'
@@ -57,13 +62,6 @@ function formatCoinTypeBilingual(value: string | null) {
 
 type FilterMode = 'type' | 'mint'
 
-type TypeFilter = {
-  l1: string
-  l2: string
-  l3: string
-  inscription: string
-}
-
 // ─── main component ────────────────────────────────────────────────────────
 
 export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
@@ -73,30 +71,11 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
   const markersRef = useRef<Map<string, Marker>>(new Map())
 
   const [mode, setMode] = useState<FilterMode>('type')
-  const [tf, setTf] = useState<TypeFilter>({ l1: '', l2: '', l3: '', inscription: '' })
+  const [tf, setTf] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [mintFilter, setMintFilter] = useState('')
   const [mintSearch, setMintSearch] = useState('')
   const [matchCount, setMatchCount] = useState<number | null>(null)
 
-  // ── derived options ──
-  const l1Options = TYPOLOGY.map((t) => t.label_en)
-  const l1 = TYPOLOGY.find((t) => t.label_en === tf.l1)
-  const l2Options: TypologyL2[] = l1?.children ?? []
-  const l2 = l2Options.find((t) => t.label_en === tf.l2)
-  const l3Options: TypologyL3[] = l2?.children ?? []
-  const l3 = l3Options.find((t) => t.label_en === tf.l3)
-  // Inscriptions for selected L3 (or L2 if no L3 children)
-  const leafEntries: TypologyLeaf[] =
-    l3?.entries ?? (l2 && l2.children.length === 0 ? l2.entries ?? [] : [])
-  const inscriptionOptions = leafEntries
-    .filter((e) => e.inscription_zh)
-    .map((e) => ({
-      zh: e.inscription_zh!,
-      en: e.inscription_en ?? e.inscription_zh!,
-      mint_zh: e.mint_zh,
-    }))
-
-  // Filter mint list by search
   const filteredMints = mintSearch
     ? ALL_MINTS.filter(
         (m) =>
@@ -108,10 +87,10 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
   // ── compute matching site codes ──
   function computeMatches(): Set<string> | null {
     if (mode === 'type') {
-      if (!tf.inscription) return null
+      if (!tf.l1) return null
       const matched = new Set<string>()
       sites.forEach((s) => {
-        if (csvIncludes(s.inscriptions, tf.inscription)) matched.add(s.site_code)
+        if (siteMatchesTypologyFilter(s, tf)) matched.add(s.site_code)
       })
       return matched
     } else {
@@ -150,8 +129,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
         marker.setZIndexOffset(isMatch === true ? 1000 : isMatch === false ? -1000 : 0)
       })
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tf.inscription, mintFilter, mode])
+  }, [tf, mintFilter, mode, sites])
 
   // ── initialise map once ──
   useEffect(() => {
@@ -291,7 +269,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
 
-  const activeFilter = mode === 'type' ? tf.inscription : mintFilter
+  const activeFilter = mode === 'type' ? tf.l1 : mintFilter
 
   return (
     <div className="overflow-hidden border border-brand/20">
@@ -302,7 +280,11 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           {(['type', 'mint'] as const).map((m) => (
             <button
               key={m}
-              onClick={() => { setMode(m); setTf({ l1: '', l2: '', l3: '', inscription: '' }); setMintFilter('') }}
+              onClick={() => {
+                setMode(m)
+                setTf(emptyTypologySelection())
+                setMintFilter('')
+              }}
               className={`px-4 py-1.5 text-xs font-semibold border transition ${
                 mode === m
                   ? 'bg-brand text-white border-brand'
@@ -314,7 +296,10 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           ))}
           {activeFilter && (
             <button
-              onClick={() => { setTf({ l1: '', l2: '', l3: '', inscription: '' }); setMintFilter('') }}
+              onClick={() => {
+                setTf(emptyTypologySelection())
+                setMintFilter('')
+              }}
               className="ml-auto px-3 py-1.5 text-xs text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
             >
               <T k="coinFilterMap.clearFilter" />
@@ -324,75 +309,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
 
         {/* Type cascade */}
         {mode === 'type' && (
-          <div className="space-y-2">
-            {/* Row 1: L1 → L2 → L3 dropdowns */}
-            <div className="flex flex-wrap gap-2">
-              <Select
-                value={tf.l1}
-                placeholder={t('coinFilterMap.category')}
-                options={l1Options}
-                onChange={(v) => { setTf({ l1: v, l2: '', l3: '', inscription: '' }) }}
-              />
-              {tf.l1 && l2Options.length > 0 && (
-                <Select
-                  value={tf.l2}
-                  placeholder={t('coinFilterMap.subcategory')}
-                  options={l2Options.map((x) => x.label_en)}
-                  onChange={(v) => { setTf((p) => ({ ...p, l2: v, l3: '', inscription: '' })) }}
-                />
-              )}
-              {tf.l2 && l3Options.length > 0 && (
-                <Select
-                  value={tf.l3}
-                  placeholder={t('coinFilterMap.type')}
-                  options={l3Options.map((x) => x.label_en)}
-                  onChange={(v) => { setTf((p) => ({ ...p, l3: v, inscription: '' })) }}
-                />
-              )}
-            </div>
-
-            {/* Row 2: Inscription picker — scrollable list so all options are visible */}
-            {(tf.l3 || (tf.l2 && l3Options.length === 0)) && inscriptionOptions.length > 0 && (
-              <div>
-                <p className="mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  {t('coinFilterMap.inscriptionCount', { count: inscriptionOptions.length })}
-                  {tf.inscription && (
-                    <button
-                      onClick={() => setTf((p) => ({ ...p, inscription: '' }))}
-                      className="ml-2 normal-case font-normal text-gray-400 hover:text-brand"
-                    >
-                      <T k="coinFilterMap.clear" />
-                    </button>
-                  )}
-                </p>
-                <div className="max-h-44 overflow-y-auto border border-brand/20 bg-white">
-                  {inscriptionOptions.map((e, i) => (
-                    <button
-                      key={i}
-                      onClick={() =>
-                        setTf((p) => ({ ...p, inscription: p.inscription === e.zh ? '' : e.zh }))
-                      }
-                      className={`flex w-full items-baseline gap-3 px-3 py-1.5 text-left text-sm transition hover:bg-brand-light ${
-                        tf.inscription === e.zh ? 'bg-brand text-white hover:bg-brand' : ''
-                      }`}
-                    >
-                      <span className={`w-20 shrink-0 font-semibold ${tf.inscription === e.zh ? 'text-white' : 'text-gray-800'}`}>
-                        {e.zh}
-                      </span>
-                      <span className={`flex-1 ${tf.inscription === e.zh ? 'text-white/90' : 'text-gray-500'}`}>
-                        {e.en}
-                      </span>
-                      {e.mint_zh && (
-                        <span className={`shrink-0 text-xs ${tf.inscription === e.zh ? 'text-white/70' : 'text-brand/60'}`}>
-                          {t('coinFilterMap.mintLabel')} {e.mint_zh}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <TypologyFilterBar sel={tf} onChange={setTf} showInscriptionList compact />
         )}
 
         {/* Mint search */}
