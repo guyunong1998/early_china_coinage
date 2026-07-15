@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Generic single-marker map for one lat/lng point (configurable height/zoom).
+ *
+ * Used by: app/mints/[mint_code]/page.tsx (the mint town's own location).
+ */
+
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 

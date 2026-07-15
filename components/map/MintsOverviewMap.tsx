@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Overview map of every documented mint town.
+ *
+ * Used by: app/mints/page.tsx.
+ */
+
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { MintTown } from '@/lib/mint-towns'

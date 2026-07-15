@@ -1,5 +1,12 @@
 'use client'
 
+/**
+ * Base Leaflet map plotting a list of find sites as markers with popups;
+ * supports fitting bounds to the sites and highlighting one site.
+ *
+ * Not used directly by any page — wrapped by CoinMapSection.tsx.
+ */
+
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { MapSite } from '@/lib/types'

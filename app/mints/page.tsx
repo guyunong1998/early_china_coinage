@@ -1,5 +1,5 @@
 import { MintListClient } from '@/components/mints/MintListClient'
-import { MintsOverviewMap } from '@/components/mints/MintsOverviewMap'
+import { MintsOverviewMap } from '@/components/map/MintsOverviewMap'
 import { T } from '@/components/i18n/T'
 import { MINT_TOWNS } from '@/lib/mint-towns'
 import { fetchMintsFromSheet } from '@/lib/sheets'

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MintIssueDistributionMap } from '@/components/mints/MintIssueDistributionMap'
+import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
 import SinglePointMap from '@/components/map/SinglePointMap'
@@ -157,7 +157,7 @@ export default async function MintDetailPage({ params }: PageProps) {
               No findspot records linked to this mint in the current database.
             </p>
           ) : mint.lat != null && mint.lng != null ? (
-            <MintIssueDistributionMap
+            <MintIssueDistribution
               mint={{
                 name_zh: mint.name_zh,
                 name_en: mint.name_en,

@@ -37,6 +37,9 @@ export const metadata: Metadata = {
   title: 'Early Chinese Coin Finds Database',
   description:
     'A searchable database of pre-Qin to early Han coin discoveries across China.',
+  icons: {
+    icon: '/coin.svg',
+  },
 }
 
 export default function RootLayout({

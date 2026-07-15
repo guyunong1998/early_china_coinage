@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
-import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/site/HoardMintOriginsMap'
+import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/map/HoardMintOriginsMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
@@ -307,16 +307,22 @@ export default async function SitePage({ params }: PageProps) {
       {mintOrigins && mintOrigins.matched.length > 0 && (
         <div className="mt-6">
           <DataCard title="Coin Mint Origins">
-            <HoardMintOriginsMap
-              site={{
-                site_code,
-                name_zh: site.site_name_zh,
-                name_en: site.site_name_en,
-                lat: summary!.lat as number,
-                lng: summary!.lng as number,
-              }}
-              mints={mintOrigins.matched}
-            />
+            <div className="space-y-2">
+              <HoardMintOriginsMap
+                site={{
+                  site_code,
+                  name_zh: site.site_name_zh,
+                  name_en: site.site_name_en,
+                  lat: summary!.lat as number,
+                  lng: summary!.lng as number,
+                }}
+                mints={mintOrigins.matched}
+              />
+              <p className="text-xs text-gray-500">
+                Teal marker: this findspot. Red markers: mint towns that issued coins found here, connected
+                by dashed lines.
+              </p>
+            </div>
             {mintOrigins.unmatched.length > 0 && (
               <p className="mt-3 text-xs text-gray-500">
                 Mint location not yet mapped for:{' '}

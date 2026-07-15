@@ -1,10 +1,19 @@
 'use client'
 
+/**
+ * Pure map: mint-town production heatmap, a circle marker per mint town
+ * sized/shaded by coin (or ANS specimen) count. No caption, no wrapper —
+ * just the map.
+ *
+ * Used by: components/heatmap/HeatmapPanel.tsx (app/heatmap/page.tsx) and
+ * components/visualizations/QuantityVisualization.tsx
+ * (app/visualizations/quantity/page.tsx), both of which render their own
+ * caption text below it.
+ */
+
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
-import type { PointedSpadeMintStat } from '@/lib/pointed-spade-data'
-
-import type { HeatmapSource } from '@/components/heatmap/HeatmapPanel'
+import type { HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 
 function heatRadius(coinCount: number, maxCount: number) {
   if (maxCount <= 0) return 12
@@ -83,14 +92,5 @@ export function PointedSpadeHeatmap({
     }
   }, [mints, source])
 
-  return (
-    <div className="space-y-2">
-      <div ref={containerRef} style={{ height: '480px', width: '100%' }} />
-      <p className="text-xs text-gray-500">
-        Circle size and intensity reflect the number of{' '}
-        {source === 'database' ? 'coins recorded in the database' : 'ANS catalogue specimens'} for each
-        mint town. Only mints with mapped coordinates are shown.
-      </p>
-    </div>
-  )
+  return <div ref={containerRef} style={{ height: '480px', width: '100%' }} />
 }

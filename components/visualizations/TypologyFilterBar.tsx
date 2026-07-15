@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * Not a map itself — the coin-type filter control (major category / sub-
+ * category / type / variant / inscription dropdowns).
+ *
+ * Used by: FindSpotsSidebar.tsx (app/visualizations/coin-type and
+ * app/visualizations/mint pages).
+ */
+
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
   emptyTypologySelection,

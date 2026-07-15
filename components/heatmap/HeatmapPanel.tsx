@@ -1,15 +1,24 @@
 'use client'
 
+/**
+ * Standalone heatmap page's full section: a database/ANS-catalogue toggle,
+ * the mint production heatmap map (PointedSpadeHeatmap, a pure map — this
+ * component supplies its own caption text below it), a "Coins by mint"
+ * table, and a "Data sources" card.
+ *
+ * Used by: app/heatmap/page.tsx only. Kept intentionally separate from (and
+ * untouched by) the map visualizations page's Quantity tab, which reuses
+ * PointedSpadeHeatmap directly without the table/sources — see
+ * components/visualizations/QuantityVisualization.tsx.
+ */
+
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { PointedSpadeHeatmap } from '@/components/heatmap/PointedSpadeHeatmap'
+import { PointedSpadeHeatmap } from '@/components/map/PointedSpadeHeatmap'
 import { DataCard } from '@/components/ui/DataCard'
 import { formatNumber } from '@/lib/format'
 import type { AnsMintStats } from '@/lib/ans-spade-data'
-import type { PointedSpadeMintStat } from '@/lib/pointed-spade-data'
-
-export type HeatmapSource = 'database' | 'ans'
-export type AnsSpadeKind = 'pointed' | 'square'
+import type { AnsSpadeKind, HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 
 type HeatmapPanelProps = {
   database: {
@@ -131,13 +140,20 @@ export function HeatmapPanel({ database, ansPointed, ansSquare }: HeatmapPanelPr
             </div>
           )}
         </div>
-        <div className="p-4">
+        <div className="space-y-2 p-4">
           {active.mapped.length > 0 ? (
-            <PointedSpadeHeatmap
-              key={source === 'ans' ? `ans-${ansKind}` : 'database'}
-              mints={active.mapped}
-              source={mapSource}
-            />
+            <>
+              <PointedSpadeHeatmap
+                key={source === 'ans' ? `ans-${ansKind}` : 'database'}
+                mints={active.mapped}
+                source={mapSource}
+              />
+              <p className="text-xs text-gray-500">
+                Circle size and intensity reflect the number of{' '}
+                {source === 'database' ? 'coins recorded in the database' : 'ANS catalogue specimens'} for
+                each mint town. Only mints with mapped coordinates are shown.
+              </p>
+            </>
           ) : (
             <p className="text-sm text-gray-500">No mapped mint towns for this data source.</p>
           )}

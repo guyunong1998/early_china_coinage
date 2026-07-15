@@ -1,5 +1,10 @@
 import type { HeatmapFind } from '@/lib/types'
 
+/** Find-spots map: filtering by coin type or by mint. */
+export type FilterMode = 'type' | 'mint'
+/** Find-spots map: individual colored points, or a blended density mass. */
+export type ViewMode = 'points' | 'density'
+
 export type ContextHeatState =
   | { kind: 'absent' }
   | { kind: 'pure' }

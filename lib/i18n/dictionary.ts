@@ -230,8 +230,17 @@ export const DICTIONARY = {
   'visualizations.data.ans': { en: 'ANS catalogue', zh: 'ANS 目录' },
   'visualizations.ans.pointed': { en: 'Pointed-foot (尖足布)', zh: '尖足布' },
   'visualizations.ans.square': { en: 'Square-foot (方足布)', zh: '方足布' },
+  'visualizations.ans.category': { en: 'Category', zh: '类别' },
   'visualizations.mintHeatmapTitle': { en: 'Mint Production Heatmap', zh: '铸地产量热力图' },
   'visualizations.noMappedMints': { en: 'No mapped mint towns for this data source.', zh: '该数据来源暂无已定位铸地。' },
+  'visualizations.mintHeatmapCaption.database': {
+    en: 'Circle size and intensity reflect the number of coins recorded in the database for each mint town. Only mints with mapped coordinates are shown.',
+    zh: '圆圈大小与深浅反映数据库中各铸地记录的钱币数量。仅显示已定位坐标的铸地。',
+  },
+  'visualizations.mintHeatmapCaption.ans': {
+    en: 'Circle size and intensity reflect the number of ANS catalogue specimens for each mint town. Only mints with mapped coordinates are shown.',
+    zh: '圆圈大小与深浅反映 ANS 目录中各铸地的标本数量。仅显示已定位坐标的铸地。',
+  },
   'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
   'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
   'visualizations.stats.specimens': { en: '{count} specimens', zh: '{count} 件标本' },

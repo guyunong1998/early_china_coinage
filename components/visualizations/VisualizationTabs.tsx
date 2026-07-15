@@ -1,5 +1,13 @@
 'use client'
 
+/**
+ * Not a map itself — the vertical "Visualize by" sidebar tab list
+ * (Quantity / Coin Type / Mint) shared across the map visualizations pages.
+ *
+ * Used by: app/visualizations/quantity/page.tsx,
+ * app/visualizations/coin-type/page.tsx, app/visualizations/mint/page.tsx.
+ */
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { T } from '@/components/i18n/T'

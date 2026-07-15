@@ -1,5 +1,4 @@
 import { QuantityVisualization } from '@/components/visualizations/QuantityVisualization'
-import { VisualizationTabs } from '@/components/visualizations/VisualizationTabs'
 import { T } from '@/components/i18n/T'
 import { getAnsPointedSpadeMintStats, getAnsSquareSpadeMintStats } from '@/lib/ans-spade-data'
 import { getPointedSpadeMintStats } from '@/lib/pointed-spade-data'
@@ -28,7 +27,6 @@ export default async function VisualizationsQuantityPage() {
         database={{ mapped: db.mapped, unmapped: db.unmapped }}
         ansPointed={ansPointed}
         ansSquare={ansSquare}
-        tabs={<VisualizationTabs />}
       />
     </div>
   )

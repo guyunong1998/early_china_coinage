@@ -4,6 +4,11 @@ import { TYPOLOGY } from '@/lib/typology-data'
 
 const POINTED_FOOT_ZH = '尖足布'
 
+/** Which dataset a mint production heatmap is showing. */
+export type HeatmapSource = 'database' | 'ans'
+/** Which ANS spade catalogue a heatmap is showing, when source is 'ans'. */
+export type AnsSpadeKind = 'pointed' | 'square'
+
 export type PointedSpadeMintStat = {
   mint_zh: string
   mint_en: string | null

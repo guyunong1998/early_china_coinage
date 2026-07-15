@@ -1,31 +1,36 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
-import { PointedSpadeHeatmap } from '@/components/heatmap/PointedSpadeHeatmap'
-import type { AnsSpadeKind, HeatmapSource } from '@/components/heatmap/HeatmapPanel'
+/**
+ * Quantity tab of the map visualizations page: a sidebar ("Visualize by"
+ * tabs, a database/ANS-catalogue toggle, a pointed/square-foot category
+ * dropdown) alongside the mint production heatmap map (PointedSpadeHeatmap,
+ * a pure map — this component supplies its own caption below it) only — no
+ * title, no bordered container, no "Coins by mint" table or "Data sources"
+ * card (unlike the standalone /heatmap page, which keeps all of that — see
+ * components/heatmap/HeatmapPanel.tsx). Styled to match the Coin Type / Mint
+ * tabs' sidebar + unbordered map layout (FindSpotsVisualization.tsx).
+ *
+ * Used by: app/visualizations/quantity/page.tsx.
+ */
+
+import { useState } from 'react'
+import { PointedSpadeHeatmap } from '@/components/map/PointedSpadeHeatmap'
+import type { AnsSpadeKind, HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { VisualizationTabs } from '@/components/visualizations/VisualizationTabs'
 import type { AnsMintStats } from '@/lib/ans-spade-data'
-import type { PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 
-const ANS_KIND_TABS: { id: AnsSpadeKind; labelKey: 'visualizations.ans.pointed' | 'visualizations.ans.square' }[] = [
-  { id: 'pointed', labelKey: 'visualizations.ans.pointed' },
-  { id: 'square', labelKey: 'visualizations.ans.square' },
-]
-
-/** Quantity tab of the map visualizations page: the mint production heatmap
- * map only — no "Coins by mint" table or "Data sources" card (unlike the
- * standalone /heatmap page, which keeps both — see HeatmapPanel.tsx). */
 export function QuantityVisualization({
   database,
   ansPointed,
   ansSquare,
-  tabs,
 }: {
   database: { mapped: PointedSpadeMintStat[]; unmapped: PointedSpadeMintStat[] }
   ansPointed: AnsMintStats
   ansSquare: AnsMintStats
-  tabs: ReactNode
 }) {
+  const { t } = useLanguage()
   const [source, setSource] = useState<HeatmapSource>('database')
   const [ansKind, setAnsKind] = useState<AnsSpadeKind>('pointed')
 
@@ -36,9 +41,11 @@ export function QuantityVisualization({
     <div className="flex min-h-[70vh] flex-1 flex-col bg-white lg:flex-row min-[1440px]:min-h-0 min-[1440px]:overflow-hidden">
       <aside className="flex shrink-0 flex-col border-b border-brand/20 lg:w-[19.5rem] lg:border-b-0 lg:border-r xl:w-[22rem]">
         <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5 sm:px-3.5">
-          {tabs}
+          <div key="tabs">
+            <VisualizationTabs />
+          </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div key="data-toggle" className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
               <T k="visualizations.data.label" />
             </span>
@@ -57,51 +64,47 @@ export function QuantityVisualization({
               </button>
             ))}
           </div>
+
+          {source === 'ans' && (
+            <label key="ans-category" className="flex flex-col gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                <T k="visualizations.ans.category" />
+              </span>
+              <select
+                value={ansKind}
+                onChange={(e) => setAnsKind(e.target.value as AnsSpadeKind)}
+                className="w-full rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="pointed">{t('visualizations.ans.pointed')}</option>
+                <option value="square">{t('visualizations.ans.square')}</option>
+              </select>
+            </label>
+          )}
+
+          <p key="caption" className="text-[11px] leading-snug text-gray-500">
+            <T
+              k={
+                source === 'database'
+                  ? 'visualizations.mintHeatmapCaption.database'
+                  : 'visualizations.mintHeatmapCaption.ans'
+              }
+            />
+          </p>
         </div>
       </aside>
 
       <div className="relative flex-1 overflow-y-auto p-4">
-        <div className="panel overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand px-4 py-2 text-sm font-bold uppercase tracking-wide text-white">
-            <span>
-              <T k="visualizations.mintHeatmapTitle" />
-            </span>
-            {source === 'ans' && (
-              <div className="flex flex-wrap gap-1">
-                {ANS_KIND_TABS.map((tab) => {
-                  const selected = tab.id === ansKind
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setAnsKind(tab.id)}
-                      className={`rounded border px-2.5 py-1 text-xs font-semibold normal-case tracking-normal transition ${
-                        selected
-                          ? 'border-white bg-white text-brand'
-                          : 'border-white/40 bg-transparent text-white hover:border-white hover:bg-white/10'
-                      }`}
-                    >
-                      <T k={tab.labelKey} />
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-          <div className="p-4">
-            {active.mapped.length > 0 ? (
-              <PointedSpadeHeatmap
-                key={source === 'ans' ? `ans-${ansKind}` : 'database'}
-                mints={active.mapped}
-                source={source}
-              />
-            ) : (
-              <p className="text-sm text-gray-500">
-                <T k="visualizations.noMappedMints" />
-              </p>
-            )}
-          </div>
-        </div>
+        {active.mapped.length > 0 ? (
+          <PointedSpadeHeatmap
+            key={source === 'ans' ? `ans-${ansKind}` : 'database'}
+            mints={active.mapped}
+            source={source}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">
+            <T k="visualizations.noMappedMints" />
+          </p>
+        )}
       </div>
     </div>
   )

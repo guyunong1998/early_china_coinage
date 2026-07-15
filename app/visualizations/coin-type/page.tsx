@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { FindSpotsMap } from '@/components/map/FindSpotsMap'
-import { VisualizationTabs } from '@/components/visualizations/VisualizationTabs'
+import { FindSpotsVisualization } from '@/components/visualizations/FindSpotsVisualization'
 import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import {
@@ -80,13 +79,7 @@ export default async function CoinTypeVisualizationPage({ searchParams }: PagePr
           })}
         </div>
       </div>
-      <FindSpotsMap
-        sites={sites}
-        coinTypes={coinTypes}
-        finds={finds}
-        forcedMode="type"
-        sidebarExtra={<VisualizationTabs />}
-      />
+      <FindSpotsVisualization sites={sites} coinTypes={coinTypes} finds={finds} forcedMode="type" />
     </div>
   )
 }

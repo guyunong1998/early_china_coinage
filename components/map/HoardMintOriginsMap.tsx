@@ -1,5 +1,14 @@
 'use client'
 
+/**
+ * Pure map for one site showing the mint towns its coins were issued from
+ * ("mint origins") — the site itself plus a point per contributing mint. No
+ * caption, no wrapper — just the map.
+ *
+ * Used by: app/sites/[site_code]/page.tsx, which renders its own caption
+ * below it.
+ */
+
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 
@@ -124,12 +133,5 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
     }
   }, [site.lat, site.lng, site.name_zh, site.site_code, mints])
 
-  return (
-    <div className="space-y-2">
-      <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
-      <p className="text-xs text-gray-500">
-        Teal marker: this findspot. Red markers: mint towns that issued coins found here, connected by dashed lines.
-      </p>
-    </div>
-  )
+  return <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
 }

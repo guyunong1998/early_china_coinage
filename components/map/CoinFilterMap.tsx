@@ -1,12 +1,19 @@
 'use client'
 
-import Link from 'next/link'
+/**
+ * Pure map: every find site as a clickable marker on the homepage, plus a
+ * density heatmap overlay (by quantity) shown by default. No filters, no
+ * header, no wrapper — just the map.
+ *
+ * Used by: app/page.tsx (homepage), which wraps it with the header link out
+ * to the full map visualizations page.
+ */
+
 import { useEffect, useRef } from 'react'
 import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import type { MapSite } from '@/lib/types'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
-import { T } from '@/components/i18n/T'
 import {
   fetchCityBoundaryGeoJson,
   fetchCountyBoundaryGeoJson,
@@ -229,17 +236,5 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
 
-  return (
-    <div>
-      <Link
-        href="/visualizations"
-        className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide hover:underline"
-      >
-        <T k="home.mapSection.title" />
-      </Link>
-      <div className="panel-body overflow-hidden">
-        <div ref={containerRef} style={{ height: '420px', width: '100%' }} />
-      </div>
-    </div>
-  )
+  return <div ref={containerRef} style={{ height: '420px', width: '100%' }} />
 }

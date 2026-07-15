@@ -1,11 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+/**
+ * Pure map: the mint town's own location plus the (already-filtered) find
+ * sites where coins issued from it were discovered. No filter UI, no
+ * caption, no wrapper — just the map.
+ *
+ * Used by: components/mints/MintIssueDistribution.tsx
+ * (app/mints/[mint_code]/page.tsx), which owns the coin-type filter that
+ * decides which sites to pass in.
+ */
+
+import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { MapSite } from '@/lib/types'
-import type { MintTypeOption } from '@/lib/queries'
 
-type MintIssueDistributionMapProps = {
+type MintIssueDistributionMapCanvasProps = {
   mint: {
     name_zh: string
     name_en: string
@@ -13,8 +22,6 @@ type MintIssueDistributionMapProps = {
     lng: number
   }
   sites: MapSite[]
-  siteTypeKeys: Record<string, string[]>
-  typeOptions: MintTypeOption[]
 }
 
 function makeDot(color: string, size = 12) {
@@ -27,20 +34,9 @@ function makeDot(color: string, size = 12) {
   "></div>`
 }
 
-export function MintIssueDistributionMap({
-  mint,
-  sites,
-  siteTypeKeys,
-  typeOptions,
-}: MintIssueDistributionMapProps) {
-  const [selectedType, setSelectedType] = useState('all')
+export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistributionMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
-
-  const filteredSites = useMemo(() => {
-    if (selectedType === 'all') return sites
-    return sites.filter((site) => (siteTypeKeys[site.site_code] ?? []).includes(selectedType))
-  }, [selectedType, sites, siteTypeKeys])
 
   useEffect(() => {
     let cancelled = false
@@ -77,7 +73,7 @@ export function MintIssueDistributionMap({
           </div>`
         )
 
-      filteredSites.forEach((site) => {
+      sites.forEach((site) => {
         if (site.lat == null || site.lng == null) return
         bounds.push([site.lat, site.lng])
 
@@ -109,35 +105,7 @@ export function MintIssueDistributionMap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [filteredSites, mint.lat, mint.lng, mint.name_en, mint.name_zh])
+  }, [sites, mint.lat, mint.lng, mint.name_en, mint.name_zh])
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <label htmlFor="mint-type-filter" className="text-sm font-semibold text-gray-700">
-          Coin type filter:
-        </label>
-        <select
-          id="mint-type-filter"
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
-          className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
-        >
-          <option value="all">All issued coin types ({sites.length} sites)</option>
-          {typeOptions.map((option) => (
-            <option key={option.key} value={option.key}>
-              {option.label} ({option.siteCount})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
-
-      <p className="text-xs text-gray-500">
-        Red marker: mint location. Teal markers: findspots containing coins issued by this mint.
-      </p>
-    </div>
-  )
+  return <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
 }
-
