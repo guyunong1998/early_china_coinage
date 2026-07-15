@@ -12,7 +12,24 @@ export async function HeroBanner() {
   }
 
   return (
-    <section className="relative overflow-hidden bg-brand text-white">
+    <section
+      className="relative overflow-hidden text-white hero-banner"
+    >
+      {/* Decorative coins illustration — desktop only, right-aligned, tinted
+          by the same left-to-right brand gradient as the section background,
+          just reversed (right to left), so the two read as one continuous
+          gradient sweep. */}
+      <div className="pointer-events-none absolute inset-0 hidden lg:block" aria-hidden="true">
+        <img
+          src="/images/hero-coins.svg"
+          alt=""
+          className="absolute right-0 top-0 h-full w-auto max-w-none"
+        />
+        <div
+          className="absolute inset-0 hero-banner__overlay"
+        />
+      </div>
+
       <div className="relative mx-auto grid max-w-5xl gap-4 px-4 py-12">
         <div>
           <p className="mb-2 text-sm uppercase tracking-[0.25em] text-brand-light/90">

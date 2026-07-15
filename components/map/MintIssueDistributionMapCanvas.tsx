@@ -24,13 +24,19 @@ type MintIssueDistributionMapCanvasProps = {
   sites: MapSite[]
 }
 
+// Marker colors (RGBA) — red/terracotta for the mint town's own center
+// marker, teal for each findspot that issued coins from it. Shared dot
+// chrome (border width, radius, shadow) lives in the `.map-dot` class in
+// app/globals.css.
+const MINT_CENTER_MARKER_COLOR = 'var(--map-dot-special)' 
+const SITE_MARKER_COLOR = 'var(--map-dot-fill)' 
+const MARKER_BORDER_COLOR = 'var(--map-dot-border)' 
+
 function makeDot(color: string, size = 12) {
-  return `<div style="
+  return `<div class="map-dot" style="
     width:${size}px;height:${size}px;
     background:${color};
-    border:2px solid white;
-    border-radius:999px;
-    box-shadow:0 0 4px rgba(0,0,0,0.35);
+    border-color:${MARKER_BORDER_COLOR};
   "></div>`
 }
 
@@ -60,7 +66,7 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
       L.marker([mint.lat, mint.lng], {
         icon: L.divIcon({
           className: '',
-          html: makeDot('#c0392b', 18),
+          html: makeDot(MINT_CENTER_MARKER_COLOR, 18),
           iconSize: [18, 18],
           iconAnchor: [9, 9],
         }),
@@ -80,7 +86,7 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
         L.marker([site.lat, site.lng], {
           icon: L.divIcon({
             className: '',
-            html: makeDot('#006d71', 12),
+            html: makeDot(SITE_MARKER_COLOR, 12),
             iconSize: [12, 12],
             iconAnchor: [6, 6],
           }),

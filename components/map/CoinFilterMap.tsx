@@ -23,13 +23,17 @@ import {
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
+// Marker fill + border (RGBA) for the homepage's site dots. Shared dot
+// chrome (border width, radius, shadow) lives in the `.map-dot` class in
+// app/globals.css.
+const SITE_MARKER_COLOR = 'var(--map-dot-disabled-fill)' 
+const MARKER_BORDER_COLOR = 'var(--map-dot-disabled-border)'
+
 function dot(color: string, size = 12) {
-  return `<div style="
+  return `<div class="map-dot" style="
     width:${size}px;height:${size}px;
     background:${color};
-    border:2px solid white;
-    border-radius:50%;
-    box-shadow:0 1px 3px rgba(0,0,0,0.4);
+    border-color:${MARKER_BORDER_COLOR};
   "></div>`
 }
 
@@ -108,7 +112,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
 
         const icon = L.divIcon({
           className: '',
-          html: dot('#006d71', 12),
+          html: dot(SITE_MARKER_COLOR, 12),
           iconSize: [12, 12],
           iconAnchor: [6, 6],
         })

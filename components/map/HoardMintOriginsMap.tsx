@@ -34,13 +34,19 @@ type HoardMintOriginsMapProps = {
   mints: HoardMintOrigin[]
 }
 
+// Marker colors (RGBA) — teal for the findspot itself, red/terracotta for
+// each contributing mint town (reused for the dashed connector line below).
+// Shared dot chrome (border width, radius, shadow) lives in the `.map-dot`
+// class in app/globals.css.
+const SITE_MARKER_COLOR = 'rgba(0, 109, 113, 1)' // #006d71
+const MINT_MARKER_COLOR = 'rgba(192, 57, 43, 1)' // #c0392b
+const MARKER_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)'
+
 function makeDot(color: string, size = 12) {
-  return `<div style="
+  return `<div class="map-dot" style="
     width:${size}px;height:${size}px;
     background:${color};
-    border:2px solid white;
-    border-radius:999px;
-    box-shadow:0 0 4px rgba(0,0,0,0.35);
+    border-color:${MARKER_BORDER_COLOR};
   "></div>`
 }
 
@@ -70,7 +76,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
       const siteMarker = L.marker([site.lat, site.lng], {
         icon: L.divIcon({
           className: '',
-          html: makeDot('#006d71', 20),
+          html: makeDot(SITE_MARKER_COLOR, 20),
           iconSize: [20, 20],
           iconAnchor: [10, 10],
         }),
@@ -94,7 +100,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
             [site.lat, site.lng],
             [mint.lat, mint.lng],
           ],
-          { color: '#c0392b', weight: 1.5, opacity: 0.55, dashArray: '4 5' }
+          { color: MINT_MARKER_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
         ).addTo(map)
 
         const coinTypesList = mint.coinTypes.length > 0 ? mint.coinTypes.join('、') : '—'
@@ -102,7 +108,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
         L.marker([mint.lat, mint.lng], {
           icon: L.divIcon({
             className: '',
-            html: makeDot('#c0392b', 14),
+            html: makeDot(MINT_MARKER_COLOR, 14),
             iconSize: [14, 14],
             iconAnchor: [7, 7],
           }),

@@ -67,13 +67,13 @@
 
   /* --- Primary accent: sage/teal green — the only color used broadly --- */
   --brand-bright: #365727;
-  --brand-dark: #063800;
+  --brand-dark: #213509;
   --brand: #304912;
   --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
 
   /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
      the default interactive color) --- */
-  --accent: #8a5a2b;
+  --accent: #e1941f;
   --accent-dark: #6b4520;
   --accent-light: #efe0c3;
 
@@ -84,6 +84,20 @@
   /* Card border color, split so hover can swap it (see section 4) */
   --card-border: var(--brand);
   --card-border-hover: var(--brand-light);
+
+  --map-dot-fill: var(--brand);
+  --map-dot-special: var(--accent);
+  --map-dot-border: rgba(255, 255, 255, 0.2); /* white with low opacity, so the dot's fill color shows through */
+
+  --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
+  --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
+
+  /* Homepage hero banner's left-to-right sweep — separate from --brand /
+     --brand-dark above so you can retint just the hero without touching the
+     rest of the site's palette. The coins SVG overlay reuses these same two
+     colors in reverse (see .hero-banner__overlay below). */
+  --hero-gradient-start: var(--brand);
+  --hero-gradient-end: var(--brand-dark);
 }
 
 /* Hand this palette to Tailwind so `bg-brand`, `text-accent`, `border-paper`,
@@ -283,6 +297,26 @@ button:not(:disabled):hover {
   /* border: 3px solid var(--brand); */
 }
 
+/* Shared marker-dot look, used by every map's L.divIcon markers (fill color
+   and size stay inline per-marker, set by each map component — see the
+   commented color constants near the top of those files). Tweak here to
+   restyle every map's dots at once. */
+.map-dot {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--map-dot-border); /* fallback if a component doesn't set its own */
+  background: var(--map-dot-fill); /* fallback if a component doesn't set its own */
+  border-radius: 50%;
+  /* box-shadow: 0 0 4px rgba(0, 0, 0, 0.35); */
+}
+
+/* Modifier for de-emphasized/inactive dots (e.g. markers outside the current
+   focus). Stack with `.map-dot`: className="map-dot map-dot-disabled". */
+.map-dot-disabled {
+  border-color: var(--map-dot-border);
+  background: var(--map-dot-border);
+}
+
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
@@ -295,4 +329,28 @@ button:not(:disabled):hover {
   background-color: color-mix(in srgb, var(--brand) 85%, transparent);
   color: white;
   font-weight: 700;
+}
+
+/* Hero banner: a left-to-right sweep from --hero-gradient-start to
+   --hero-gradient-end (edit those two variables above to retint). The
+   coins SVG itself is rendered as a plain <img> in HeroBanner.tsx, not here —
+   .hero-banner__overlay below is just the tint layer on top of it. */
+.hero-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(to right, var(--hero-gradient-start), var(--hero-gradient-end));
+}
+
+/* Tints the coins <img> with the same two colors, reversed (right to left),
+   so the illustration reads as part of the gradient sweep instead of sitting
+   on top of it in its own native colors. `multiply` is what lets the
+   underlying artwork still show through instead of being fully hidden by an
+   opaque color — swap to `overlay` or `color` for a stronger/different tint,
+   or remove mix-blend-mode entirely to show the gradient as a flat layer. */
+.hero-banner__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to left, var(--hero-gradient-start), var(--hero-gradient-end));
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }

@@ -57,13 +57,18 @@ const DENSITY_GRADIENT: Record<number, string> = {
   1: '#6e0c0c',
 }
 
+// Note: this map's fill/border colors are state-driven (stateColor() below,
+// backed by lib/color-scale.ts's match-ratio gradient) rather than fixed
+// per-marker-role constants, so they're not named RGBA constants here the
+// way the other maps' simple site/mint dots are — they're the "heatmap
+// colors" this map is built around. Only the shared structural chrome
+// (radius, shadow) comes from `.map-dot` in app/globals.css; the border
+// still tracks each marker's own color inline.
 function dot(color: string, size = 14) {
-  return `<div style="
+  return `<div class="map-dot" style="
     width:${size}px;height:${size}px;
     background:${color};
-    border:2px solid ${color.includes('rgba') ? 'rgba(80,80,80,0.35)' : color};
-    border-radius:50%;
-    box-shadow:0 1px 3px rgba(0,0,0,0.35);
+    border-color:${color.includes('rgba') ? 'rgba(80,80,80,0.35)' : color};
   "></div>`
 }
 

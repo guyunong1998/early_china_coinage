@@ -9,6 +9,11 @@
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 
+// Marker fill + border (RGBA). Shared dot chrome (border width, radius,
+// shadow) lives in the `.map-dot` class in app/globals.css.
+const MARKER_COLOR = 'var(--map-dot-special)'
+const MARKER_BORDER_COLOR = 'var(--map-dot-border)'
+
 type SinglePointMapProps = {
   lat: number
   lng: number
@@ -46,12 +51,10 @@ export default function SinglePointMap({
       L.marker([lat, lng], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="
+          html: `<div class="map-dot" style="
             width:16px;height:16px;
-            background:#c0392b;
-            border:2.5px solid white;
-            border-radius:50%;
-            box-shadow:0 0 5px rgba(0,0,0,0.4);
+            background:${MARKER_COLOR};
+            border-color:${MARKER_BORDER_COLOR};
           "></div>`,
           iconSize: [16, 16],
           iconAnchor: [8, 8],

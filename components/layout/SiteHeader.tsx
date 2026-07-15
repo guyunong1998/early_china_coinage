@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { T } from '@/components/i18n/T'
 import { LanguageToggle } from '@/components/i18n/LanguageToggle'
+import { MobileNav } from '@/components/layout/MobileNav'
 
 export function SiteHeader() {
   return (
@@ -19,7 +20,7 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-6">
-          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 lg:flex">
             <Link href="/mints" className="hover:text-brand">
               <T k="nav.mints" />
             </Link>
@@ -36,6 +37,7 @@ export function SiteHeader() {
               <T k="nav.about" />
             </Link>
           </nav>
+          <MobileNav />
           <LanguageToggle />
         </div>
       </div>
