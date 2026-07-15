@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import { TypologyFilterBar } from '@/components/map/TypologyFilterBar'
 import { T } from '@/components/i18n/T'
@@ -199,11 +199,20 @@ export function FindSpotsMap({
   coinTypes,
   finds,
   height = '100%',
+  forcedMode,
+  sidebarExtra,
 }: {
   sites: MapSite[]
   coinTypes: CoinType[]
   finds: HeatmapFind[]
   height?: string
+  /** Lock the type/mint filter mode and hide the toggle — for pages (like the
+   * Coin Type / Mint tabs of the map visualizations page) that already convey
+   * the mode via their own navigation. */
+  forcedMode?: FilterMode
+  /** Rendered at the very top of the sidebar, above the Display toggle — e.g.
+   * the map visualizations page's tab list. */
+  sidebarExtra?: ReactNode
 }) {
   const { t } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -211,7 +220,7 @@ export function FindSpotsMap({
   const markersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
 
-  const [mode, setMode] = useState<FilterMode>('type')
+  const [mode, setMode] = useState<FilterMode>(forcedMode ?? 'type')
   const [viewMode, setViewMode] = useState<ViewMode>('points')
   const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [mintFilter, setMintFilter] = useState('')
@@ -475,42 +484,13 @@ export function FindSpotsMap({
   }, [])
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white lg:flex-row">
-      {/* Filters: top strip on mobile, left sidebar on desktop */}
-      <aside className="flex max-h-[42%] shrink-0 flex-col overflow-hidden border-b border-brand/20 lg:max-h-none lg:w-[19.5rem] lg:border-b-0 lg:border-r xl:w-[22rem]">
+    <div className="flex min-h-[70vh] flex-1 flex-col bg-white lg:flex-row min-[1440px]:min-h-0 min-[1440px]:overflow-hidden">
+      {/* Filters: top strip on mobile, left sidebar on desktop. Below 1440px
+          the page is allowed to scroll (see app/visualizations/*), so the
+          aside shows its full content instead of being height-capped. */}
+      <aside className="flex shrink-0 flex-col border-b border-brand/20 lg:w-[19.5rem] lg:border-b-0 lg:border-r xl:w-[22rem]">
         <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5 sm:px-3.5">
-          <p className="text-[11px] leading-snug text-gray-500">
-            <T k="map.filter.hint" />
-          </p>
-
-          <div className="flex flex-wrap items-center gap-1">
-            {(['type', 'mint'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setMode(m)
-                  clearFilters()
-                }}
-                className={`px-2.5 py-1 text-[11px] font-semibold border transition ${
-                  mode === m
-                    ? 'bg-brand text-white border-brand'
-                    : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
-                }`}
-              >
-                <T k={m === 'type' ? 'map.filter.byType' : 'map.filter.byMint'} />
-              </button>
-            ))}
-            {filterActive && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="ml-auto px-2 py-1 text-[11px] text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
-              >
-                <T k="heatmap.clearFilter" />
-              </button>
-            )}
-          </div>
+          {sidebarExtra}
 
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -531,6 +511,42 @@ export function FindSpotsMap({
               </button>
             ))}
           </div>
+
+          <p className="text-[11px] leading-snug text-gray-500">
+            <T k="map.filter.hint" />
+          </p>
+
+          {(!forcedMode || filterActive) && (
+            <div className="flex flex-wrap items-center gap-1">
+              {!forcedMode &&
+                (['type', 'mint'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setMode(m)
+                      clearFilters()
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-semibold border transition ${
+                      mode === m
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
+                    }`}
+                  >
+                    <T k={m === 'type' ? 'map.filter.byType' : 'map.filter.byMint'} />
+                  </button>
+                ))}
+              {filterActive && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="ml-auto px-2 py-1 text-[11px] text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
+                >
+                  <T k="heatmap.clearFilter" />
+                </button>
+              )}
+            </div>
+          )}
 
           {mode === 'type' && (
             <TypologyFilterBar
@@ -578,7 +594,7 @@ export function FindSpotsMap({
       </aside>
 
       {/* Map canvas — dominant area */}
-      <div className="relative min-h-[58%] flex-1 lg:min-h-0">
+      <div className="relative flex-1">
         <div
           ref={containerRef}
           className="absolute inset-0"

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { SearchableCheckboxList } from '@/components/search/SearchableCheckboxList'
+import { SortSelect } from '@/components/search/SortSelect'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import type { FacetMode, FacetOption } from '@/lib/search-filters'
+import type { FacetMode, FacetOption, SortOption } from '@/lib/search-filters'
 
 const SEARCH_THRESHOLD = 15
 
@@ -35,6 +36,7 @@ export function SearchFilters({
   maxQty,
   onlySingle,
   excludeSingle,
+  sort,
 }: {
   mintOptions: FacetOption[]
   coinTypeOptions: FacetOption[]
@@ -48,9 +50,18 @@ export function SearchFilters({
   maxQty: number | null
   onlySingle: boolean
   excludeSingle: boolean
+  sort: SortOption
 }) {
   return (
     <div className="panel divide-y divide-brand/10">
+      <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
+        <T k="filters.panelTitle" />
+      </div>
+
+      <div className="p-4">
+        <SortSelect value={sort} />
+      </div>
+
       <FacetGroup titleKey="filters.quantity.title">
         <div className="flex items-center gap-2">
           <TranslatedInput

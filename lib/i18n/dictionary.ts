@@ -4,7 +4,7 @@ export const DICTIONARY = {
   // ── header / nav ──────────────────────────────────────────────────────
   'nav.about': { en: 'About', zh: '关于' },
   'nav.search': { en: 'Search', zh: '搜索' },
-  'nav.map': { en: 'Find Spots', zh: '出土遗址' },
+  'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Heatmap', zh: '热力图' },
   'nav.heatmap': { en: 'Heatmap', zh: '热力图' },
@@ -25,10 +25,10 @@ export const DICTIONARY = {
   // ── home nav cards ────────────────────────────────────────────────────
   'navcards.mints.label': { en: 'Mint Town Location', zh: '铸币城邑位置' },
   'navcards.mints.desc': { en: 'Geographic distribution of coin-producing centres', zh: '铸币中心的地理分布' },
-  'navcards.map.label': { en: 'Find Spots', zh: '出土遗址' },
+  'navcards.map.label': { en: 'Map Visualizations', zh: '地图可视化' },
   'navcards.map.desc': {
-    en: 'Interactive map of all georeferenced coin find sites',
-    zh: '所有已定位钱币出土遗址的交互地图',
+    en: 'Explore find sites by quantity, coin type, or mint',
+    zh: '按数量、币种或铸地探索出土遗址地图',
   },
   'navcards.spadeHeatmap.label': { en: 'Heatmap', zh: '热力图' },
   'navcards.spadeHeatmap.desc': {
@@ -49,7 +49,7 @@ export const DICTIONARY = {
     zh: '数据库现有 {coins} 枚钱币，分布于 {sites} 个已验证遗址。',
   },
   'stats.summaryWithFinds': {
-    en: 'Currently in the database: {coins} coins in {sites} validated sites across {finds} find records.',
+    en: 'This database contains {coins} coins in {sites} validated sites across {finds} find records.',
     zh: '数据库现有 {coins} 枚钱币，分布于 {sites} 个已验证遗址、{finds} 条出土记录。',
   },
 
@@ -96,6 +96,11 @@ export const DICTIONARY = {
   'search.noResults': { en: 'No sites match these filters.', zh: '没有符合当前筛选条件的遗址。' },
   'search.viewRecord': { en: 'View record →', zh: '查看记录 →' },
   'search.coins': { en: 'coins', zh: '枚钱币' },
+  'search.field.province': { en: 'Province:', zh: '省：' },
+  'search.field.city': { en: 'City:', zh: '市：' },
+  'search.field.county': { en: 'County:', zh: '县：' },
+  'search.field.coinType': { en: 'Coin type:', zh: '币类：' },
+  'search.field.quantity': { en: 'Quantity:', zh: '数量：' },
   'search.types': { en: 'Types:', zh: '类型：' },
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
   'map.precision.label': { en: 'Location precision', zh: '定位精度' },
@@ -119,6 +124,8 @@ export const DICTIONARY = {
   'filters.state.title': { en: 'State', zh: '诸侯国' },
   'filters.mint.title': { en: 'Mint', zh: '铸地' },
   'filters.apply': { en: 'Apply Filters', zh: '应用筛选' },
+  'filters.panelTitle': { en: 'Sort & Filter', zh: '排序与筛选' },
+  'filters.toggle': { en: 'Filters', zh: '筛选' },
   'filters.searchPlaceholder': { en: 'Search…', zh: '搜索…' },
   'filters.matchMode': { en: 'Match', zh: '匹配方式' },
   'filters.mode.any': { en: 'Any', zh: '任一' },
@@ -213,11 +220,27 @@ export const DICTIONARY = {
   'siteTabs.noFinds': { en: 'No find records for this site.', zh: '该遗址暂无出土记录。' },
   'siteTabs.noSources': { en: 'No bibliographic sources linked yet.', zh: '暂无关联文献。' },
 
+  // ── map visualizations page ──────────────────────────────────────────────
+  'visualizations.tabs.label': { en: 'Visualize by', zh: '可视化方式' },
+  'visualizations.tabs.quantity': { en: 'Quantity', zh: '数量' },
+  'visualizations.tabs.coinType': { en: 'Coin Type', zh: '币种' },
+  'visualizations.tabs.mint': { en: 'Mint', zh: '铸地' },
+  'visualizations.data.label': { en: 'Data', zh: '数据' },
+  'visualizations.data.database': { en: 'Database finds', zh: '数据库记录' },
+  'visualizations.data.ans': { en: 'ANS catalogue', zh: 'ANS 目录' },
+  'visualizations.ans.pointed': { en: 'Pointed-foot (尖足布)', zh: '尖足布' },
+  'visualizations.ans.square': { en: 'Square-foot (方足布)', zh: '方足布' },
+  'visualizations.mintHeatmapTitle': { en: 'Mint Production Heatmap', zh: '铸地产量热力图' },
+  'visualizations.noMappedMints': { en: 'No mapped mint towns for this data source.', zh: '该数据来源暂无已定位铸地。' },
+  'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
+  'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
+  'visualizations.stats.specimens': { en: '{count} specimens', zh: '{count} 件标本' },
+
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
   'map.filter.hint': {
-    en: 'Filter by coin type or mint. Sites colour by context: all matching = red; mixed contexts use quantity share (redder = higher); present but uncounted = grey; absent = faint grey.',
+    en: 'Visualize find sites by coin type or mint. Each point is colored according to the percentage amount of the specified type or mint within the find site.' ,
     zh: '按币种或铸地筛选。按出土单位着色：单位内全为所选=红；混合单位按数量占比（越高越红）；有所选但无法计量=灰半透明；不含所选=浅灰。',
   },
   'map.filter.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
@@ -242,11 +265,12 @@ export const DICTIONARY = {
     en: 'This is the only recorded coin at this site',
     zh: '该遗址仅有的一枚钱币记录',
   },
-  'map.filter.l1': { en: '1 · Major category', zh: '1 · 大类' },
-  'map.filter.l2': { en: '2 · Subcategory', zh: '2 · 中类' },
-  'map.filter.l3': { en: '3 · Type', zh: '3 · 类型' },
-  'map.filter.l4': { en: '4 · Variant', zh: '4 · 形制' },
-  'map.filter.inscription': { en: '5 · Inscription ({count})', zh: '5 · 铭文（{count}）' },
+  'map.filter.l1': { en: 'Major category', zh: '大类' },
+  'map.filter.l2': { en: 'Subcategory', zh: '中类' },
+  'map.filter.l3': { en: 'Type', zh: '类型' },
+  'map.filter.l4': { en: 'Variant', zh: '形制' },
+  'map.filter.inscription': { en: 'Inscription ({count})', zh: '铭文（{count}）' },
+  'map.filter.none': { en: 'None', zh: '无' },
   'map.legend.title': { en: 'Share within contexts:', zh: '出土单位内占比：' },
   'map.legend.pure': { en: 'Context all this type', zh: '单位内全为此类' },
   'map.popup.pureContext': {
@@ -285,6 +309,7 @@ export const DICTIONARY = {
   'mintDetail.row.coinTypes': { en: 'Coin types', zh: '币种' },
 
   // ── home map filter panel (CoinFilterMap) ────────────────────────────
+  'home.mapSection.title': { en: 'View More Map Visualizations', zh: '查看更多地图可视化' },
   'coinFilterMap.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
   'coinFilterMap.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
   'coinFilterMap.clearFilter': { en: '✕ Clear filter', zh: '✕ 清除筛选' },

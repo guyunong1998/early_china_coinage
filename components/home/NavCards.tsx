@@ -10,7 +10,7 @@ const cards: { href: string; labelKey: DictionaryKey; descKey: DictionaryKey; ic
     icon: '◎',
   },
   {
-    href: '/map',
+    href: '/visualizations',
     labelKey: 'navcards.map.label',
     descKey: 'navcards.map.desc',
     icon: '⊕',
@@ -36,7 +36,7 @@ export function NavCards() {
         <Link
           key={card.href}
           href={card.href}
-          className="panel group flex flex-col px-5 py-4"
+          className="panel-nav-card group flex flex-col px-5 py-4"
         >
           <span className="text-xl text-brand/50">{card.icon}</span>
           <h2 className="mt-2 font-serif text-sm font-semibold text-gray-900 group-hover:text-brand">

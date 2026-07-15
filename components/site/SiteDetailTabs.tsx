@@ -193,7 +193,7 @@ export function SiteDetailTabs({
           const breakdown = buildContextBreakdown(findsForContext)
 
           return (
-            <div key={ctx.context_code} className="border border-gray-100 p-4">
+            <div key={ctx.context_code} className="panel-record-item p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-semibold text-brand">
@@ -316,7 +316,7 @@ export function SiteDetailTabs({
         <p className="text-sm italic text-gray-500">No bibliographic sources linked yet.</p>
       ) : (
         uniqueSources.map((source, index) => (
-          <article key={source.source_code} className="border border-gray-100 p-4 text-sm">
+          <article key={source.source_code} className="panel-record-item p-4 text-sm">
             <p className="text-xs font-semibold text-brand">
               [{index + 1}] {source.source_code}
             </p>

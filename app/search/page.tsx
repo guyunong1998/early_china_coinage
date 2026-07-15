@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { DataCard } from '@/components/ui/DataCard'
 import { Pagination } from '@/components/ui/Pagination'
 import { SearchFilters } from '@/components/search/SearchFilters'
-import { SortSelect } from '@/components/search/SortSelect'
+import { SearchFiltersToggle } from '@/components/search/SearchFiltersToggle'
+import { SearchResultCard } from '@/components/search/SearchResultCard'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { CoinTypePieChart, type PieGroup } from '@/components/site/CoinTypePieChart'
 import { T } from '@/components/i18n/T'
@@ -268,16 +268,16 @@ export default async function SearchPage({ searchParams }: PageProps) {
       <form action="/search" method="get">
         <input type="hidden" name="precision" value={filters.precision !== 'all' ? filters.precision : ''} />
 
-        <div className="mx-auto mb-4 flex w-full max-w-3xl gap-0">
+        <div className="mx-auto mb-4 flex w-full max-w-3xl gap-3">
           <TranslatedInput
             type="search"
             name="q"
             defaultValue={q}
             placeholderKey="search.placeholder"
-            className="search-input w-full px-3 py-3 text-sm text-gray-800"
+            className="search-page-input w-full px-3 py-3 text-sm text-gray-800"
           />
-          <button type="submit" className="search-button px-4 py-3 font-semibold">
-            →
+          <button type="submit" className="search-page-button px-5 py-3 font-semibold">
+            <T k="nav.search" />
           </button>
         </div>
 
@@ -301,33 +301,36 @@ export default async function SearchPage({ searchParams }: PageProps) {
           })}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <div className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-            <SearchFilters
-              mintOptions={mintOptions}
-              coinTypeOptions={coinTypeOptions}
-              stateOptions={stateOptions}
-              regionOptions={regionOptions}
-              periodOptions={periodOptions}
-              siteTypeOptions={siteTypeOptions}
-              selected={{
-                mints: filters.mints,
-                coinTypes: filters.coinTypes,
-                states: filters.states,
-                regions: filters.regions,
-                periods: filters.periods,
-                siteTypes: filters.siteTypes,
-              }}
-              modes={{
-                mints: filters.mintsMode,
-                coinTypes: filters.coinTypesMode,
-                states: filters.statesMode,
-              }}
-              minQty={filters.minQty}
-              maxQty={filters.maxQty}
-              onlySingle={filters.onlySingle}
-              excludeSingle={filters.excludeSingle}
-            />
+        <div className="grid gap-6 min-[1440px]:grid-cols-[280px_1fr]">
+          <div className="min-[1440px]:sticky min-[1440px]:top-4 min-[1440px]:max-h-[calc(100vh-2rem)] min-[1440px]:overflow-y-auto">
+            <SearchFiltersToggle>
+              <SearchFilters
+                mintOptions={mintOptions}
+                coinTypeOptions={coinTypeOptions}
+                stateOptions={stateOptions}
+                regionOptions={regionOptions}
+                periodOptions={periodOptions}
+                siteTypeOptions={siteTypeOptions}
+                selected={{
+                  mints: filters.mints,
+                  coinTypes: filters.coinTypes,
+                  states: filters.states,
+                  regions: filters.regions,
+                  periods: filters.periods,
+                  siteTypes: filters.siteTypes,
+                }}
+                modes={{
+                  mints: filters.mintsMode,
+                  coinTypes: filters.coinTypesMode,
+                  states: filters.statesMode,
+                }}
+                minQty={filters.minQty}
+                maxQty={filters.maxQty}
+                onlySingle={filters.onlySingle}
+                excludeSingle={filters.excludeSingle}
+                sort={sort}
+              />
+            </SearchFiltersToggle>
           </div>
 
           <div>
@@ -335,11 +338,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <CoinMapSection sites={filtered} height="360px" fitBounds />
             </div>
 
-            <div className="mb-3 flex items-center justify-end">
-              <SortSelect value={sort} />
-            </div>
-
-            <div className="space-y-4">
+            <div className="space-y-6">
               {pageResults.map((site) => {
                 const nameEn = toEnglishName(site.site_name_zh, site.site_name_en)
                 const provinceEn = toEnglishName(site.province_zh, site.province_en)
@@ -348,63 +347,55 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 const pieData = buildSitePie(site.site_code)
 
                 return (
-                  <DataCard
+                  <SearchResultCard
                     key={site.site_code}
-                    title={
-                      <span className="flex flex-wrap items-baseline gap-x-2">
-                        <Link href={`/sites/${site.site_code}`} className="hover:underline">
-                          {displayValue(site.site_name_zh)}
-                        </Link>
-                        {nameEn && (
-                          <span className="text-xs font-normal normal-case italic tracking-normal opacity-70">
-                            {nameEn}
-                          </span>
-                        )}
-                        <span className="text-xs font-normal normal-case tracking-normal opacity-50">
-                          {site.site_code}
+                    href={`/sites/${site.site_code}`}
+                    siteName={displayValue(site.site_name_zh)}
+                    siteNameEn={
+                      nameEn && (
+                        <span className="text-xs font-normal normal-case italic tracking-normal opacity-70">
+                          {nameEn}
                         </span>
-                      </span>
+                      )
                     }
+                    viewRecordLabel={<T k="search.viewRecord" />}
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                       <div className="min-w-[200px] flex-1 space-y-1 text-sm leading-6 text-gray-800">
                         <p>
-                          <span className="font-semibold">Province / 省：</span>
+                          <span className="font-semibold"><T k="search.field.province" /> </span>
                           {displayValue(site.province_zh)}
                           {provinceEn && <span className="text-gray-400"> ({provinceEn})</span>}
                         </p>
                         <p>
-                          <span className="font-semibold">City / 市：</span>
+                          <span className="font-semibold"><T k="search.field.city" /> </span>
                           {displayValue(site.city_zh)}
                           {cityEn && <span className="text-gray-400"> ({cityEn})</span>}
                         </p>
                         <p>
-                          <span className="font-semibold">County / 县：</span>
+                          <span className="font-semibold"><T k="search.field.county" /> </span>
                           {displayValue(site.county_zh)}
                           {countyEn && <span className="text-gray-400"> ({countyEn})</span>}
                         </p>
                         <p>
-                          <span className="font-semibold">Coin type / 币类：</span>
+                          <span className="font-semibold"><T k="search.field.coinType" /> </span>
                           {formatCoinTypeBilingual(site.major_types_zh)}
                         </p>
                         <p>
-                          <span className="font-semibold">Quantity / 数量：</span>
+                          <span className="font-semibold"><T k="search.field.quantity" /> </span>
                           {formatNumber(site.total_quantity_for_map)}
                         </p>
                       </div>
                       {pieData.length > 0 && (
-                        <div className="shrink-0">
-                          <CoinTypePieChart data={pieData} size={64} showLegend={false} />
+                        <div className="flex shrink-0 flex-col items-center gap-1.5">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            {site.site_code}
+                          </span>
+                          <CoinTypePieChart data={pieData} size={96} showLegend={false} />
                         </div>
                       )}
                     </div>
-                    <Link
-                      href={`/sites/${site.site_code}`}
-                      className="mt-2 inline-block text-sm text-brand hover:underline"
-                    >
-                      <T k="search.viewRecord" />
-                    </Link>
-                  </DataCard>
+                  </SearchResultCard>
                 )
               })}
 

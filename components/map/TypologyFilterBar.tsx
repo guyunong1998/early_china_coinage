@@ -1,6 +1,5 @@
 'use client'
 
-import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
   emptyTypologySelection,
@@ -42,7 +41,6 @@ export function TypologyFilterBar({
   const l4Options = getL4Options(sel, lang)
   const inscriptionOptions = getInscriptionOptions(sel, coinTypes)
 
-  const hasFilter = !!sel.l1
   // Show inscriptions at any typology leaf — including L1-only categories
   // like Round Coin (圜钱) that have no L2/L3 children.
   const showInscriptions =
@@ -52,125 +50,88 @@ export function TypologyFilterBar({
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-start gap-2.5">
         <FilterSelect
+          label={t('map.filter.l1')}
           value={sel.l1}
-          placeholder={t('map.filter.l1')}
           options={l1Options}
           onChange={(v) => onChange({ ...emptyTypologySelection(), l1: v })}
         />
         {sel.l1 && l2Options.length > 0 && (
           <FilterSelect
+            label={t('map.filter.l2')}
             value={sel.l2}
-            placeholder={t('map.filter.l2')}
             options={l2Options}
             onChange={(v) => onChange({ ...sel, l2: v, l3: '', l4: '', inscription: '' })}
           />
         )}
         {sel.l2 && l3Options.length > 0 && (
           <FilterSelect
+            label={t('map.filter.l3')}
             value={sel.l3}
-            placeholder={t('map.filter.l3')}
             options={l3Options}
             onChange={(v) => onChange({ ...sel, l3: v, l4: '', inscription: '' })}
           />
         )}
         {sel.l3 && l4Options.length > 0 && (
           <FilterSelect
+            label={t('map.filter.l4')}
             value={sel.l4}
-            placeholder={t('map.filter.l4')}
             options={l4Options}
             onChange={(v) => onChange({ ...sel, l4: v, inscription: '' })}
           />
         )}
-        {hasFilter && (
-          <button
-            type="button"
-            onClick={() => onChange(emptyTypologySelection())}
-            className="ml-auto px-3 py-1.5 text-xs text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
-          >
-            <T k="heatmap.clearFilter" />
-          </button>
+
+        {showInscriptions && (
+          <FilterSelect
+            label={t('map.filter.inscription', { count: inscriptionOptions.length })}
+            value={sel.inscription}
+            options={inscriptionOptions.map((e) => ({
+              value: e.zh,
+              label: formatInscriptionOptionLabel(e),
+            }))}
+            onChange={(v) => onChange({ ...sel, inscription: v })}
+          />
         )}
       </div>
-
-      {showInscriptions && (
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <T k="map.filter.inscription" vars={{ count: inscriptionOptions.length }} />
-            {sel.inscription && (
-              <button
-                type="button"
-                onClick={() => onChange({ ...sel, inscription: '' })}
-                className="ml-2 normal-case font-normal text-gray-400 hover:text-brand"
-              >
-                <T k="coinFilterMap.clear" />
-              </button>
-            )}
-          </p>
-          <div
-            className={`overflow-y-auto border border-brand/20 bg-white ${
-              compact ? 'max-h-28' : 'max-h-36'
-            }`}
-          >
-            {inscriptionOptions.map((e) => (
-              <button
-                key={e.zh}
-                type="button"
-                onClick={() =>
-                  onChange({ ...sel, inscription: sel.inscription === e.zh ? '' : e.zh })
-                }
-                className={`flex w-full items-baseline gap-3 px-3 py-1.5 text-left text-sm transition hover:bg-brand-light ${
-                  sel.inscription === e.zh ? 'bg-brand text-white hover:bg-brand' : ''
-                }`}
-              >
-                <span
-                  className={`w-20 shrink-0 font-semibold ${sel.inscription === e.zh ? 'text-white' : 'text-gray-800'}`}
-                >
-                  {e.zh}
-                </span>
-                <span className={`flex-1 ${sel.inscription === e.zh ? 'text-white/90' : 'text-gray-500'}`}>
-                  {e.en}
-                </span>
-                {e.mint_zh && (
-                  <span
-                    className={`shrink-0 text-xs ${sel.inscription === e.zh ? 'text-white/70' : 'text-brand/60'}`}
-                  >
-                    <T k="coinFilterMap.mintLabel" /> {e.mint_zh}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
+function formatInscriptionOptionLabel(opt: { zh: string; en: string; mint_zh: string | null }) {
+  let label = opt.en && opt.en !== opt.zh ? `${opt.zh} · ${opt.en}` : opt.zh
+  if (opt.mint_zh) label += ` (${opt.mint_zh})`
+  return label
+}
+
 function FilterSelect({
+  label,
   value,
-  placeholder,
   options,
   onChange,
 }: {
+  label: string
   value: string
-  placeholder: string
   options: { value: string; label: string }[]
   onChange: (v: string) => void
 }) {
+  const { t } = useLanguage()
+
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+      >
+        <option value="">{`${label} – ${t('map.filter.none')}`}</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }

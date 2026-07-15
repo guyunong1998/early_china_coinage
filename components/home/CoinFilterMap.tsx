@@ -1,15 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap, Marker } from 'leaflet'
-import { ALL_MINTS } from '@/lib/typology-data'
+import Link from 'next/link'
+import { useEffect, useRef } from 'react'
+import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import type { MapSite } from '@/lib/types'
-import { TypologyFilterBar } from '@/components/map/TypologyFilterBar'
-import {
-  emptyTypologySelection,
-  siteMatchesTypologyFilter,
-  type TypologyFilterSelection,
-} from '@/lib/typology-filter'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { T } from '@/components/i18n/T'
@@ -32,9 +26,19 @@ function dot(color: string, size = 12) {
   "></div>`
 }
 
-function csvIncludes(csv: string | null | undefined, value: string) {
-  if (!csv) return false
-  return csv.split('、').concat(csv.split(',')).some((v) => v.trim() === value)
+/** Same intensity curve as the "no filter" state on the find spots map, so
+ * both density overlays read consistently. */
+function densityIntensity(qty: number | null | undefined): number {
+  if (!qty || qty <= 0) return 0.35
+  return Math.min(1, 0.35 + Math.log10(qty + 1) / 4)
+}
+
+const DENSITY_GRADIENT: Record<number, string> = {
+  0.15: '#f0d56a',
+  0.4: '#e39a2b',
+  0.65: '#d04a1c',
+  0.85: '#a01515',
+  1: '#6e0c0c',
 }
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
@@ -58,10 +62,6 @@ function formatCoinTypeBilingual(value: string | null) {
     .join('、')
 }
 
-// ─── types ─────────────────────────────────────────────────────────────────
-
-type FilterMode = 'type' | 'mint'
-
 // ─── main component ────────────────────────────────────────────────────────
 
 export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
@@ -69,67 +69,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Map<string, Marker>>(new Map())
-
-  const [mode, setMode] = useState<FilterMode>('type')
-  const [tf, setTf] = useState<TypologyFilterSelection>(emptyTypologySelection())
-  const [mintFilter, setMintFilter] = useState('')
-  const [mintSearch, setMintSearch] = useState('')
-  const [matchCount, setMatchCount] = useState<number | null>(null)
-
-  const filteredMints = mintSearch
-    ? ALL_MINTS.filter(
-        (m) =>
-          m.mint_zh.includes(mintSearch) ||
-          (m.mint_en ?? '').toLowerCase().includes(mintSearch.toLowerCase())
-      )
-    : ALL_MINTS
-
-  // ── compute matching site codes ──
-  function computeMatches(): Set<string> | null {
-    if (mode === 'type') {
-      if (!tf.l1) return null
-      const matched = new Set<string>()
-      sites.forEach((s) => {
-        if (siteMatchesTypologyFilter(s, tf)) matched.add(s.site_code)
-      })
-      return matched
-    } else {
-      if (!mintFilter) return null
-      const matched = new Set<string>()
-      sites.forEach((s) => {
-        if (csvIncludes(s.mints_zh, mintFilter)) matched.add(s.site_code)
-      })
-      return matched
-    }
-  }
-
-  // ── update marker colours when filter changes ──
-  useEffect(() => {
-    const matches = computeMatches()
-    setMatchCount(matches ? matches.size : null)
-
-    if (!mapRef.current) return
-
-    // We need L at runtime to create DivIcons properly
-    import('leaflet').then(({ default: L }) => {
-      markersRef.current.forEach((marker, code) => {
-        const isMatch = matches ? matches.has(code) : null
-        const color = isMatch === null ? '#006d71' : isMatch ? '#c0392b' : '#b0b8b8'
-        const size = isMatch === true ? 14 : isMatch === false ? 10 : 12
-
-        marker.setIcon(
-          L.divIcon({
-            className: '',
-            html: dot(color, size),
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
-          })
-        )
-        // Bring matched markers to the front, push non-matches behind
-        marker.setZIndexOffset(isMatch === true ? 1000 : isMatch === false ? -1000 : 0)
-      })
-    })
-  }, [tf, mintFilter, mode, sites])
+  const heatLayerRef = useRef<HeatLayer | null>(null)
 
   // ── initialise map once ──
   useEffect(() => {
@@ -140,6 +80,11 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
 
+      // Ensure leaflet.heat attaches to this Leaflet instance
+      const g = globalThis as typeof globalThis & { L?: typeof L }
+      g.L = L
+      await import('leaflet.heat')
+
       const map = L.map(containerRef.current, { zoomControl: true }).setView([35.8, 105.4], 4)
       mapRef.current = map
 
@@ -148,6 +93,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       addLayerControl(L, map, osm, satellite, satelliteLabels)
 
       const bounds: [number, number][] = []
+      const densityLatLngs: [number, number, number][] = []
 
       sites.forEach((site) => {
         if (site.lat == null || site.lng == null) return
@@ -185,7 +131,19 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           )
 
         markersRef.current.set(site.site_code, marker)
+        densityLatLngs.push([site.lat, site.lng, densityIntensity(site.total_quantity_for_map)])
       })
+
+      if (densityLatLngs.length > 0) {
+        heatLayerRef.current = L.heatLayer(densityLatLngs, {
+          radius: 32,
+          blur: 26,
+          maxZoom: 9,
+          max: 1,
+          minOpacity: 0.25,
+          gradient: DENSITY_GRADIENT,
+        }).addTo(map)
+      }
 
       // Gray city boundaries for uncertain site locations
       const candidateCities = new Map<string, { cityZh: string; provinceZh?: string | null }>()
@@ -257,11 +215,13 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
     }
 
     init()
+    const markers = markersRef.current
     return () => {
       cancelled = true
+      heatLayerRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
-      markersRef.current.clear()
+      markers.clear()
     }
     // `t` is deliberately omitted: re-running this would refetch every boundary
     // geometry just to relabel a popup link, so it reflects the language active
@@ -269,124 +229,17 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
 
-  const activeFilter = mode === 'type' ? tf.l1 : mintFilter
-
   return (
-    <div className="panel overflow-hidden">
-      {/* ── filter panel ── */}
-      <div className="border-b border-brand/20 bg-white px-4 py-3">
-        {/* Mode tabs */}
-        <div className="mb-3 flex gap-0">
-          {(['type', 'mint'] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => {
-                setMode(m)
-                setTf(emptyTypologySelection())
-                setMintFilter('')
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold border transition ${
-                mode === m
-                  ? 'bg-brand text-white border-brand'
-                  : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
-              }`}
-            >
-              <T k={m === 'type' ? 'coinFilterMap.byType' : 'coinFilterMap.byMint'} />
-            </button>
-          ))}
-          {activeFilter && (
-            <button
-              onClick={() => {
-                setTf(emptyTypologySelection())
-                setMintFilter('')
-              }}
-              className="ml-auto px-3 py-1.5 text-xs text-gray-500 hover:text-brand border border-gray-200 hover:border-brand"
-            >
-              <T k="coinFilterMap.clearFilter" />
-            </button>
-          )}
-        </div>
-
-        {/* Type cascade */}
-        {mode === 'type' && (
-          <TypologyFilterBar sel={tf} onChange={setTf} showInscriptionList compact />
-        )}
-
-        {/* Mint search */}
-        {mode === 'mint' && (
-          <div className="flex flex-wrap gap-2 text-sm">
-            <input
-              type="search"
-              placeholder={t('coinFilterMap.searchMint')}
-              value={mintSearch}
-              onChange={(e) => setMintSearch(e.target.value)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm outline-none focus:border-brand"
-            />
-            <Select
-              value={mintFilter}
-              placeholder={t('coinFilterMap.selectMint')}
-              options={filteredMints.map(
-                (m) => `${m.mint_zh}${m.mint_en ? ' (' + m.mint_en + ')' : ''}${m.state_zh ? ' — ' + m.state_zh : ''}`
-              )}
-              optionValues={filteredMints.map((m) => m.mint_zh)}
-              onChange={(v) => setMintFilter(v)}
-            />
-          </div>
-        )}
-
-        {/* Legend */}
-        {activeFilter && (
-          <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-full bg-[#c0392b]" />
-              <T k="coinFilterMap.match" />
-              {matchCount !== null && (
-                <strong className="ml-1 text-brand">
-                  {t('coinFilterMap.matchSites', { count: matchCount })}
-                </strong>
-              )}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-3 w-3 rounded-full bg-[#b0b8b8]" />
-              <T k="coinFilterMap.noMatch" />
-            </span>
-          </div>
-        )}
+    <div>
+      <Link
+        href="/visualizations"
+        className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide hover:underline"
+      >
+        <T k="home.mapSection.title" />
+      </Link>
+      <div className="panel-body overflow-hidden">
+        <div ref={containerRef} style={{ height: '420px', width: '100%' }} />
       </div>
-
-      {/* Map */}
-      <div ref={containerRef} style={{ height: '420px', width: '100%' }} />
     </div>
-  )
-}
-
-// ─── small reusable select ─────────────────────────────────────────────────
-
-function Select({
-  value,
-  placeholder,
-  options,
-  optionValues,
-  onChange,
-}: {
-  value: string
-  placeholder: string
-  options: string[]
-  optionValues?: string[]
-  onChange: (v: string) => void
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((label, i) => (
-        <option key={i} value={optionValues ? optionValues[i] : label}>
-          {label}
-        </option>
-      ))}
-    </select>
   )
 }

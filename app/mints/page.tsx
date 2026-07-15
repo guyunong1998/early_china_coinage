@@ -51,11 +51,13 @@ export default async function MintsPage() {
       )}
 
       {/* Overview map */}
-      <div className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
+      <div className="mt-6">
+        <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mints.overview" />
         </div>
-        <MintsOverviewMap mints={mints} />
+        <div className="panel-body overflow-hidden">
+          <MintsOverviewMap mints={mints} />
+        </div>
       </div>
 
       {/* Searchable list */}

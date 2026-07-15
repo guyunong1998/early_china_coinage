@@ -23,7 +23,7 @@ export function SiteHeader() {
             <Link href="/mints" className="hover:text-brand">
               <T k="nav.mints" />
             </Link>
-            <Link href="/map" className="hover:text-brand">
+            <Link href="/visualizations" className="hover:text-brand">
               <T k="nav.map" />
             </Link>
             <Link href="/heatmap" className="hover:text-brand">

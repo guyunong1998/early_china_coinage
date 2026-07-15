@@ -31,8 +31,18 @@
    Playfair Display is also loaded if you want a more decorative heading font.
    ============================================================================ */
 :root {
-  --font-sans: var(--font-geist-sans);  /* body text */
-  --font-serif: var(--font-spectral);   /* headings (the `font-serif` utility) */
+  /* Geist/Spectral only cover Latin glyphs, so the browser's per-character
+     font fallback drops any Chinese character straight through to LXGW
+     WenKai TC (loaded via lxgw-wenkai-tc-webfont in app/layout.tsx) — no
+     lang-tagging or component changes needed for bilingual text to pick it
+     up automatically. */
+  --font-sans: var(--font-geist-sans), "LXGW WenKai TC", sans-serif;  /* body text */
+  --font-serif: var(--font-spectral), "LXGW WenKai TC", serif;   /* headings (the `font-serif` utility) */
+}
+.lxgw-wenkai-tc-regular {
+  font-family: "LXGW WenKai TC", cursive;
+  font-weight: 400;
+  font-style: normal;
 }
 
 
@@ -56,8 +66,9 @@
   --muted: #75705f;        /* secondary/muted text (dates, captions, meta) */
 
   /* --- Primary accent: sage/teal green — the only color used broadly --- */
-  --brand: #365727;
-  --brand-dark: #23453f;
+  --brand-bright: #365727;
+  --brand-dark: #063800;
+  --brand: #304912;
   --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
 
   /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
@@ -126,6 +137,11 @@ a {
    ============================================================================ */
 .panel {
   background: var(--paper);
+  border: 3px solid var(--brand);
+  /* box-shadow: var(--shadow); */
+}
+.panel .home-panel {
+  background: var(--paper);
   border: 5px dotted var(--brand);
   /* box-shadow: var(--shadow); */
 }
@@ -135,12 +151,41 @@ a {
   /* box-shadow: 0 4px 16px rgba(35, 34, 32, 0.09); */
 }
 
-/* The label bar at the top of a panel (see DataCard.tsx) — a quiet tinted
-   strip rather than a bold color block, to keep the catalogue feel calm. */
+/* The label bar that sits above a panel body (see DataCard.tsx) — a quiet
+   tinted strip, rounded on top like a tab, rather than a bold color block. */
 .panel-header {
   background: var(--brand-light);
   color: var(--brand-dark);
   border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* The bordered body underneath a `.panel-header`. Default rule: its border
+   color always matches the header's background, so the two read as one
+   connected piece — retint --brand-light above to restyle both at once. */
+.panel-body {
+  background: var(--paper);
+  border: 3px solid var(--brand-light);
+  /* border-radius: var(--radius); */
+}
+
+/* Panels that want their own look, decoupled from the shared `.panel-body`
+   default above: search result list items, homepage nav cards, and the
+   per-record panels on the site detail page. Same look as `.panel` today —
+   free to diverge independently later. */
+
+
+.panel-record-item {
+  background: var(--paper);
+  border: 3px solid var(--brand);
+  /* border-radius: var(--radius); */
+}
+.panel-nav-card{
+  background: var(--paper);
+  border: 5px dotted var(--brand);
+}
+.panel-search-item{
+  background: var(--paper);
+  border: 3px solid var(--brand-light);
 }
 
 
@@ -194,6 +239,36 @@ button:not(:disabled):hover {
 
 .search-button:hover {
   background: var(--brand-dark);
+}
+
+/* Search page's own search bar: input and submit button read as two
+   separate, square-cornered pieces (a gap is added in app/search/page.tsx)
+   rather than the single rounded pill used by the homepage's `.search-input`
+   / `.search-button` above. */
+.search-page-input {
+  background: var(--paper);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-page-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.search-page-button {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  border: 1px solid var(--card-border);
+  border-radius: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.search-page-button:hover {
+  background: var(--brand);
+  color: var(--paper);
 }
 
 

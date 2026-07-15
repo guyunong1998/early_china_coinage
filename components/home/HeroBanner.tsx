@@ -13,7 +13,7 @@ export async function HeroBanner() {
 
   return (
     <section className="relative overflow-hidden bg-brand text-white">
-      <div className="relative mx-auto grid max-w-5xl gap-8 px-4 py-14">
+      <div className="relative mx-auto grid max-w-5xl gap-4 px-4 py-12">
         <div>
           <p className="mb-2 text-sm uppercase tracking-[0.25em] text-brand-light/90">
             <T k="hero.tagline" />
@@ -25,10 +25,10 @@ export async function HeroBanner() {
             <T k="hero.description" />
           </p>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-10 py-4">
           <SearchForm />
         </div>
-        <p className="text-center text-sm text-white/90">
+        <p className="text-sm text-white/90">
           <T k={stats.findCount > 0 ? 'stats.summaryWithFinds' : 'stats.summary'} vars={statsVars} />
         </p>
       </div>
