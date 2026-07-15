@@ -91,13 +91,6 @@
 
   --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
   --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
-
-  /* Homepage hero banner's left-to-right sweep — separate from --brand /
-     --brand-dark above so you can retint just the hero without touching the
-     rest of the site's palette. The coins SVG overlay reuses these same two
-     colors in reverse (see .hero-banner__overlay below). */
-  --hero-gradient-start: var(--brand);
-  --hero-gradient-end: var(--brand-dark);
 }
 
 /* Hand this palette to Tailwind so `bg-brand`, `text-accent`, `border-paper`,
@@ -338,7 +331,7 @@ button:not(:disabled):hover {
 .hero-banner {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(to right, var(--hero-gradient-start), var(--hero-gradient-end));
+  background: linear-gradient(to right, var(--brand), var(--brand-dark));
 }
 
 /* Tints the coins <img> with the same two colors, reversed (right to left),
@@ -350,7 +343,7 @@ button:not(:disabled):hover {
 .hero-banner__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to left, var(--hero-gradient-start), var(--hero-gradient-end));
+  background: linear-gradient(to left, var(--brand), var(--brand-dark));
   mix-blend-mode: multiply;
   pointer-events: none;
 }
