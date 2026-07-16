@@ -331,3 +331,15 @@ button:not(:disabled):hover {
   mix-blend-mode: multiply;
   pointer-events: none;
 }
+
+.title-en {
+  font-family: serif;
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600;    /* font-semibold */
+  color: var(--brand); /* replace with your brand color */
+}
+
+.title-zh {
+  font-size: 0.75rem;  /* text-xs */
+  color: #6b7280;      /* gray-500 */
+}

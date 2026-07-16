@@ -66,8 +66,7 @@ const DENSITY_GRADIENT: Record<number, string> = {
 // are the only properties still set via two scoped CSS custom properties
 // (`.map-dot-ratio` reads --dot-fill / --dot-border there).
 function dot(color: string, size = 14) {
-  const borderColor = color.includes('rgba') ? 'rgba(80,80,80,0.35)' : color
-  return `<div class="map-dot map-dot-size-${size} map-dot-ratio" style="--dot-fill:${color};--dot-border:${borderColor}"></div>`
+  return `<div class="map-dot map-dot-size-${size} map-dot-ratio"></div>`
 }
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
@@ -282,9 +281,12 @@ export function FindSpotsMapCanvas({
 
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
+
+      const isMobile = window.matchMedia('(max-width: 768px)').matches
       addLayerControl(L, map, osm, satellite, satelliteLabels, {
         collapsed: true,
         position: 'bottomright',
+        showRiverControl: !isMobile,
       })
 
       const bounds: [number, number][] = []

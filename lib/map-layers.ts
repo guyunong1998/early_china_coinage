@@ -188,7 +188,7 @@ export function addLayerControl(
   osm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
   satelliteLabels: import('leaflet').TileLayer,
-  options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
+  options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition; showRiverControl?: boolean}
 ) {
   // On by default on top of either base layer — gives bilingual labels on
   // the street map, and is the only text shown on the satellite view. Users
@@ -205,7 +205,9 @@ export function addLayerControl(
     )
     .addTo(map)
 
-  const majorRivers = buildRiverLayer(L, '/data/rivers-major.geojson')
-  const minorRivers = buildRiverLayer(L, '/data/rivers-minor.geojson')
-  addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
+  if (options?.showRiverControl ?? true) {
+    const majorRivers = buildRiverLayer(L, '/data/rivers-major.geojson')
+    const minorRivers = buildRiverLayer(L, '/data/rivers-minor.geojson')
+    addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
+  }
 }

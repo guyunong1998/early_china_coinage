@@ -284,7 +284,7 @@ export function FindSpotsVisualization({
       </div>
 
       {(filterActive || viewMode === 'density') && (
-        <div className="findspots-vis_filters">
+        <div className="heatmap_legend">
           {filterActive && viewMode === 'points' && (
             <>
               <span className="font-semibold uppercase tracking-wide text-gray-500">

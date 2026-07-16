@@ -12,10 +12,12 @@ export function SiteHeader() {
             钱
           </div>
           <div>
-            <p className="font-serif text-lg font-semibold tracking-wide text-brand">
+            <p className="title-en">
               Early Chinese Coin Finds
             </p>
-            <p className="text-xs text-gray-500">先秦至汉初钱币出土数据库</p>
+            <p className="title-zh">
+              先秦至汉初钱币出土数据库
+            </p>
           </div>
         </Link>
 

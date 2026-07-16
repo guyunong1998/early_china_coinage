@@ -47,7 +47,7 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
   const detail = t(active.detailKey)
 
   return (
-    <div className="map-vis-overlay z-[700] absolute">
+    <div className="map-vis-overlay ">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
           <div className="flex flex-wrap gap-1.5">
