@@ -34,20 +34,15 @@ type HoardMintOriginsMapProps = {
   mints: HoardMintOrigin[]
 }
 
-// Marker colors (RGBA) — teal for the findspot itself, red/terracotta for
-// each contributing mint town (reused for the dashed connector line below).
-// Shared dot chrome (border width, radius, shadow) lives in the `.map-dot`
-// class in app/globals.css.
-const SITE_MARKER_COLOR = 'rgba(0, 109, 113, 1)' // #006d71
-const MINT_MARKER_COLOR = 'rgba(192, 57, 43, 1)' // #c0392b
-const MARKER_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)'
+// Marker look (size + role color) comes from app/maps.css — no inline
+// styles. Leaflet's vector layers (the dashed connector line below) can't
+// take a CSS class, so that one line color still needs a real JS value; it
+// reads the same --map-dot-special token the mint dot's CSS class uses, so
+// retinting that variable keeps both in sync.
+const MINT_LINE_COLOR = 'var(--map-dot-special)'
 
-function makeDot(color: string, size = 12) {
-  return `<div class="map-dot" style="
-    width:${size}px;height:${size}px;
-    background:${color};
-    border-color:${MARKER_BORDER_COLOR};
-  "></div>`
+function makeDot(role: string, size: number) {
+  return `<div class="map-dot map-dot-size-${size} ${role}"></div>`
 }
 
 export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
@@ -76,7 +71,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
       const siteMarker = L.marker([site.lat, site.lng], {
         icon: L.divIcon({
           className: '',
-          html: makeDot(SITE_MARKER_COLOR, 20),
+          html: makeDot('map-dot-hoard-site', 20),
           iconSize: [20, 20],
           iconAnchor: [10, 10],
         }),
@@ -100,7 +95,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
             [site.lat, site.lng],
             [mint.lat, mint.lng],
           ],
-          { color: MINT_MARKER_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
+          { color: MINT_LINE_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
         ).addTo(map)
 
         const coinTypesList = mint.coinTypes.length > 0 ? mint.coinTypes.join('、') : '—'
@@ -108,7 +103,7 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
         L.marker([mint.lat, mint.lng], {
           icon: L.divIcon({
             className: '',
-            html: makeDot(MINT_MARKER_COLOR, 14),
+            html: makeDot('map-dot-hoard-mint', 14),
             iconSize: [14, 14],
             iconAnchor: [7, 7],
           }),

@@ -28,24 +28,37 @@ export type FilterState = {
   excludeSingle: boolean
 }
 
-export type SortOption = 'name' | 'quantity' | 'province'
+export type SortOption = 'name' | 'quantity' | 'province' | 'finds' | 'coinTypes' | 'states'
+
+const SORT_OPTIONS: SortOption[] = ['name', 'quantity', 'province', 'finds', 'coinTypes', 'states']
 
 export function parseFacetMode(value: string | undefined): FacetMode {
   return value === 'all' ? 'all' : 'any'
 }
 
 export function parseSortOption(value: string | undefined): SortOption {
-  return value === 'quantity' || value === 'province' ? value : 'name'
+  return (SORT_OPTIONS as string[]).includes(value ?? '') ? (value as SortOption) : 'name'
 }
 
-export function sortSites<T extends Pick<SearchSite, 'site_name_zh' | 'province_zh' | 'total_quantity_for_map'>>(
-  sites: T[],
-  sort: SortOption
-): T[] {
+export function sortSites<
+  T extends Pick<
+    SearchSite,
+    'site_name_zh' | 'province_zh' | 'total_quantity_for_map' | 'find_record_count' | 'major_types_zh' | 'states_zh'
+  >,
+>(sites: T[], sort: SortOption): T[] {
   const sorted = [...sites]
   switch (sort) {
     case 'quantity':
       sorted.sort((a, b) => (b.total_quantity_for_map ?? 0) - (a.total_quantity_for_map ?? 0))
+      break
+    case 'finds':
+      sorted.sort((a, b) => (b.find_record_count ?? 0) - (a.find_record_count ?? 0))
+      break
+    case 'coinTypes':
+      sorted.sort((a, b) => splitCsv(b.major_types_zh).length - splitCsv(a.major_types_zh).length)
+      break
+    case 'states':
+      sorted.sort((a, b) => splitCsv(b.states_zh).length - splitCsv(a.states_zh).length)
       break
     case 'province':
       sorted.sort((a, b) => (a.province_zh ?? '').localeCompare(b.province_zh ?? '', 'zh'))
@@ -139,6 +152,10 @@ export function withEnglish(options: FacetOption[], lookup: Map<string, string>)
  * (but not this one), so checking a box narrows other facets' counts without
  * making its own options disappear. Zero-count options are dropped, except
  * ones the user already has selected (so a selection never vanishes).
+ *
+ * Selected options are always sorted to the top of the list (as their own
+ * group, in the usual count/alpha order), so a checked box stays visible
+ * without having to scroll back to find it.
  */
 export function buildFacetOptions(
   sites: SearchSite[],
@@ -159,5 +176,10 @@ export function buildFacetOptions(
   return [...counts.entries()]
     .filter(([value, count]) => count > 0 || selected.includes(value))
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+    .sort((a, b) => {
+      const aSelected = selected.includes(a.value)
+      const bSelected = selected.includes(b.value)
+      if (aSelected !== bSelected) return aSelected ? -1 : 1
+      return b.count - a.count || a.value.localeCompare(b.value)
+    })
 }

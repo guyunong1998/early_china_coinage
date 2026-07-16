@@ -4,8 +4,7 @@
  * Not a map itself — the coin-type filter control (major category / sub-
  * category / type / variant / inscription dropdowns).
  *
- * Used by: FindSpotsSidebar.tsx (app/visualizations/coin-type and
- * app/visualizations/mint pages).
+ * Used by: FindSpotsVisualization.tsx (app/visualizations/find-site page).
  */
 
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -16,7 +15,6 @@ import {
   getL2Options,
   getL3Options,
   getL4Options,
-  isTypologyLeafSelection,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
 import type { CoinType } from '@/lib/types'
@@ -49,12 +47,11 @@ export function TypologyFilterBar({
   const l4Options = getL4Options(sel, lang)
   const inscriptionOptions = getInscriptionOptions(sel, coinTypes)
 
-  // Show inscriptions at any typology leaf — including L1-only categories
-  // like Round Coin (圜钱) that have no L2/L3 children.
-  const showInscriptions =
-    showInscriptionList &&
-    inscriptionOptions.length > 0 &&
-    isTypologyLeafSelection(sel)
+  // Shown as soon as a major category is picked — not gated behind also
+  // drilling into subcategory/type/variant first, since a given inscription
+  // can span multiple of those sub-branches under the same category.
+  // const showInscriptions = showInscriptionList && inscriptionOptions.length > 0 && !!sel.l1
+  const showInscriptions = true;
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -127,7 +124,7 @@ function FilterSelect({
 
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-sm font-semibold text-gray-700">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

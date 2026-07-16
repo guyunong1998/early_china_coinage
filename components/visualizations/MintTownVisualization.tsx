@@ -1,27 +1,23 @@
 'use client'
 
 /**
- * Quantity tab of the map visualizations page: a sidebar ("Visualize by"
- * tabs, a database/ANS-catalogue toggle, a pointed/square-foot category
- * dropdown) alongside the mint production heatmap map (PointedSpadeHeatmap,
- * a pure map — this component supplies its own caption below it) only — no
- * title, no bordered container, no "Coins by mint" table or "Data sources"
- * card (unlike the standalone /heatmap page, which keeps all of that — see
- * components/heatmap/HeatmapPanel.tsx). Styled to match the Coin Type / Mint
- * tabs' sidebar + unbordered map layout (FindSpotsVisualization.tsx).
+ * Mint Town tab of the map visualizations page: the full-bleed mint
+ * production heatmap map (PointedSpadeHeatmap, a pure map) with the
+ * database/ANS-catalogue toggle and pointed/square-foot picker inside the
+ * shared MapVisualizationOverlay.
  *
- * Used by: app/visualizations/quantity/page.tsx.
+ * Used by: app/visualizations/mint-town/page.tsx.
  */
 
 import { useState } from 'react'
 import { PointedSpadeHeatmap } from '@/components/map/PointedSpadeHeatmap'
-import type { AnsSpadeKind, HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
+import { MapVisualizationOverlay } from '@/components/visualizations/MapVisualizationOverlay'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
-import { VisualizationTabs } from '@/components/visualizations/VisualizationTabs'
+import type { AnsSpadeKind, HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 import type { AnsMintStats } from '@/lib/ans-spade-data'
 
-export function QuantityVisualization({
+export function MintTownVisualization({
   database,
   ansPointed,
   ansSquare,
@@ -38,15 +34,18 @@ export function QuantityVisualization({
   const active = source === 'database' ? database : ans
 
   return (
-    <div className="flex min-h-[70vh] flex-1 flex-col bg-white lg:flex-row min-[1440px]:min-h-0 min-[1440px]:overflow-hidden">
-      <aside className="flex shrink-0 flex-col border-b border-brand/20 lg:w-[19.5rem] lg:border-b-0 lg:border-r xl:w-[22rem]">
-        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5 sm:px-3.5">
-          <div key="tabs">
-            <VisualizationTabs />
-          </div>
+    <div className="absolute inset-0">
+      <PointedSpadeHeatmap
+        key={source === 'ans' ? `ans-${ansKind}` : 'database'}
+        mints={active.mapped}
+        source={source}
+        fill
+      />
 
-          <div key="data-toggle" className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+      <MapVisualizationOverlay>
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-semibold text-gray-700">
               <T k="visualizations.data.label" />
             </span>
             {(['database', 'ans'] as const).map((s) => (
@@ -54,7 +53,7 @@ export function QuantityVisualization({
                 key={s}
                 type="button"
                 onClick={() => setSource(s)}
-                className={`px-2 py-0.5 text-[11px] font-semibold border transition ${
+                className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
                   source === s
                     ? 'bg-brand text-white border-brand'
                     : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
@@ -66,8 +65,8 @@ export function QuantityVisualization({
           </div>
 
           {source === 'ans' && (
-            <label key="ans-category" className="flex flex-col gap-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-700">
                 <T k="visualizations.ans.category" />
               </span>
               <select
@@ -81,7 +80,7 @@ export function QuantityVisualization({
             </label>
           )}
 
-          <p key="caption" className="text-[11px] leading-snug text-gray-500">
+          <p className="text-sm leading-snug text-gray-700">
             <T
               k={
                 source === 'database'
@@ -90,22 +89,14 @@ export function QuantityVisualization({
               }
             />
           </p>
-        </div>
-      </aside>
 
-      <div className="relative flex-1 overflow-y-auto p-4">
-        {active.mapped.length > 0 ? (
-          <PointedSpadeHeatmap
-            key={source === 'ans' ? `ans-${ansKind}` : 'database'}
-            mints={active.mapped}
-            source={source}
-          />
-        ) : (
-          <p className="text-sm text-gray-500">
-            <T k="visualizations.noMappedMints" />
-          </p>
-        )}
-      </div>
+          {active.mapped.length === 0 && (
+            <p className="text-sm text-gray-700">
+              <T k="visualizations.noMappedMints" />
+            </p>
+          )}
+        </div>
+      </MapVisualizationOverlay>
     </div>
   )
 }

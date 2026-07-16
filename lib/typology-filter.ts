@@ -120,19 +120,6 @@ export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLea
   return []
 }
 
-/**
- * True when inscription filtering should be offered for the selection.
- * L3/L4 always qualify (inscriptions live on L3). L1/L2 qualify only when
- * they are leaves (no further type children) — e.g. Round Coin 圜钱.
- */
-export function isTypologyLeafSelection(sel: TypologyFilterSelection): boolean {
-  const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
-  if (!l1) return false
-  if (l4 || l3) return true
-  if (l2) return (l2.children?.length ?? 0) === 0
-  return (l1.children?.length ?? 0) === 0
-}
-
 export function hasTypologyFilter(sel: TypologyFilterSelection): boolean {
   return !!sel.l1
 }

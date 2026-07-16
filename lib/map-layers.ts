@@ -97,7 +97,8 @@ function addRiverModeControl(
   map: import('leaflet').Map,
   majorRivers: import('leaflet').LayerGroup,
   minorRivers: import('leaflet').LayerGroup,
-  defaultMode: RiverMode = 'major'
+  defaultMode: RiverMode = 'major',
+  position: import('leaflet').ControlPosition = 'topright'
 ) {
   function applyMode(mode: RiverMode) {
     map.removeLayer(majorRivers)
@@ -107,7 +108,7 @@ function addRiverModeControl(
   }
 
   const RiverControl = L.Control.extend({
-    options: { position: 'topright' },
+    options: { position },
     onAdd() {
       const container = L.DomUtil.create('div', 'leaflet-bar river-mode-control')
       container.style.background = 'white'
@@ -186,22 +187,25 @@ export function addLayerControl(
   map: import('leaflet').Map,
   osm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
-  satelliteLabels: import('leaflet').TileLayer
+  satelliteLabels: import('leaflet').TileLayer,
+  options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
   // On by default on top of either base layer — gives bilingual labels on
   // the street map, and is the only text shown on the satellite view. Users
   // can switch it off via the overlay checkbox if it feels cluttered.
   satelliteLabels.addTo(map)
 
+  const position = options?.position ?? 'topright'
+
   L.control
     .layers(
       { 'Street map': osm, Satellite: satellite },
       { 'English labels': satelliteLabels },
-      { collapsed: false, position: 'topright' }
+      { collapsed: options?.collapsed ?? false, position }
     )
     .addTo(map)
 
   const majorRivers = buildRiverLayer(L, '/data/rivers-major.geojson')
   const minorRivers = buildRiverLayer(L, '/data/rivers-minor.geojson')
-  addRiverModeControl(L, map, majorRivers, minorRivers, 'major')
+  addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
 }

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./maps.css";
 
 /* ============================================================================
    EARLY CHINESE COIN FINDS — CLEAN CATALOGUE THEME
@@ -84,13 +85,6 @@
   /* Card border color, split so hover can swap it (see section 4) */
   --card-border: var(--brand);
   --card-border-hover: var(--brand-light);
-
-  --map-dot-fill: var(--brand);
-  --map-dot-special: var(--accent);
-  --map-dot-border: rgba(255, 255, 255, 0.2); /* white with low opacity, so the dot's fill color shows through */
-
-  --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
-  --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
 
   /* Homepage hero banner's left-to-right sweep — separate from --brand /
      --brand-dark above so you can retint just the hero without touching the
@@ -297,25 +291,8 @@ button:not(:disabled):hover {
   /* border: 3px solid var(--brand); */
 }
 
-/* Shared marker-dot look, used by every map's L.divIcon markers (fill color
-   and size stay inline per-marker, set by each map component — see the
-   commented color constants near the top of those files). Tweak here to
-   restyle every map's dots at once. */
-.map-dot {
-  border-width: 2px;
-  border-style: solid;
-  border-color: var(--map-dot-border); /* fallback if a component doesn't set its own */
-  background: var(--map-dot-fill); /* fallback if a component doesn't set its own */
-  border-radius: 50%;
-  /* box-shadow: 0 0 4px rgba(0, 0, 0, 0.35); */
-}
-
-/* Modifier for de-emphasized/inactive dots (e.g. markers outside the current
-   focus). Stack with `.map-dot`: className="map-dot map-dot-disabled". */
-.map-dot-disabled {
-  border-color: var(--map-dot-border);
-  background: var(--map-dot-border);
-}
+/* Map marker dot styling (base + size + per-role color classes) now lives in
+   app/maps.css, imported at the top of this file. */
 
 .marker-cluster-small,
 .marker-cluster-medium,

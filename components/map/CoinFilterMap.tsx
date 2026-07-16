@@ -23,18 +23,10 @@ import {
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
-// Marker fill + border (RGBA) for the homepage's site dots. Shared dot
-// chrome (border width, radius, shadow) lives in the `.map-dot` class in
-// app/globals.css.
-const SITE_MARKER_COLOR = 'var(--map-dot-disabled-fill)' 
-const MARKER_BORDER_COLOR = 'var(--map-dot-disabled-border)'
-
-function dot(color: string, size = 12) {
-  return `<div class="map-dot" style="
-    width:${size}px;height:${size}px;
-    background:${color};
-    border-color:${MARKER_BORDER_COLOR};
-  "></div>`
+// Marker look (size + role color) comes from app/maps.css — `.map-dot`,
+// `.map-dot-size-12`, `.map-dot-home-site` — no inline styles.
+function dot(size = 12) {
+  return `<div class="map-dot map-dot-size-${size} map-dot-home-site"></div>`
 }
 
 /** Same intensity curve as the "no filter" state on the find spots map, so
@@ -112,7 +104,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
 
         const icon = L.divIcon({
           className: '',
-          html: dot(SITE_MARKER_COLOR, 12),
+          html: dot(12),
           iconSize: [12, 12],
           iconAnchor: [6, 6],
         })

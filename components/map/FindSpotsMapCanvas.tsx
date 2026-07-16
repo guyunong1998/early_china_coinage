@@ -7,8 +7,8 @@
  * the map.
  *
  * Used by: components/visualizations/FindSpotsVisualization.tsx
- * (app/visualizations/coin-type and app/visualizations/mint pages), which
- * owns the filter state and renders the sidebar + legend around it.
+ * (app/visualizations/find-site page), which owns the filter state and
+ * renders the overlay controls + legend around it.
  */
 
 import { useEffect, useRef } from 'react'
@@ -58,18 +58,16 @@ const DENSITY_GRADIENT: Record<number, string> = {
 }
 
 // Note: this map's fill/border colors are state-driven (stateColor() below,
-// backed by lib/color-scale.ts's match-ratio gradient) rather than fixed
-// per-marker-role constants, so they're not named RGBA constants here the
-// way the other maps' simple site/mint dots are — they're the "heatmap
-// colors" this map is built around. Only the shared structural chrome
-// (radius, shadow) comes from `.map-dot` in app/globals.css; the border
-// still tracks each marker's own color inline.
+// backed by lib/color-scale.ts's match-ratio gradient, including one
+// genuinely continuous interpolation) rather than fixed per-marker-role
+// classes like the other maps' simple site/mint dots — they're the "heatmap
+// colors" this map is built around, so they can't be pre-enumerated in
+// app/maps.css. Size still comes from a `.map-dot-size-N` class; fill/border
+// are the only properties still set via two scoped CSS custom properties
+// (`.map-dot-ratio` reads --dot-fill / --dot-border there).
 function dot(color: string, size = 14) {
-  return `<div class="map-dot" style="
-    width:${size}px;height:${size}px;
-    background:${color};
-    border-color:${color.includes('rgba') ? 'rgba(80,80,80,0.35)' : color};
-  "></div>`
+  const borderColor = color.includes('rgba') ? 'rgba(80,80,80,0.35)' : color
+  return `<div class="map-dot map-dot-size-${size} map-dot-ratio" style="--dot-fill:${color};--dot-border:${borderColor}"></div>`
 }
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
@@ -278,12 +276,16 @@ export function FindSpotsMapCanvas({
       const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
 
-      const map = L.map(containerRef.current, { zoomControl: true }).setView([35.8, 105.4], 4)
+      const map = L.map(containerRef.current, { zoomControl: false }).setView([35.8, 105.4], 4)
       mapRef.current = map
+      L.control.zoom({ position: 'topright' }).addTo(map)
 
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      addLayerControl(L, map, osm, satellite, satelliteLabels)
+      addLayerControl(L, map, osm, satellite, satelliteLabels, {
+        collapsed: true,
+        position: 'bottomright',
+      })
 
       const bounds: [number, number][] = []
 
@@ -294,7 +296,7 @@ export function FindSpotsMapCanvas({
         const marker = L.marker([site.lat, site.lng], {
           icon: L.divIcon({
             className: '',
-            html: dot('#365727', 12),
+            html: '<div class="map-dot map-dot-size-12 map-dot-nofilter"></div>',
             iconSize: [12, 12],
             iconAnchor: [6, 6],
           }),

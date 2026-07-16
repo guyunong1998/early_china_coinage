@@ -16,7 +16,7 @@ const cards: { href: string; labelKey: DictionaryKey; descKey: DictionaryKey; ic
     icon: '⊕',
   },
   {
-    href: '/heatmap',
+    href: '/museum-collections',
     labelKey: 'navcards.spadeHeatmap.label',
     descKey: 'navcards.spadeHeatmap.desc',
     icon: '◉',

@@ -18,14 +18,6 @@ import {
   shouldShowCountyBoundary,
 } from '@/lib/city-boundaries'
 
-// Marker colors (RGBA) — teal is the default find-site dot; red highlights
-// the currently-viewed site (e.g. its own detail page's map). Border is the
-// white ring around every dot. Shared dot chrome (border width, radius,
-// shadow) lives in the `.map-dot` class in app/globals.css.
-const SITE_MARKER_COLOR = 'rgba(0, 109, 113, 1)' // #006d71
-const HIGHLIGHT_MARKER_COLOR = 'rgba(192, 57, 43, 1)' // #c0392b
-const MARKER_BORDER_COLOR = 'rgba(255, 255, 255, 0.9)'
-
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
   布币: 'Spade Coin',
   刀币: 'Knife-Shaped Coin',
@@ -115,17 +107,14 @@ export default function CoinMap({
         bounds.push([site.lat, site.lng])
 
         const isHighlighted = site.site_code === highlightSiteCode
+        const size = isHighlighted ? 18 : 14
+        const roleClass = isHighlighted ? 'map-dot-findspot-highlight' : 'map-dot-findspot'
         const marker = L.marker([site.lat, site.lng], {
           icon: L.divIcon({
             className: '',
-            html: `<div class="map-dot" style="
-              width:${isHighlighted ? '18px' : '14px'};
-              height:${isHighlighted ? '18px' : '14px'};
-              background:${isHighlighted ? HIGHLIGHT_MARKER_COLOR : SITE_MARKER_COLOR};
-              border-color:${MARKER_BORDER_COLOR};
-            "></div>`,
-            iconSize: [isHighlighted ? 18 : 14, isHighlighted ? 18 : 14],
-            iconAnchor: [isHighlighted ? 9 : 7, isHighlighted ? 9 : 7],
+            html: `<div class="map-dot map-dot-size-${size} ${roleClass}"></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
           }),
         })
 

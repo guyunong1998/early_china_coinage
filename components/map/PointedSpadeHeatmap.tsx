@@ -5,9 +5,9 @@
  * sized/shaded by coin (or ANS specimen) count. No caption, no wrapper —
  * just the map.
  *
- * Used by: components/heatmap/HeatmapPanel.tsx (app/heatmap/page.tsx) and
- * components/visualizations/QuantityVisualization.tsx
- * (app/visualizations/quantity/page.tsx), both of which render their own
+ * Used by: components/heatmap/HeatmapPanel.tsx (app/museum-collections/page.tsx)
+ * and components/visualizations/MintTownVisualization.tsx
+ * (app/visualizations/mint-town/page.tsx), both of which render their own
  * caption text below it.
  */
 
@@ -30,9 +30,13 @@ function heatOpacity(coinCount: number, maxCount: number) {
 export function PointedSpadeHeatmap({
   mints,
   source = 'database',
+  fill = false,
 }: {
   mints: PointedSpadeMintStat[]
   source?: HeatmapSource
+  /** Fill the relatively-positioned parent instead of using a fixed 480px
+   * height — for full-bleed map layouts (the Mint Town visualization tab). */
+  fill?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
@@ -46,12 +50,15 @@ export function PointedSpadeHeatmap({
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
-      const map = L.map(containerRef.current).setView([37.5, 112], 6)
+      const map = L.map(containerRef.current, { zoomControl: false }).setView([37.5, 112], 6)
       mapRef.current = map
+      L.control.zoom({ position: 'bottomright' }).addTo(map)
 
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      addLayerControl(L, map, osm, satellite, satelliteLabels)
+      // Collapsed to an icon in fill mode so it doesn't compete for
+      // top-right space with the overlaid filter panel above it.
+      addLayerControl(L, map, osm, satellite, satelliteLabels, fill ? { collapsed: true } : undefined)
 
       const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
       const bounds: [number, number][] = []
@@ -90,7 +97,8 @@ export function PointedSpadeHeatmap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [mints, source])
+  }, [mints, source, fill])
 
+  if (fill) return <div ref={containerRef} className="absolute inset-0" />
   return <div ref={containerRef} style={{ height: '480px', width: '100%' }} />
 }

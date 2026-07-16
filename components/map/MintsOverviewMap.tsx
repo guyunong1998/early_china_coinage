@@ -10,11 +10,6 @@ import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import type { MintTown } from '@/lib/mint-towns'
 
-// Mint marker fill + border (RGBA). Shared dot chrome (border width, radius,
-// shadow) lives in the `.map-dot` class in app/globals.css.
-const MINT_MARKER_COLOR = 'var(--map-dot-fill)'
-const MARKER_BORDER_COLOR = 'var(--map-dot-border)'
-
 export function MintsOverviewMap({ mints }: { mints: MintTown[] }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
@@ -47,11 +42,7 @@ export function MintsOverviewMap({ mints }: { mints: MintTown[] }) {
         L.marker([mint.lat, mint.lng], {
           icon: L.divIcon({
             className: '',
-            html: `<div class="map-dot" style="
-              width:13px;height:13px;
-              background:${MINT_MARKER_COLOR};
-              border-color:${MARKER_BORDER_COLOR};
-            "></div>`,
+            html: '<div class="map-dot map-dot-size-13 map-dot-mints-overview"></div>',
             iconSize: [13, 13],
             iconAnchor: [6, 6],
           }),

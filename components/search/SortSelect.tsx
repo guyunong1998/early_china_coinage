@@ -1,12 +1,16 @@
 'use client'
 
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import type { SortOption } from '@/lib/search-filters'
 
-const OPTIONS: { value: SortOption; labelKey: 'search.sort.name' | 'search.sort.quantity' | 'search.sort.province' }[] = [
+const OPTIONS: { value: SortOption; labelKey: DictionaryKey }[] = [
   { value: 'name', labelKey: 'search.sort.name' },
   { value: 'quantity', labelKey: 'search.sort.quantity' },
   { value: 'province', labelKey: 'search.sort.province' },
+  { value: 'finds', labelKey: 'search.sort.finds' },
+  { value: 'coinTypes', labelKey: 'search.sort.coinTypes' },
+  { value: 'states', labelKey: 'search.sort.states' },
 ]
 
 /** Lives inside the surrounding filter `<form>` so changing it resubmits the

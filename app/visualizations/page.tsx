@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 // than baked into a single static redirect at build time.
 export const dynamic = 'force-dynamic'
 
-const TABS = ['/visualizations/quantity', '/visualizations/coin-type', '/visualizations/mint']
+const TABS = ['/visualizations/mint-town', '/visualizations/find-site']
 
 export default function VisualizationsIndexPage() {
   redirect(TABS[Math.floor(Math.random() * TABS.length)])
