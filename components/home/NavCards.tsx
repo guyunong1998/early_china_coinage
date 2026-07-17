@@ -31,10 +31,7 @@ const cards: Card[] = [
     icon: '◈',
     labelKey: 'navcards.about.label',
     descKey: 'navcards.about.desc',
-    links: [
-      { href: '/about', labelKey: 'navcards.about.site' },
-      { href: '/about/team', labelKey: 'navcards.about.people' },
-    ],
+    links: [{ href: '/about', labelKey: 'navcards.about.label' }],
   },
 ]
 

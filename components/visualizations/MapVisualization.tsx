@@ -21,6 +21,7 @@ import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { MapVisualizationOverlay } from '@/components/visualizations/MapVisualizationOverlay'
 import { TypologyFilterBar } from '@/components/visualizations/TypologyFilterBar'
 import { T } from '@/components/i18n/T'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { PrecisionFilter } from '@/lib/city-boundaries'
 import {
@@ -95,6 +96,18 @@ function ViewModeRow({ viewMode, onChange }: { viewMode: ViewMode; onChange: (v:
   )
 }
 
+/** How size (and, in Density view, heat weight) is calculated — shown in the
+ * filter panel itself (distinct from DensityLegend's terse one-liner in the
+ * floating bottom legend), same text for both tabs since the underlying
+ * calculation (siteSizeByQuantity / heatIntensity) is shared. */
+function SizeCalcHint({ viewMode }: { viewMode: ViewMode }) {
+  return (
+    <p className="text-sm leading-snug text-gray-700">
+      <T k={viewMode === 'density' ? 'map.filter.densityHint' : 'map.filter.sizeHint'} />
+    </p>
+  )
+}
+
 function DensityLegend() {
   return (
     <>
@@ -165,20 +178,17 @@ export function FindSpotsVisualization({
   const [viewMode, setViewMode] = useState<ViewMode>('points')
   const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [mintFilter, setMintFilter] = useState('')
-  const [mintSearch, setMintSearch] = useState('')
 
   const mintOptions = useMemo(() => buildMintFilterOptions(coinTypes), [coinTypes])
-  const filteredMints = useMemo(() => {
-    const q = mintSearch.trim().toLowerCase()
-    if (!q) return mintOptions
-    return mintOptions.filter(
-      (m) =>
-        m.mint_zh.includes(mintSearch.trim()) ||
-        (m.mint_en ?? '').toLowerCase().includes(q) ||
-        (m.state_zh ?? '').includes(mintSearch.trim()) ||
-        (m.state_en ?? '').toLowerCase().includes(q)
-    )
-  }, [mintOptions, mintSearch])
+  const mintSelectOptions = useMemo(
+    () =>
+      mintOptions.map((m) => ({
+        value: m.mint_zh,
+        label: formatMintOptionLabel(m),
+        searchText: `${m.mint_zh} ${m.mint_en ?? ''} ${m.state_zh ?? ''} ${m.state_en ?? ''}`,
+      })),
+    [mintOptions]
+  )
 
   const filterActive = mode === 'type' ? hasTypologyFilter(sel) : !!mintFilter
 
@@ -234,7 +244,6 @@ export function FindSpotsVisualization({
   function clearFilters() {
     setSel(emptyTypologySelection())
     setMintFilter('')
-    setMintSearch('')
   }
 
   const precisionButtons = PRECISION_TABS.map((tab) => {
@@ -298,33 +307,20 @@ export function FindSpotsVisualization({
           <p className="text-sm leading-snug text-gray-700">
             <T k="map.filter.hint" />
           </p>
+          <SizeCalcHint viewMode={viewMode} />
 
           {mode === 'type' && (
             <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList coinTypes={coinTypes} compact />
           )}
 
           {mode === 'mint' && (
-            <div className="flex flex-col gap-2">
-              <input
-                type="search"
-                placeholder={t('map.filter.searchMint')}
-                value={mintSearch}
-                onChange={(e) => setMintSearch(e.target.value)}
-                className="w-full rounded border border-brand/30 px-2.5 py-1.5 text-sm outline-none focus:border-brand"
-              />
-              <select
-                value={mintFilter}
-                onChange={(e) => setMintFilter(e.target.value)}
-                className="w-full rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
-              >
-                <option value="">{t('map.filter.selectMint')}</option>
-                {filteredMints.map((m) => (
-                  <option key={m.mint_zh} value={m.mint_zh}>
-                    {formatMintOptionLabel(m)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              options={mintSelectOptions}
+              value={mintFilter}
+              onChange={setMintFilter}
+              placeholder={t('map.filter.searchMint')}
+              noResultsLabel={t('map.filter.noMintMatches')}
+            />
           )}
 
           {filterActive && foundInSummary && (
@@ -336,14 +332,16 @@ export function FindSpotsVisualization({
             </p>
           )}
           {filterActive && (
+            <div className="flex justify-end">
               <button
                 type="button"
                 onClick={clearFilters}
-                className="ml-auto align-right rounded border border-gray-200 px-2.5 py-1 text-sm text-gray-600 hover:border-brand hover:text-brand"
+                className="rounded border border-brand/30 bg-brand-light px-2.5 py-1 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
               >
                 <T k="heatmap.clearFilter" />
               </button>
-            )}
+            </div>
+          )}
         </div>
       </MapVisualizationOverlay>
 
@@ -542,6 +540,7 @@ export function MintTownVisualization({
           <p className="text-sm leading-snug text-gray-700">
             <T k="map.filter.hintMintTown" />
           </p>
+          <SizeCalcHint viewMode={viewMode} />
           <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList coinTypes={coinTypes} compact />
 
           {mintPoints.length === 0 && (
@@ -559,13 +558,15 @@ export function MintTownVisualization({
             </p>
           )}
           {filterActive && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="ml-auto align-right rounded border border-gray-200 px-2.5 py-1 text-sm text-gray-600 hover:border-brand hover:text-brand"
-            >
-              <T k="heatmap.clearFilter" />
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="rounded border border-brand/30 bg-brand-light px-2.5 py-1 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
+              >
+                <T k="heatmap.clearFilter" />
+              </button>
+            </div>
           )}
         </div>
       </MapVisualizationOverlay>

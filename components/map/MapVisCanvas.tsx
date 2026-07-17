@@ -71,6 +71,13 @@ function dot(color: string, size = 14) {
   return `<div class="map-dot map-dot-ratio" style="--dot-fill:${color};width:${size}px;height:${size}px"></div>`
 }
 
+// "No record at all" marker — fixed size + color, both set in app/maps.css
+// (`.map-dot-no-data`) rather than computed inline, since neither varies.
+const NO_DATA_DOT_SIZE = 12
+function noDataDot() {
+  return `<div class="map-dot map-dot-no-data"></div>`
+}
+
 /** Min/max pixel size for quantity-driven sizing, read from app/maps.css's
  * `--map-dot-qty-size-min` / `-max` so the CSS file stays the single source
  * of truth. Read once per restyle pass, not per marker. */
@@ -278,6 +285,7 @@ function applyHeatMarkerStyle(
   popupHtml: string
 ) {
   const state = toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty)
+  const isStaticNoData = !inDensity && state.kind === 'no-data'
   const color = inDensity
     ? state.kind === 'no-data'
       ? 'transparent'
@@ -289,14 +297,19 @@ function applyHeatMarkerStyle(
       : 7
     : // No-data points stay small and fixed (not quantity-scaled) — there's
       // nothing to size by for a type/mint that isn't recorded there at all.
-      state.kind === 'no-data'
-      ? sizeRange.min
-      : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
+      isStaticNoData
+      ? NO_DATA_DOT_SIZE
+      : // Present but the matching quantity wasn't recorded — sized as if it
+        // were 20% of the location's total, a conservative stand-in that
+        // still reflects scale without claiming a count we don't have.
+        state.kind === 'unquantified'
+        ? siteSizeByQuantity(totalQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
+        : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
 
   marker.setIcon(
     L.divIcon({
       className: '',
-      html: size > 0 ? dot(color, size) : '',
+      html: size > 0 ? (isStaticNoData ? noDataDot() : dot(color, size)) : '',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     })
@@ -332,6 +345,12 @@ type SitesCanvasProps = {
   /** Extra distinct point for the mint the active filter resolves to (Find
    * Site's "by mint" filter mode), when it has known coordinates. */
   highlightMint?: HighlightMint | null
+  /** Full layer-switcher + river-mode controls (desktop only regardless).
+   * Default true — the two dedicated Map Visualizations pages want this;
+   * anywhere else this canvas gets embedded (e.g. the /mints overview map)
+   * should pass `false` to get the same controls-off, static-major-rivers
+   * treatment every other single-page map uses. */
+  fullControls?: boolean
   height?: string
 }
 
@@ -344,6 +363,8 @@ type MintsCanvasProps = {
   /** Extra distinct point for the mint the active coin-type filter resolves
    * to (e.g. a specific inscription), when it has known coordinates. */
   highlightMint?: HighlightMint | null
+  /** See SitesCanvasProps.fullControls. */
+  fullControls?: boolean
   height?: string
 }
 
@@ -506,13 +527,14 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
 
-      // Full layer-switcher + river-mode controls are reserved for these
-      // dedicated Map Visualizations pages, desktop only — on mobile there's
-      // no room for the extra chrome, so it drops back to the same
-      // "just the bilingual labels + static major rivers" baseline every
-      // other map on the site uses.
+      // Full layer-switcher + river-mode controls are reserved for the
+      // dedicated Map Visualizations pages (fullControls, default true),
+      // desktop only — on mobile, or wherever this canvas is embedded
+      // elsewhere with fullControls={false} (e.g. the /mints overview map),
+      // it drops back to the same "just the bilingual labels + static major
+      // rivers" baseline every other map on the site uses.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
-      if (isMobile) {
+      if (isMobile || props.fullControls === false) {
         satelliteLabels.addTo(map)
         addStaticMajorRivers(L, map)
       } else {

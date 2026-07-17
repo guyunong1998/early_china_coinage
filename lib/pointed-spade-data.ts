@@ -15,6 +15,8 @@ export type PointedSpadeMintStat = {
   lng: number
   findCount: number
   coinCount: number
+  /** Number of distinct find sites with a coin attributed to this mint. */
+  siteCount: number
   inscriptions: string[]
   state_zh: string | null
   state_en: string | null
@@ -41,10 +43,13 @@ export function computeMintStatsFromFinds(
   matchedCodes: Set<string> | null
 ): { mapped: PointedSpadeMintStat[]; unmapped: PointedSpadeMintStat[] } {
   const coinTypeByCode = new Map(coinTypes.map((c) => [c.coin_type_code, c]))
-  const groups = new Map<string, { findCount: number; coinCount: number; inscriptions: Set<string> }>()
+  const groups = new Map<
+    string,
+    { findCount: number; coinCount: number; inscriptions: Set<string>; siteCodes: Set<string> }
+  >()
 
   MINT_TOWNS.forEach((town) => {
-    groups.set(town.name_zh, { findCount: 0, coinCount: 0, inscriptions: new Set() })
+    groups.set(town.name_zh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
   })
 
   finds.forEach((find) => {
@@ -56,13 +61,14 @@ export function computeMintStatsFromFinds(
     const mintZh = resolveMintNameZh(mintRaw)
 
     if (!groups.has(mintZh)) {
-      groups.set(mintZh, { findCount: 0, coinCount: 0, inscriptions: new Set() })
+      groups.set(mintZh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
     }
     if (matchedCodes && !matchedCodes.has(code)) return
 
     const group = groups.get(mintZh)!
     group.findCount += 1
     group.coinCount += findQuantity(find)
+    if (find.site_code) group.siteCodes.add(find.site_code)
     const insc = coinType!.inscription?.trim()
     if (insc) group.inscriptions.add(insc)
   })
@@ -78,6 +84,7 @@ export function computeMintStatsFromFinds(
         lng: town?.lng ?? NaN,
         findCount: g.findCount,
         coinCount: g.coinCount,
+        siteCount: g.siteCodes.size,
         inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
         state_zh: town?.state_zh ?? null,
         state_en: town?.state_en ?? null,

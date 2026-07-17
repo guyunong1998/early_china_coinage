@@ -1,79 +1,68 @@
-import type { CoinTypeImagePaths } from '@/lib/coin-images'
+import Link from 'next/link'
+import { T } from '@/components/i18n/T'
+import { MouldTag } from '@/components/coin-types/MouldTag'
+import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
+import { stateTagColor } from '@/lib/state-colors'
+import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
 
-/** Generic "no photo yet" placeholder — a round cash-coin outline with a
- * square hole, the universal shorthand for "a coin" regardless of this
- * particular type's real shape (spade, knife, round, etc). */
-function CoinImagePlaceholder({ label }: { label: string }) {
-  return (
-    <div
-      className="flex aspect-square w-full items-center justify-center bg-brand-light"
-      role="img"
-      aria-label={`${label}: no photo available yet`}
-    >
-      <svg viewBox="0 0 48 48" className="h-2/3 w-2/3 text-brand/40" aria-hidden="true">
-        <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="2" />
-        <rect x="18" y="18" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" />
-      </svg>
-    </div>
-  )
-}
-
-function CoinImageSlot({ src, label }: { src: string | null; label: string }) {
-  return (
-    <div className="overflow-hidden rounded border border-brand/20">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={label} className="aspect-square w-full object-cover" />
-      ) : (
-        <CoinImagePlaceholder label={label} />
-      )}
-      <p className="border-t border-brand/20 bg-white py-1 text-center text-[11px] uppercase tracking-wide text-gray-500">
-        {label}
-      </p>
-    </div>
-  )
-}
-
+/** One typology node (L1–L4) as a card — mirrors MintListClient's card
+ * shape/CSS (`panel`, tag styling, hover reveal) so the two list pages read
+ * as one system. */
 export function CoinTypeCard({
-  majorTypeZh,
-  majorTypeEn,
-  minorTypeZh,
-  minorTypeEn,
-  inscriptionCount,
-  images,
+  node,
+  counts,
+  isMould = false,
 }: {
-  majorTypeZh: string
-  majorTypeEn: string | null
-  minorTypeZh: string | null
-  minorTypeEn: string | null
-  inscriptionCount: number
-  images: CoinTypeImagePaths
+  node: CoinTypeNode
+  counts?: CoinTypeCounts
+  isMould?: boolean
 }) {
-  const showMinor = minorTypeZh && minorTypeZh !== majorTypeZh
-
   return (
-    <div className="panel-search-item overflow-hidden">
-      <div className="p-4">
-        <h3 className="font-serif text-base font-semibold text-brand">
-          {majorTypeZh}
-          {majorTypeEn && <span className="ml-1.5 text-sm font-normal italic text-gray-400">{majorTypeEn}</span>}
-        </h3>
-        {showMinor && (
-          <p className="text-sm text-gray-600">
-            {minorTypeZh}
-            {minorTypeEn && <span className="ml-1.5 text-xs italic text-gray-400">{minorTypeEn}</span>}
-          </p>
-        )}
+    <Link href={`/coin-types/${node.slug}`} className="panel group flex flex-col p-5">
+      <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="h-28 w-full rounded" />
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <CoinImageSlot src={images.obverseSrc} label="Obverse" />
-          <CoinImageSlot src={images.reverseSrc} label="Reverse" />
-        </div>
-
-        <p className="mt-3 text-xs text-gray-400">
-          {inscriptionCount} inscription{inscriptionCount === 1 ? '' : 's'} recorded
-        </p>
+      <div className="mt-3 flex items-start justify-between gap-2">
+        <h2 className="font-serif text-lg font-semibold text-gray-900 group-hover:text-brand">
+          {node.label_zh} <span className="text-sm font-normal text-gray-500">({node.label_en})</span>
+        </h2>
+        <MouldTag isMould={isMould} />
       </div>
-    </div>
+
+      {counts && counts.coinCount > 0 && (
+        <p className="mt-2 text-xs text-gray-500">
+          <T k="coinTypeList.coinsInSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+        </p>
+      )}
+
+      {node.parents.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {node.parents.map((p) => (
+            <span
+              key={p.slug}
+              className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+            >
+              {p.label_zh}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {node.states.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {node.states.map((s) => (
+            <span
+              key={s.state_zh}
+              className={`rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(s.state_en)}`}
+            >
+              {s.state_zh}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <span className="mt-4 text-xs text-brand opacity-0 transition group-hover:opacity-100">
+        <T k="mintList.viewDetails" />
+      </span>
+    </Link>
   )
 }

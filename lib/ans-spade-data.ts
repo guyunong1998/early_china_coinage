@@ -96,6 +96,8 @@ function aggregateAnsMintStats(
         lng: town?.lng ?? NaN,
         findCount: g.coinCount,
         coinCount: g.coinCount,
+        // ANS catalogue specimens aren't tied to an archaeological find site.
+        siteCount: 0,
         inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
         state_zh: town?.state_zh ?? null,
         state_en: town?.state_en ?? null,

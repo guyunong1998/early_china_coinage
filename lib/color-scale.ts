@@ -7,11 +7,14 @@
 const RAMP_LIGHT: [number, number, number] = [0xd9, 0xa4, 0x06] // low ratio: yellow
 const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: red
 
-// Site/context has no record of the selected type at all. Faint (paired with
-// a smaller, fixed dot size at the call sites) so it recedes behind real
-// data, but still visible against the basemap rather than disappearing.
-export const NO_DATA_COLOR = '#c5c5c5'
-export const NO_DATA_ALPHA = 0.45
+// Site/context has no record of the selected type at all. A darker, fixed
+// gray (paired with a smaller, fixed dot size at the call sites) so it reads
+// unambiguously as "nothing here" rather than a faint step of the ratio
+// scale. Keep in sync with app/maps.css's --map-dot-nodata-fill, which the
+// actual marker uses (this constant backs the legend swatch and popup bar,
+// which can't read a CSS custom property).
+export const NO_DATA_COLOR = '#5a5a5a'
+export const NO_DATA_ALPHA = 0.55
 
 // Type is present in a context but quantities cannot be computed — full
 // opacity so it doesn't read as "less certain" than quantified sites.

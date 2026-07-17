@@ -27,8 +27,17 @@ export default async function MintsPage() {
   // Same points list the Mint Town map visualization shows by default (no
   // filter, no ANS toggle) — one source of truth so the two look identical.
   const [finds, coinTypes] = await Promise.all([getFindsForHeatmap(), getCoinTypes()])
-  const { mapped } = computeMintStatsFromFinds(finds, coinTypes, null)
+  const { mapped, unmapped } = computeMintStatsFromFinds(finds, coinTypes, null)
   const mintPoints = toMintPoints(mapped)
+
+  // Coin/site counts for the list cards below — covers every documented
+  // mint, geolocated or not, keyed by the same canonical name_zh MINT_TOWNS
+  // uses (a plain serializable object, since this crosses into a client
+  // component as a prop).
+  const statsByMint: Record<string, { coinCount: number; siteCount: number }> = {}
+  ;[...mapped, ...unmapped].forEach((stat) => {
+    statsByMint[stat.mint_zh] = { coinCount: stat.coinCount, siteCount: stat.siteCount }
+  })
 
   const dataSource =
     result.source === 'sheet'
@@ -38,7 +47,7 @@ export default async function MintsPage() {
         : 'local file (sheet error)'
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-2">
         <h1 className="font-serif text-3xl font-semibold text-brand">
           <T k="mints.title" />
@@ -59,31 +68,41 @@ export default async function MintsPage() {
         </div>
       )}
 
-      {/* Overview map */}
-      <div className="mt-6">
-        <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="mints.overview" />
-        </div>
-        <div className="panel-body relative overflow-hidden" style={{ height: '340px', width: '100%' }}>
-          <MapVisCanvas
-            kind="mints"
-            mintPoints={mintPoints}
-            mintStates={null}
-            viewMode="points"
-            densityLatLngs={[]}
-            height="340px"
-          />
-        </div>
-        <p className="mt-2 text-sm">
-          <Link href="/visualizations/mint-town" className="text-brand hover:underline">
-            <T k="mints.moreMapVisualizations" />
+      {/* Overview map — same left-third title/link + right-two-thirds map
+          card the home page uses for its own map section. */}
+      <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
+        <div className="flex flex-col justify-center gap-3 p-6 lg:col-span-1">
+          <h2 className="font-serif text-xl font-semibold text-brand">
+            <T k="navcards.map.label" />
+          </h2>
+          <p className="text-sm leading-6 text-gray-600">
+            <T k="navcards.map.desc" />
+          </p>
+          <Link
+            href="/visualizations/mint-town"
+            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          >
+            <T k="home.mapSection.title" /> →
           </Link>
-        </p>
+        </div>
+        <div className="lg:col-span-2 p-4">
+          <div className="relative overflow-hidden" style={{ height: '340px', width: '100%' }}>
+            <MapVisCanvas
+              kind="mints"
+              mintPoints={mintPoints}
+              mintStates={null}
+              viewMode="points"
+              densityLatLngs={[]}
+              fullControls={false}
+              height="340px"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Searchable list */}
       <div className="mt-8">
-        <MintListClient all={mints} />
+        <MintListClient all={mints} statsByMint={statsByMint} />
       </div>
     </div>
   )
