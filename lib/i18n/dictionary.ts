@@ -156,6 +156,10 @@ export const DICTIONARY = {
     en: 'Found in {found} sites out of {total}',
     zh: '在 {total} 个遗址中，{found} 个含有此币种',
   },
+  'heatmap.foundInMints': {
+    en: 'Found in {found} mint towns out of {total}',
+    zh: '在 {total} 个铸地中，{found} 个含有此币种',
+  },
   'heatmap.legend.title': { en: 'Share of site total:', zh: '占遗址钱币总数比例：' },
   'heatmap.legend.oneOfOne': { en: '1 of 1', zh: '1 枚中的 1 枚' },
   'heatmap.legend.presentNoCount': { en: 'Present, no count', zh: '存在但无具体数量' },
@@ -239,19 +243,11 @@ export const DICTIONARY = {
   'visualizations.findSite.detail': { en: '', zh: '' },
   'visualizations.data.label': { en: 'Data', zh: '数据' },
   'visualizations.data.database': { en: 'Database finds', zh: '数据库记录' },
-  'visualizations.data.ans': { en: 'ANS catalogue', zh: 'ANS 目录' },
-  'visualizations.ans.pointed': { en: 'Pointed-foot (尖足布)', zh: '尖足布' },
-  'visualizations.ans.square': { en: 'Square-foot (方足布)', zh: '方足布' },
-  'visualizations.ans.category': { en: 'Category', zh: '类别' },
   'visualizations.mintHeatmapTitle': { en: 'Mint Production Heatmap', zh: '铸地产量热力图' },
   'visualizations.noMappedMints': { en: 'No mapped mint towns for this data source.', zh: '该数据来源暂无已定位铸地。' },
   'visualizations.mintHeatmapCaption.database': {
     en: 'Circle size and intensity reflect the number of coins recorded in the database for each mint town. Only mints with mapped coordinates are shown.',
     zh: '圆圈大小与深浅反映数据库中各铸地记录的钱币数量。仅显示已定位坐标的铸地。',
-  },
-  'visualizations.mintHeatmapCaption.ans': {
-    en: 'Circle size and intensity reflect the number of ANS catalogue specimens for each mint town. Only mints with mapped coordinates are shown.',
-    zh: '圆圈大小与深浅反映 ANS 目录中各铸地的标本数量。仅显示已定位坐标的铸地。',
   },
   'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
   'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
@@ -263,6 +259,10 @@ export const DICTIONARY = {
   'map.filter.hint': {
     en: 'Visualize find sites by coin type or mint. Each point is colored according to the percentage amount of the specified type or mint within the find site.' ,
     zh: '按币种或铸地筛选。按出土单位着色：单位内全为所选=红；混合单位按数量占比（越高越红）；有所选但无法计量=灰半透明；不含所选=浅灰。',
+  },
+  'map.filter.hintMintTown': {
+    en: 'Filter mint towns by coin type. Circle size and shade reflect the number of matching coins recorded at each mint town.',
+    zh: '按币种筛选铸地。圆圈大小与深浅反映各铸地符合条件的钱币数量。',
   },
   'map.filter.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
   'map.filter.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },

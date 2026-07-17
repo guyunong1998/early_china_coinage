@@ -4,7 +4,9 @@
  * Not a map itself — the coin-type filter control (major category / sub-
  * category / type / variant / inscription dropdowns).
  *
- * Used by: FindSpotsVisualization.tsx (app/visualizations/find-site page).
+ * Used by: FindSpotsVisualization and MintTownVisualization in
+ * components/visualizations/MapVisualization.tsx (the find-site and
+ * mint-town pages).
  */
 
 import { useLanguage } from '@/lib/i18n/LanguageContext'

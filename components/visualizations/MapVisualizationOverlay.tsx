@@ -8,7 +8,8 @@
  * caller passes as children. Below the `lg` breakpoint the controls collapse
  * behind a toggle button so the map underneath stays reachable.
  *
- * Used by: MintTownVisualization.tsx, FindSpotsVisualization.tsx.
+ * Used by: MintTownVisualization and FindSpotsVisualization in
+ * components/visualizations/MapVisualization.tsx.
  */
 
 import Link from 'next/link'

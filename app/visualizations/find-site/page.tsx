@@ -1,4 +1,4 @@
-import { FindSpotsVisualization } from '@/components/visualizations/FindSpotsVisualization'
+import { FindSpotsVisualization } from '@/components/visualizations/MapVisualization'
 import {
   countSitesByPrecision,
   parsePrecisionFilter,

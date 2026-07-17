@@ -5,10 +5,11 @@
  * sized/shaded by coin (or ANS specimen) count. No caption, no wrapper —
  * just the map.
  *
- * Used by: components/heatmap/HeatmapPanel.tsx (app/museum-collections/page.tsx)
- * and components/visualizations/MintTownVisualization.tsx
- * (app/visualizations/mint-town/page.tsx), both of which render their own
- * caption text below it.
+ * Used by: components/heatmap/HeatmapPanel.tsx (app/museum-collections/page.tsx),
+ * which renders its own caption text below it. The map visualizations page's
+ * Mint Town tab (components/visualizations/MapVisualization.tsx) has its own
+ * copy of this same circle-marker logic folded into components/map/MapVisCanvas.tsx,
+ * so it can share that canvas's points/density toggle and coin-type filter.
  */
 
 import { useEffect, useRef } from 'react'
@@ -52,13 +53,17 @@ export function PointedSpadeHeatmap({
       mapRef.current?.remove()
       const map = L.map(containerRef.current, { zoomControl: false }).setView([37.5, 112], 6)
       mapRef.current = map
-      L.control.zoom({ position: 'bottomright' }).addTo(map)
+      L.control.zoom({ position: 'topright' }).addTo(map)
 
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      // Collapsed to an icon in fill mode so it doesn't compete for
-      // top-right space with the overlaid filter panel above it.
-      addLayerControl(L, map, osm, satellite, satelliteLabels, fill ? { collapsed: true } : undefined)
+
+      const isMobile = window.matchMedia('(max-width: 768px)').matches
+      addLayerControl(L, map, osm, satellite, satelliteLabels, {
+        collapsed: true,
+        position: 'bottomright',
+        showRiverControl: !isMobile,
+      })
 
       const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
       const bounds: [number, number][] = []

@@ -1,17 +1,23 @@
 'use client'
 
 /**
- * Find Site tab of the map visualizations page: owns all filter state and
- * renders the full-bleed map (FindSpotsMapCanvas, a pure map) with the
- * type/mint filter controls, points/density toggle, and precision controls
- * inside the shared MapVisualizationOverlay, plus a legend overlay.
+ * Both tabs of the map visualizations page: FindSpotsVisualization (Find Site
+ * tab) and MintTownVisualization (Mint Town tab). Each owns its own filter
+ * state and data shape, but both render the full-bleed map (MapVisCanvas)
+ * inside the same MapVisualizationOverlay, with a matching filter-panel shell
+ * (mode/source toggle row, points/density toggle, hint text, legend) built
+ * from the shared pieces below — only the legend contents and the map's
+ * point-rendering logic (color-coded find-site dots vs. sized mint circles)
+ * differ, and that difference lives in MapVisCanvas itself.
  *
- * Used by: app/visualizations/find-site/page.tsx.
+ * Used by: app/visualizations/find-site/page.tsx and
+ * app/visualizations/mint-town/page.tsx.
  */
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
-import { FindSpotsMapCanvas } from '@/components/map/FindSpotsMapCanvas'
+import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { MapVisualizationOverlay } from '@/components/visualizations/MapVisualizationOverlay'
 import { TypologyFilterBar } from '@/components/visualizations/TypologyFilterBar'
 import { T } from '@/components/i18n/T'
@@ -29,6 +35,7 @@ import { computeSiteHeatStates } from '@/lib/context-heatmap'
 import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { buildMintFilterOptions, formatMintOptionLabel, getMatchingCoinTypeCodesByMint } from '@/lib/mint-filter'
+import { computeMintStatsFromFinds, type HeatmapSource } from '@/lib/pointed-spade-data'
 import {
   emptyTypologySelection,
   getMatchingCoinTypeCodes,
@@ -37,6 +44,77 @@ import {
 } from '@/lib/typology-filter'
 import type { CoinType, HeatmapFind, MapSite } from '@/lib/types'
 
+/* ── shared filter-panel pieces ─────────────────────────────────────────── */
+
+function ToggleButtons<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T
+  options: { value: T; label: ReactNode }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
+            value === opt.value
+              ? 'bg-brand text-white border-brand'
+              : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ViewModeRow({ viewMode, onChange }: { viewMode: ViewMode; onChange: (v: ViewMode) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-sm font-semibold text-gray-700">
+        <T k="map.view.label" />
+      </span>
+      <ToggleButtons
+        value={viewMode}
+        onChange={onChange}
+        options={[
+          { value: 'points', label: <T k="map.view.points" /> },
+          { value: 'density', label: <T k="map.view.density" /> },
+        ]}
+      />
+    </div>
+  )
+}
+
+function DensityLegend() {
+  return (
+    <>
+      <span className="font-semibold uppercase tracking-wide text-gray-500">
+        <T k="map.legend.density" />
+      </span>
+      <span
+        className="inline-block h-2 w-28 rounded-sm"
+        style={{
+          background:
+            'linear-gradient(90deg, #f0d56a 0%, #e39a2b 40%, #d04a1c 65%, #a01515 85%, #6e0c0c 100%)',
+        }}
+      />
+      <span className="text-gray-500">
+        <T k="map.legend.densityHint" />
+      </span>
+    </>
+  )
+}
+
+/* ── Find Site tab ───────────────────────────────────────────────────────── */
+
 const PRECISION_TABS: Array<{ id: PrecisionFilter; key: DictionaryKey }> = [
   { id: 'all', key: 'map.precision.all' },
   { id: 'site', key: 'map.precision.site' },
@@ -44,7 +122,7 @@ const PRECISION_TABS: Array<{ id: PrecisionFilter; key: DictionaryKey }> = [
   { id: 'city', key: 'map.precision.city' },
 ]
 
-/** Same intensity curve used inside FindSpotsMapCanvas — kept here too since
+/** Same intensity curve used inside MapVisCanvas — kept here too since
  * the density point list is computed by this orchestrator. */
 function heatIntensity(state: SiteHeatState, site: MapSite): number | null {
   switch (state.kind) {
@@ -161,7 +239,8 @@ export function FindSpotsVisualization({
 
   return (
     <div className="absolute inset-0">
-      <FindSpotsMapCanvas
+      <MapVisCanvas
+        kind="sites"
         sites={sites}
         mode={mode}
         siteStates={siteStates}
@@ -178,46 +257,19 @@ export function FindSpotsVisualization({
               instead, inside the same collapsible dropdown. */}
           <div className="flex flex-wrap items-center gap-1.5 lg:hidden">{precisionButtons}</div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(['type', 'mint'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setMode(m)
-                  clearFilters()
-                }}
-                className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
-                  mode === m
-                    ? 'bg-brand text-white border-brand'
-                    : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
-                }`}
-              >
-                <T k={m === 'type' ? 'map.filter.byType' : 'map.filter.byMint'} />
-              </button>
-            ))}
-            
-          </div>
+          <ToggleButtons
+            value={mode}
+            onChange={(m) => {
+              setMode(m)
+              clearFilters()
+            }}
+            options={[
+              { value: 'type' as const, label: <T k="map.filter.byType" /> },
+              { value: 'mint' as const, label: <T k="map.filter.byMint" /> },
+            ]}
+          />
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-semibold text-gray-700">
-              <T k="map.view.label" />
-            </span>
-            {(['points', 'density'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setViewMode(v)}
-                className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
-                  viewMode === v
-                    ? 'bg-brand text-white border-brand'
-                    : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
-                }`}
-              >
-                <T k={v === 'points' ? 'map.view.points' : 'map.view.density'} />
-              </button>
-            ))}
-          </div>
+          <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
 
           <p className="text-sm leading-snug text-gray-700">
             <T k="map.filter.hint" />
@@ -322,23 +374,117 @@ export function FindSpotsVisualization({
               </span>
             </>
           )}
-          {viewMode === 'density' && (
-            <>
-              <span className="font-semibold uppercase tracking-wide text-gray-500">
-                <T k="map.legend.density" />
-              </span>
-              <span
-                className="inline-block h-2 w-28 rounded-sm"
-                style={{
-                  background:
-                    'linear-gradient(90deg, #f0d56a 0%, #e39a2b 40%, #d04a1c 65%, #a01515 85%, #6e0c0c 100%)',
-                }}
-              />
-              <span className="text-gray-500">
-                <T k="map.legend.densityHint" />
-              </span>
-            </>
+          {viewMode === 'density' && <DensityLegend />}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Mint Town tab ───────────────────────────────────────────────────────── */
+
+export function MintTownVisualization({
+  finds,
+  coinTypes,
+}: {
+  finds: HeatmapFind[]
+  coinTypes: CoinType[]
+}) {
+  // Only one data source exists today (database finds) — the toggle row is
+  // kept (rather than collapsed away) so a future data source is just
+  // another entry in `options` below, not a UI rebuild.
+  const [source, setSource] = useState<HeatmapSource>('database')
+  const [viewMode, setViewMode] = useState<ViewMode>('points')
+  const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
+
+  const filterActive = hasTypologyFilter(sel)
+
+  const matchedCodes = useMemo(() => getMatchingCoinTypeCodes(coinTypes, sel), [coinTypes, sel])
+
+  const active = useMemo(
+    () => computeMintStatsFromFinds(finds, coinTypes, matchedCodes),
+    [finds, coinTypes, matchedCodes]
+  )
+
+  const maxCount = useMemo(() => Math.max(...active.mapped.map((m) => m.coinCount), 1), [active])
+
+  const densityLatLngs = useMemo(() => {
+    const points: [number, number, number][] = []
+    active.mapped.forEach((mint) => {
+      if (mint.coinCount <= 0) return
+      const intensity = maxCount <= 0 ? 0.5 : Math.max(0.15, Math.min(1, mint.coinCount / maxCount))
+      points.push([mint.lat, mint.lng, intensity])
+    })
+    return points
+  }, [active, maxCount])
+
+  const foundInSummary = useMemo(() => {
+    if (!filterActive) return null
+    const foundCount = active.mapped.filter((m) => m.coinCount > 0).length
+    return { foundCount, totalCount: active.mapped.length }
+  }, [filterActive, active])
+
+  function clearFilters() {
+    setSel(emptyTypologySelection())
+  }
+
+  return (
+    <div className="absolute inset-0">
+      <MapVisCanvas kind="mints" mints={active.mapped} source={source} viewMode={viewMode} densityLatLngs={densityLatLngs} />
+
+      <MapVisualizationOverlay>
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-semibold text-gray-700">
+              <T k="visualizations.data.label" />
+            </span>
+            <ToggleButtons
+              value={source}
+              onChange={setSource}
+              options={[{ value: 'database' as const, label: <T k="visualizations.data.database" /> }]}
+            />
+          </div>
+
+          <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
+
+          <p className="text-sm leading-snug text-gray-700">
+            <T k="visualizations.mintHeatmapCaption.database" />
+          </p>
+
+          <p className="text-sm leading-snug text-gray-700">
+            <T k="map.filter.hintMintTown" />
+          </p>
+          <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList coinTypes={coinTypes} compact />
+
+          {active.mapped.length === 0 && (
+            <p className="text-sm text-gray-700">
+              <T k="visualizations.noMappedMints" />
+            </p>
           )}
+
+          {filterActive && foundInSummary && (
+            <p className="text-sm text-gray-700">
+              <T
+                k="heatmap.foundInMints"
+                vars={{ found: foundInSummary.foundCount, total: foundInSummary.totalCount }}
+              />
+            </p>
+          )}
+          {filterActive && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ml-auto align-right rounded border border-gray-200 px-2.5 py-1 text-sm text-gray-600 hover:border-brand hover:text-brand"
+            >
+              <T k="heatmap.clearFilter" />
+            </button>
+          )}
+        </div>
+      </MapVisualizationOverlay>
+
+      {viewMode === 'density' && (
+        <div className="heatmap_legend">
+          <DensityLegend />
         </div>
       )}
     </div>

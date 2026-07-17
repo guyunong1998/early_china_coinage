@@ -1,0 +1,510 @@
+'use client'
+
+/**
+ * Pure map, shared by both map-visualization tabs: either every find site as
+ * a marker colored/sized by filter match (`kind: 'sites'`, computed by the
+ * caller into `siteStates`), or every mint town as a circle marker sized/
+ * shaded by coin count (`kind: 'mints'`, mirroring the standalone
+ * PointedSpadeHeatmap's logic). Both kinds share the same base-layer setup,
+ * resize handling, and density heat-layer rendering. No sidebar, no legend,
+ * no padding — just the map.
+ *
+ * Used by: components/visualizations/MapVisualization.tsx (FindSpotsVisualization
+ * and MintTownVisualization, the find-site and mint-town pages), which own
+ * the filter state and render the overlay controls + legend around it.
+ */
+
+import { useEffect, useRef } from 'react'
+import type { CircleMarker, HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { TFunction } from '@/lib/i18n/LanguageContext'
+import {
+  NO_DATA_ALPHA,
+  NO_DATA_COLOR,
+  PRESENT_UNQUANTIFIED_COLOR,
+  SINGLE_FIND_COLOR,
+  hexToRgba,
+  ratioToColor,
+} from '@/lib/color-scale'
+import {
+  fetchCityBoundaryGeoJson,
+  fetchCountyBoundaryGeoJson,
+  shouldShowCityBoundary,
+  shouldShowCountyBoundary,
+} from '@/lib/city-boundaries'
+import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
+import { toEnglishName } from '@/lib/name-translation'
+import type { HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
+import type { MapSite } from '@/lib/types'
+
+/**
+ * Presentation-layer state: `pure` (from context-heatmap.ts) only means "every
+ * find in this context/site matches" — it says nothing about how many coins
+ * that is. A site whose *only* recorded coin (across all types) matches the
+ * filter is a much more notable "single find" and gets its own color; a
+ * larger all-match site just renders like any other 100%-ratio site.
+ */
+type DisplayState = SiteHeatState | { kind: 'single-find' }
+
+function toDisplayState(state: SiteHeatState, site: MapSite | undefined): DisplayState {
+  if (state.kind === 'pure' && site?.total_quantity_for_map === 1) {
+    return { kind: 'single-find' }
+  }
+  return state
+}
+
+const DENSITY_GRADIENT: Record<number, string> = {
+  0.15: '#f0d56a',
+  0.4: '#e39a2b',
+  0.65: '#d04a1c',
+  0.85: '#a01515',
+  1: '#6e0c0c',
+}
+
+// Note: this map's fill/border colors are state-driven (stateColor() below,
+// backed by lib/color-scale.ts's match-ratio gradient, including one
+// genuinely continuous interpolation) rather than fixed per-marker-role
+// classes like the other maps' simple site/mint dots — they're the "heatmap
+// colors" this map is built around, so they can't be pre-enumerated in
+// app/maps.css. Size still comes from a `.map-dot-size-N` class; fill/border
+// are the only properties still set via two scoped CSS custom properties
+// (`.map-dot-ratio` reads --dot-fill / --dot-border there).
+function dot(color: string, size = 14) {
+  return `<div class="map-dot map-dot-size-${size} map-dot-ratio"></div>`
+}
+
+const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
+  布币: 'Spade Coin',
+  刀币: 'Knife-Shaped Coin',
+  圜钱: 'Round Coin',
+  蚁鼻钱: 'Cowrie Coin',
+  金版: 'Gold Plate',
+}
+
+function formatCoinTypeBilingual(value: string | null) {
+  if (!value) return '—'
+  return value
+    .split(/[、,，]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((zh) => {
+      const en = COIN_TYPE_TRANSLATIONS[zh]
+      return en ? `${zh} (${en})` : zh
+    })
+    .join('、')
+}
+
+function buildPopupHtml(site: MapSite, statusLine: string | null, t: TFunction): string {
+  const nameZh = site.site_name_zh ?? '未命名遗址'
+  const nameEn = toEnglishName(site.site_name_zh, site.site_name_en)
+  const provinceZh = site.province_zh ?? '—'
+  const provinceEn = toEnglishName(site.province_zh, site.province_en)
+  const cityZh = site.city_zh ?? '—'
+  const cityEn = toEnglishName(site.city_zh, site.city_en)
+  const countyZh = site.county_zh ?? '—'
+  const countyEn = toEnglishName(site.county_zh, site.county_en)
+  const typeBilingual = formatCoinTypeBilingual(site.major_types_zh)
+
+  return `
+    <div style="min-width:250px;font-size:12.5px;font-family:sans-serif;line-height:1.6">
+      ${statusLine ? `<div>${statusLine}</div><hr style="margin:8px 0;border:none;border-top:1px solid #ddd" />` : ''}
+      <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span style="color:#888;font-style:italic">${nameEn}</span>` : ''}</div>
+      <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span style="color:#888">(${provinceEn})</span>` : ''}</div>
+      <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span style="color:#888">(${cityEn})</span>` : ''}</div>
+      <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span style="color:#888">(${countyEn})</span>` : ''}</div>
+      <div><strong>Coin type / 币类：</strong>${typeBilingual}</div>
+      <div><strong>Quantity / 数量：</strong>${site.total_quantity_for_map ?? 0}</div>
+      <a href="/sites/${site.site_code}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>
+    </div>
+  `
+}
+
+function stateColor(state: DisplayState): string {
+  switch (state.kind) {
+    case 'no-filter':
+      return '#365727'
+    case 'no-data':
+      return hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
+    case 'unquantified':
+      return PRESENT_UNQUANTIFIED_COLOR
+    case 'single-find':
+      return SINGLE_FIND_COLOR
+    case 'pure':
+      return ratioToColor(1)
+    case 'ratio':
+      return ratioToColor(state.ratio)
+  }
+}
+
+function stateSize(state: DisplayState): number {
+  switch (state.kind) {
+    case 'no-filter':
+      return 12
+    case 'no-data':
+      return 9
+    case 'unquantified':
+      return 12
+    case 'single-find':
+      return 14
+    case 'pure':
+      return 16
+    case 'ratio':
+      return 11 + Math.round(state.ratio * 5)
+  }
+}
+
+function statePopupLine(state: DisplayState, mode: FilterMode, t: TFunction): string | null {
+  switch (state.kind) {
+    case 'no-filter':
+      return null
+    case 'no-data':
+      return t('heatmap.popup.noRecord')
+    case 'unquantified':
+      return t('heatmap.popup.presentNoCount')
+    case 'single-find':
+      return t('map.popup.singleFind')
+    case 'pure':
+      return t(mode === 'mint' ? 'map.popup.pureMint' : 'map.popup.pureContext')
+    case 'ratio':
+      return t('heatmap.popup.ratio', {
+        matched: state.matchedQty,
+        total: state.totalQty,
+        pct: Math.round(state.ratio * 100),
+      })
+  }
+}
+
+// Mint-town circle markers: radius/opacity scale with count relative to the
+// current dataset's max, same curve as the standalone PointedSpadeHeatmap.
+function heatRadius(coinCount: number, maxCount: number) {
+  if (maxCount <= 0) return 12
+  const t = Math.sqrt(coinCount / maxCount)
+  return 10 + t * 34
+}
+
+function heatOpacity(coinCount: number, maxCount: number) {
+  if (coinCount <= 0) return 0.35
+  if (maxCount <= 0) return 0.35
+  return 0.35 + (coinCount / maxCount) * 0.45
+}
+
+function buildMintPopupHtml(mint: PointedSpadeMintStat, source: HeatmapSource): string {
+  return `
+    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+      <strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}</strong><br/>
+      <strong>${source === 'database' ? 'Coins in database' : 'ANS specimens'}:</strong> ${mint.coinCount || mint.findCount}<br/>
+      ${source === 'database' ? `<strong>Find records:</strong> ${mint.findCount}<br/>` : ''}
+      ${mint.inscriptions.length > 0 ? `<strong>Inscriptions:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
+      ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
+      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
+    </div>
+  `
+}
+
+type SitesCanvasProps = {
+  kind: 'sites'
+  sites: MapSite[]
+  mode: FilterMode
+  siteStates: Map<string, SiteHeatState> | null
+  viewMode: ViewMode
+  densityLatLngs: [number, number, number][]
+  filterActive: boolean
+  height?: string
+}
+
+type MintsCanvasProps = {
+  kind: 'mints'
+  mints: PointedSpadeMintStat[]
+  source: HeatmapSource
+  viewMode: ViewMode
+  densityLatLngs: [number, number, number][]
+  height?: string
+}
+
+export type MapVisCanvasProps = SitesCanvasProps | MintsCanvasProps
+
+export function MapVisCanvas(props: MapVisCanvasProps) {
+  const { viewMode, densityLatLngs, height = '100%' } = props
+  const { t } = useLanguage()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const siteMarkersRef = useRef<Map<string, Marker>>(new Map())
+  const mintMarkersRef = useRef<Map<string, CircleMarker>>(new Map())
+  const heatLayerRef = useRef<HeatLayer | null>(null)
+
+  // Kind-specific fields, pulled out of the discriminated union once so effect
+  // dependency arrays below stay simple, statically-checkable expressions.
+  const siteStatesOrMints = props.kind === 'sites' ? props.siteStates : props.mints
+  const sitesOrSource = props.kind === 'sites' ? props.sites : props.source
+  const modeForSites = props.kind === 'sites' ? props.mode : null
+  const filterActiveForSites = props.kind === 'sites' ? props.filterActive : null
+  const sitesForInit = props.kind === 'sites' ? props.sites : null
+
+  // Restyle existing markers + toggle the density heat layer. Runs on every
+  // filter/view-mode change but never rebuilds the map itself.
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    import('leaflet').then(async ({ default: L }) => {
+      const map = mapRef.current
+      if (!map) return
+
+      // Ensure leaflet.heat attaches to this Leaflet instance
+      const g = globalThis as typeof globalThis & { L?: typeof L }
+      g.L = L
+      await import('leaflet.heat')
+
+      const inDensity = viewMode === 'density'
+
+      if (props.kind === 'sites') {
+        const { sites, mode, siteStates } = props
+        siteMarkersRef.current.forEach((marker, code) => {
+          const site = sites.find((s) => s.site_code === code)
+          const rawState: SiteHeatState = siteStates?.get(code) ?? { kind: 'no-filter' }
+          const state = toDisplayState(rawState, site)
+          const color = inDensity
+            ? state.kind === 'no-data'
+              ? 'transparent'
+              : 'rgba(40,40,40,0.45)'
+            : stateColor(state)
+          const size = inDensity ? (state.kind === 'no-data' ? 0 : 7) : stateSize(state)
+
+          marker.setIcon(
+            L.divIcon({
+              className: '',
+              html: size > 0 ? dot(color, size) : '',
+              iconSize: [size, size],
+              iconAnchor: [size / 2, size / 2],
+            })
+          )
+          marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
+          marker.setZIndexOffset(
+            state.kind === 'no-data'
+              ? -1000
+              : state.kind === 'pure' || state.kind === 'single-find' || state.kind === 'ratio'
+                ? 500
+                : 0
+          )
+
+          if (!site) return
+          marker.setPopupContent(buildPopupHtml(site, statePopupLine(state, mode, t), t))
+        })
+      } else {
+        const { mints, source } = props
+        const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
+        mintMarkersRef.current.forEach((marker, mintZh) => {
+          const mint = mints.find((m) => m.mint_zh === mintZh)
+          if (!mint) return
+          marker.setRadius(heatRadius(mint.coinCount, maxCount))
+          marker.setStyle({
+            fillOpacity: inDensity ? 0 : heatOpacity(mint.coinCount, maxCount),
+            opacity: inDensity ? 0 : 1,
+          })
+          marker.setPopupContent(buildMintPopupHtml(mint, source))
+        })
+      }
+
+      try {
+        if (inDensity && densityLatLngs.length > 0) {
+          if (!heatLayerRef.current) {
+            heatLayerRef.current = L.heatLayer(densityLatLngs, {
+              radius: 32,
+              blur: 26,
+              maxZoom: 9,
+              max: 1,
+              minOpacity: 0.25,
+              gradient: DENSITY_GRADIENT,
+            }).addTo(map)
+          } else {
+            heatLayerRef.current.setLatLngs(densityLatLngs)
+            if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
+          }
+        } else if (heatLayerRef.current) {
+          map.removeLayer(heatLayerRef.current)
+          heatLayerRef.current = null
+        }
+      } catch (err) {
+        // leaflet.heat is a legacy global-style plugin patched onto `L` above;
+        // fail soft (log + skip the overlay) rather than crash the whole map
+        // if that patching ever doesn't line up in a given environment.
+        console.error('Failed to render the density heat overlay:', err)
+        heatLayerRef.current = null
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siteStatesOrMints, sitesOrSource, modeForSites, t, viewMode, densityLatLngs])
+
+  // Build the map + initial markers once. For `sites`, re-runs if the site
+  // list itself changes (e.g. a precision-filter navigation). For `mints`,
+  // the caller remounts this component (via a `key`) when the underlying
+  // dataset changes (source/ANS-kind), so this never needs to re-run for a
+  // coin-type filter tweak — only marker styling (above) reacts to that.
+  useEffect(() => {
+    let cancelled = false
+
+    async function init() {
+      const { default: L } = await import('leaflet')
+      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      if (cancelled || !containerRef.current || mapRef.current) return
+
+      const center: [number, number] = props.kind === 'sites' ? [35.8, 105.4] : [37.5, 112]
+      const zoom = props.kind === 'sites' ? 4 : 6
+      const map = L.map(containerRef.current, { zoomControl: false }).setView(center, zoom)
+      mapRef.current = map
+      L.control.zoom({ position: 'topright' }).addTo(map)
+
+      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      osm.addTo(map)
+
+      const isMobile = window.matchMedia('(max-width: 768px)').matches
+      addLayerControl(L, map, osm, satellite, satelliteLabels, {
+        collapsed: true,
+        position: 'bottomright',
+        showRiverControl: !isMobile,
+      })
+
+      const bounds: [number, number][] = []
+
+      if (props.kind === 'sites') {
+        const { sites } = props
+        sites.forEach((site) => {
+          if (site.lat == null || site.lng == null) return
+          bounds.push([site.lat, site.lng])
+
+          const marker = L.marker([site.lat, site.lng], {
+            icon: L.divIcon({
+              className: '',
+              html: '<div class="map-dot map-dot-size-12 map-dot-nofilter"></div>',
+              iconSize: [12, 12],
+              iconAnchor: [6, 6],
+            }),
+          })
+            .addTo(map)
+            .bindPopup(buildPopupHtml(site, null, t))
+
+          siteMarkersRef.current.set(site.site_code, marker)
+        })
+
+        const candidateCities = new Map<string, { cityZh: string; provinceZh?: string | null }>()
+        sites.forEach((site) => {
+          if (!shouldShowCityBoundary(site) || !site.city_zh) return
+          const key = `${site.province_zh ?? ''}::${site.city_zh}`
+          if (!candidateCities.has(key)) {
+            candidateCities.set(key, { cityZh: site.city_zh, provinceZh: site.province_zh })
+          }
+        })
+        if (candidateCities.size > 0) {
+          const layer = L.layerGroup().addTo(map)
+          await Promise.all(
+            [...candidateCities.values()].map(async ({ cityZh, provinceZh }) => {
+              const geo = await fetchCityBoundaryGeoJson(cityZh, provinceZh)
+              if (!geo || cancelled) return
+              L.geoJSON(geo as GeoJSON.GeoJsonObject, {
+                style: {
+                  color: '#8e8e8e',
+                  weight: 1.5,
+                  opacity: 0.9,
+                  fillColor: '#bfbfbf',
+                  fillOpacity: 0.1,
+                  dashArray: '4 4',
+                },
+              }).addTo(layer)
+            })
+          )
+        }
+
+        const candidateCounties = new Map<
+          string,
+          { countyZh: string; cityZh?: string | null; provinceZh?: string | null }
+        >()
+        sites.forEach((site) => {
+          if (!shouldShowCountyBoundary(site) || !site.county_zh) return
+          const key = `${site.province_zh ?? ''}::${site.city_zh ?? ''}::${site.county_zh}`
+          if (!candidateCounties.has(key)) {
+            candidateCounties.set(key, {
+              countyZh: site.county_zh,
+              cityZh: site.city_zh,
+              provinceZh: site.province_zh,
+            })
+          }
+        })
+        if (candidateCounties.size > 0) {
+          const layer = L.layerGroup().addTo(map)
+          await Promise.all(
+            [...candidateCounties.values()].map(async ({ countyZh, cityZh, provinceZh }) => {
+              const geo = await fetchCountyBoundaryGeoJson(countyZh, cityZh, provinceZh)
+              if (!geo || cancelled) return
+              L.geoJSON(geo as GeoJSON.GeoJsonObject, {
+                style: {
+                  color: '#6f6f6f',
+                  weight: 2,
+                  opacity: 0.9,
+                  fillColor: '#b5b5b5',
+                  fillOpacity: 0.14,
+                  dashArray: '2 3',
+                },
+              }).addTo(layer)
+            })
+          )
+        }
+      } else {
+        const { mints, source } = props
+        const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
+        mints.forEach((mint) => {
+          bounds.push([mint.lat, mint.lng])
+
+          const marker = L.circleMarker([mint.lat, mint.lng], {
+            radius: heatRadius(mint.coinCount, maxCount),
+            fillColor: '#c0392b',
+            color: '#ffffff',
+            weight: 1.5,
+            fillOpacity: heatOpacity(mint.coinCount, maxCount),
+          })
+            .addTo(map)
+            .bindPopup(buildMintPopupHtml(mint, source))
+
+          mintMarkersRef.current.set(mint.mint_zh, marker)
+        })
+      }
+
+      if (bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] })
+    }
+
+    init()
+    const siteMarkers = siteMarkersRef.current
+    const mintMarkers = mintMarkersRef.current
+    return () => {
+      cancelled = true
+      heatLayerRef.current = null
+      mapRef.current?.remove()
+      mapRef.current = null
+      siteMarkers.clear()
+      mintMarkers.clear()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sitesForInit])
+
+  // Keep Leaflet sized correctly when the sidebar/map split changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const id = window.setTimeout(() => map.invalidateSize(), 80)
+    return () => window.clearTimeout(id)
+  }, [viewMode, filterActiveForSites, modeForSites])
+
+  useEffect(() => {
+    function onResize() {
+      mapRef.current?.invalidateSize()
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0"
+      style={height !== '100%' ? { height } : undefined}
+    />
+  )
+}
