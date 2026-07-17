@@ -102,6 +102,21 @@ export function collectTypeKeys(sel: TypologyFilterSelection): Set<string> {
   return collectMatchLabels(sel)
 }
 
+/** Every inscription entry across the whole typology tree, for when no
+ * major category is selected yet — lets a user jump straight to filtering
+ * by inscription without picking L1/L2/L3 first. */
+function getAllInscriptionEntries(): TypologyLeaf[] {
+  const entries: TypologyLeaf[] = []
+  TYPOLOGY.forEach((l1) => {
+    if (l1.children.length === 0) entries.push(...(l1.entries ?? []))
+    l1.children.forEach((l2) => {
+      if (l2.children.length === 0) entries.push(...(l2.entries ?? []))
+      l2.children.forEach((l3) => entries.push(...(l3.entries ?? [])))
+    })
+  })
+  return entries
+}
+
 export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLeaf[] {
   const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
   // L4 has no own inscription list; use parent L3 entries while L4 type filter still applies.
@@ -117,11 +132,11 @@ export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLea
         : child.children.flatMap((c) => c.entries ?? [])
     )
   }
-  return []
+  return getAllInscriptionEntries()
 }
 
 export function hasTypologyFilter(sel: TypologyFilterSelection): boolean {
-  return !!sel.l1
+  return !!sel.l1 || !!sel.inscription
 }
 
 function coinTypeLabels(coin: Pick<CoinType, 'major_type_zh' | 'minor_type_zh'>): string[] {
@@ -131,7 +146,12 @@ function coinTypeLabels(coin: Pick<CoinType, 'major_type_zh' | 'minor_type_zh'>)
 }
 
 export function coinMatchesTypologyFilter(coin: CoinType, sel: TypologyFilterSelection): boolean {
-  if (!sel.l1) return false
+  if (!sel.l1) {
+    // No major category picked — an inscription alone is still a valid
+    // filter, matched directly with no category constraint.
+    if (!sel.inscription) return false
+    return (coin.inscription ?? '').trim() === sel.inscription
+  }
 
   const { l1 } = resolveTypologyPath(sel)
   if (!l1) return false
@@ -172,7 +192,12 @@ export function siteMatchesTypologyFilter(
   },
   sel: TypologyFilterSelection
 ): boolean {
-  if (!sel.l1) return false
+  if (!sel.l1) {
+    // No major category picked — an inscription alone is still a valid
+    // filter, matched directly with no category constraint.
+    if (!sel.inscription) return false
+    return splitCsv(site.inscriptions).includes(sel.inscription)
+  }
   const { l1 } = resolveTypologyPath(sel)
   if (!l1) return false
 

@@ -1,4 +1,5 @@
 import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
+import type { MintPoint } from '@/components/map/MapVisCanvas'
 import type { CoinType, HeatmapFind } from '@/lib/types'
 
 /** Which dataset a mint production heatmap is showing. */
@@ -91,4 +92,20 @@ export function computeMintStatsFromFinds(
   const unmapped = stats.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng))
 
   return { mapped, unmapped }
+}
+
+/** Reshapes mapped mint stats into the plain `MintPoint[]` MapVisCanvas
+ * plots — shared so every "mint town map" (the Mint Town visualization tab,
+ * the /mints overview page, ...) renders from the exact same point list. */
+export function toMintPoints(stats: PointedSpadeMintStat[]): MintPoint[] {
+  return stats.map((m) => ({
+    mint_zh: m.mint_zh,
+    mint_en: m.mint_en,
+    mint_code: m.mint_code,
+    lat: m.lat,
+    lng: m.lng,
+    totalQty: m.coinCount,
+    inscriptions: m.inscriptions,
+    modern_location_en: m.modern_location_en,
+  }))
 }

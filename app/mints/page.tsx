@@ -1,7 +1,10 @@
+import Link from 'next/link'
 import { MintListClient } from '@/components/mints/MintListClient'
-import { MintsOverviewMap } from '@/components/map/MintsOverviewMap'
+import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { MINT_TOWNS } from '@/lib/mint-towns'
+import { computeMintStatsFromFinds, toMintPoints } from '@/lib/pointed-spade-data'
+import { getCoinTypes, getFindsForHeatmap } from '@/lib/queries'
 import { fetchMintsFromSheet } from '@/lib/sheets'
 
 export const metadata = {
@@ -20,6 +23,12 @@ export default async function MintsPage() {
     result.source === 'sheet' && result.mints.length > 0
       ? result.mints
       : MINT_TOWNS
+
+  // Same points list the Mint Town map visualization shows by default (no
+  // filter, no ANS toggle) — one source of truth so the two look identical.
+  const [finds, coinTypes] = await Promise.all([getFindsForHeatmap(), getCoinTypes()])
+  const { mapped } = computeMintStatsFromFinds(finds, coinTypes, null)
+  const mintPoints = toMintPoints(mapped)
 
   const dataSource =
     result.source === 'sheet'
@@ -55,9 +64,21 @@ export default async function MintsPage() {
         <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mints.overview" />
         </div>
-        <div className="panel-body overflow-hidden">
-          <MintsOverviewMap mints={mints} />
+        <div className="panel-body relative overflow-hidden" style={{ height: '340px', width: '100%' }}>
+          <MapVisCanvas
+            kind="mints"
+            mintPoints={mintPoints}
+            mintStates={null}
+            viewMode="points"
+            densityLatLngs={[]}
+            height="340px"
+          />
         </div>
+        <p className="mt-2 text-sm">
+          <Link href="/visualizations/mint-town" className="text-brand hover:underline">
+            <T k="mints.moreMapVisualizations" />
+          </Link>
+        </p>
       </div>
 
       {/* Searchable list */}

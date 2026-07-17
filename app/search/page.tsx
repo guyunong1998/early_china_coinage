@@ -213,10 +213,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   }
 
   const precisionTabs: Array<{ id: PrecisionFilter; key: DictionaryKey; count: number }> = [
-    { id: 'all', key: 'map.precision.all', count: counts.all },
-    { id: 'site', key: 'map.precision.site', count: counts.site },
-    { id: 'county', key: 'map.precision.county', count: counts.county },
-    { id: 'city', key: 'map.precision.city', count: counts.city },
+    { id: 'all', key: 'search.precision.all', count: counts.all },
+    { id: 'site', key: 'search.precision.site', count: counts.site },
+    { id: 'county', key: 'search.precision.county', count: counts.county },
+    { id: 'city', key: 'search.precision.city', count: counts.city },
   ]
 
   function buildHref(overrides: Record<string, string | undefined>) {
@@ -268,16 +268,18 @@ export default async function SearchPage({ searchParams }: PageProps) {
       <form action="/search" method="get">
         <input type="hidden" name="precision" value={filters.precision !== 'all' ? filters.precision : ''} />
 
-        <div className="mx-auto mb-4 flex w-full max-w-3xl gap-3">
+        <div className="mx-auto mb-4 flex w-full max-w-3xl gap-0">
           <TranslatedInput
             type="search"
             name="q"
             defaultValue={q}
             placeholderKey="search.placeholder"
-            className="search-page-input w-full px-3 py-3 text-sm text-gray-800"
+            className="search-input w-full px-3 py-3 text-sm text-gray-800"
           />
-          <button type="submit" className="search-page-button px-5 py-3 font-semibold">
-            <T k="nav.search" />
+          {/* hover:shadow-none! overrides the site-wide button-hover ring
+              (globals.css) for just this button, matching the homepage's. */}
+          <button type="submit" className="search-button hover:shadow-none! px-4 py-3 font-semibold">
+            →
           </button>
         </div>
 
@@ -334,8 +336,13 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <div className="panel mb-6 overflow-hidden">
-              <CoinMapSection sites={filtered} height="360px" fitBounds />
+            <div className="mb-6 search-filter">
+              <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
+                <T k="map.title" />
+              </div>
+              <div className="overflow-hidden">
+                <CoinMapSection sites={filtered} height="360px" fitBounds />
+              </div>
             </div>
 
             <div className="space-y-6">

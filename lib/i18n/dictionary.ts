@@ -23,12 +23,15 @@ export const DICTIONARY = {
   },
 
   // ── home nav cards ────────────────────────────────────────────────────
-  'navcards.mints.label': { en: 'Mint Town Location', zh: '铸币城邑位置' },
-  'navcards.mints.desc': { en: 'Geographic distribution of coin-producing centres', zh: '铸币中心的地理分布' },
   'navcards.map.label': { en: 'Map Visualizations', zh: '地图可视化' },
   'navcards.map.desc': {
     en: 'Explore find sites by quantity, coin type, or mint',
     zh: '按数量、币种或铸地探索出土遗址地图',
+  },
+  'navcards.explore.label': { en: 'Explore', zh: '探索' },
+  'navcards.explore.desc': {
+    en: 'Mint towns and coin typology by category',
+    zh: '按类别浏览铸地与钱币类型学',
   },
   'navcards.spadeHeatmap.label': { en: 'Museum Collections', zh: '博物馆藏品' },
   'navcards.spadeHeatmap.desc': {
@@ -42,6 +45,8 @@ export const DICTIONARY = {
   },
   'navcards.about.label': { en: 'About', zh: '关于本站' },
   'navcards.about.desc': { en: 'Project scope, team, and collaborations', zh: '项目范围、团队与合作' },
+  'navcards.about.site': { en: 'About the Site', zh: '关于本站' },
+  'navcards.about.people': { en: 'About the People', zh: '关于团队' },
 
   // ── database stats bar ───────────────────────────────────────────────
   'stats.summary': {
@@ -69,10 +74,16 @@ export const DICTIONARY = {
     zh: '数据库涵盖刀币、圜钱、布币及相关类型，均出自已验证的出版记录。遗址在可能的情况下均已进行地理定位，并按大类、小类、铭文、铸地及所属诸侯国进行归纳。',
   },
   'about.team.title': { en: 'Team', zh: '团队' },
+  'about.team.pageTitle': { en: 'About the People', zh: '关于团队' },
   'about.team.body': {
     en: 'This project is maintained by researchers working on early Chinese numismatics and archaeological publication. Team details can be added here.',
     zh: '本项目由从事早期中国钱币学与考古出版研究的学者维护。团队详情将在此补充。',
   },
+  'about.team.teaser': {
+    en: 'Meet the researchers and collaborators behind this project.',
+    zh: '认识本项目背后的研究者与合作者。',
+  },
+  'about.team.linkLabel': { en: 'Meet the team', zh: '认识团队' },
   'about.collab.title': { en: 'Collaborations', zh: '合作' },
   'about.collab.body': {
     en: 'We welcome collaboration with museums, excavation teams, and publication projects. Contact information and partner institutions can be listed in this section.',
@@ -103,15 +114,11 @@ export const DICTIONARY = {
   'search.field.quantity': { en: 'Quantity:', zh: '数量：' },
   'search.types': { en: 'Types:', zh: '类型：' },
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
-  'map.precision.label': { en: 'Location precision', zh: '定位精度' },
-  'map.precision.all': { en: 'All', zh: '全部' },
-  'map.precision.site': { en: 'Specified to site', zh: '精确到遗址' },
-  'map.precision.county': { en: 'Specified to county (不明单位)', zh: '精确到区县（不明单位）' },
-  'map.precision.city': { en: 'Specified to city (县=不明)', zh: '精确到城市（县=不明）' },
+  'search.precision.label': { en: 'Location precision', zh: '定位精度' },
   'search.precision.all': { en: 'All', zh: '全部' },
-  'search.precision.site': { en: 'Specified to site', zh: '精确到遗址' },
-  'search.precision.county': { en: 'Specified to county (不明单位)', zh: '精确到区县（不明单位）' },
-  'search.precision.city': { en: 'Specified to city (县=不明)', zh: '精确到城市（县=不明）' },
+  'search.precision.site': { en: 'Specified to site', zh: '精确到遗址(最具体）' },
+  'search.precision.county': { en: 'Specified to county', zh: '精确到区县（不明单位）' },
+  'search.precision.city': { en: 'Specified to city', zh: '精确到城市（不明县城）' },
 
   // ── search filters ────────────────────────────────────────────────────
   'filters.quantity.title': { en: 'Number of Coins', zh: '钱币数量' },
@@ -264,8 +271,9 @@ export const DICTIONARY = {
     en: 'Filter mint towns by coin type. Circle size and shade reflect the number of matching coins recorded at each mint town.',
     zh: '按币种筛选铸地。圆圈大小与深浅反映各铸地符合条件的钱币数量。',
   },
-  'map.filter.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
-  'map.filter.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
+  'map.filter.modeLabel': { en: 'Filter by', zh: '筛选方式' },
+  'map.filter.byType': { en: 'Coin Type', zh: '按币种' },
+  'map.filter.byMint': { en: 'Mint', zh: '按铸地' },
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.selectMint': { en: 'Select mint', zh: '选择铸地' },
   'map.view.points': { en: 'Points', zh: '点状' },
@@ -277,15 +285,7 @@ export const DICTIONARY = {
     zh: '匹配遗址越集中、占比越高，颜色越亮越红。',
   },
   'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
-  'map.popup.pureMint': {
-    en: 'Selected mint makes up entire context(s) at this site',
-    zh: '该遗址相关出土单位内均为所选铸地',
-  },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
-  'map.popup.singleFind': {
-    en: 'This is the only recorded coin at this site',
-    zh: '该遗址仅有的一枚钱币记录',
-  },
   'map.filter.l1': { en: 'Major category', zh: '大类' },
   'map.filter.l2': { en: 'Subcategory', zh: '中类' },
   'map.filter.l3': { en: 'Type', zh: '类型' },
@@ -294,10 +294,6 @@ export const DICTIONARY = {
   'map.filter.none': { en: 'None', zh: '无' },
   'map.legend.title': { en: 'Share within contexts:', zh: '出土单位内占比：' },
   'map.legend.pure': { en: 'Context all this type', zh: '单位内全为此类' },
-  'map.popup.pureContext': {
-    en: 'Selected type makes up entire context(s) at this site',
-    zh: '该遗址相关出土单位内均为所选币种',
-  },
 
   // ── mints page ────────────────────────────────────────────────────────
   'mints.title': { en: 'Mint Town Locations', zh: '铸币城邑位置' },
@@ -307,6 +303,7 @@ export const DICTIONARY = {
   },
   'mints.townsDocumented': { en: '{count} towns currently documented.', zh: '目前已收录 {count} 处城邑。' },
   'mints.overview': { en: 'Geographic Overview', zh: '地理概览' },
+  'mints.moreMapVisualizations': { en: 'For more map visualizations →', zh: '查看更多地图可视化 →' },
   'mints.sheetError': {
     en: 'Could not load Google Sheet ({message}). Showing data from the local file instead.',
     zh: '无法加载 Google 表格（{message}）。改为显示本地文件中的数据。',

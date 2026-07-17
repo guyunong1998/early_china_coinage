@@ -69,7 +69,7 @@ export default function CoinMap({
       if (cancelled || !containerRef.current || mapInstanceRef.current) return
 
       const L = leafletModule.default
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
 
       const map = L.map(containerRef.current, {
         scrollWheelZoom: interactive,
@@ -80,12 +80,13 @@ export default function CoinMap({
 
       mapInstanceRef.current = map
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      // Single-page map: no layer-switcher or river-mode controls (those are
+      // reserved for the dedicated Map Visualizations pages) — just the
+      // street tiles, bilingual labels, and major rivers as a fixed layer.
+      const { osm, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-
-      if (interactive) {
-        addLayerControl(L, map, osm, satellite, satelliteLabels)
-      }
+      satelliteLabels.addTo(map)
+      addStaticMajorRivers(L, map)
 
       const clusterGroup = (
         L as typeof L & {

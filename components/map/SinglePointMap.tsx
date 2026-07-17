@@ -34,14 +34,18 @@ export default function SinglePointMap({
       const { default: L } = await import('leaflet')
       if (cancelled || !containerRef.current || mapInstanceRef.current) return
 
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
 
       const map = L.map(containerRef.current, { zoomControl: true }).setView([lat, lng], zoom)
       mapInstanceRef.current = map
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      // Single-page map: no layer-switcher or river-mode controls (those are
+      // reserved for the dedicated Map Visualizations pages) — just the
+      // street tiles, bilingual labels, and major rivers as a fixed layer.
+      const { osm, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      addLayerControl(L, map, osm, satellite, satelliteLabels)
+      satelliteLabels.addTo(map)
+      addStaticMajorRivers(L, map)
 
       L.marker([lat, lng], {
         icon: L.divIcon({

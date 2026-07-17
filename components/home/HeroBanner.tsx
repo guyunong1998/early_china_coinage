@@ -30,7 +30,7 @@ export async function HeroBanner() {
         />
       </div>
 
-      <div className="relative mx-auto grid max-w-5xl gap-4 px-4 py-12">
+      <div className="hero-banner-content">
         <div>
           <p className="mb-2 text-sm uppercase tracking-[0.25em] text-brand-light/90">
             <T k="hero.tagline" />
@@ -42,7 +42,7 @@ export async function HeroBanner() {
             <T k="hero.description" />
           </p>
         </div>
-        <div className="px-10 py-4">
+        <div className="">
           <SearchForm />
         </div>
         <p className="text-sm text-white/90">

@@ -2,24 +2,43 @@
    MAP MARKER DOTS
    ----------------------------------------------------------------------------
    Every Leaflet L.divIcon marker across every map component (components/map/
-   and components/visualizations/FindSpotsMapCanvas usage) renders with these
-   classes — no inline styles for width/height/background/border-color.
-   Each marker div gets exactly three classes:
+   and components/visualizations/MapVisualization.tsx usage) renders with
+   these classes — no inline styles for width/height/background/border-color,
+   with one exception: MapVisCanvas.tsx's quantity/heatmap dots (`.map-dot-
+   ratio`) additionally set `--dot-fill` + width/height inline, since their
+   fill color and size are computed continuously in JS rather than picked
+   from a fixed set of classes. Border-color is never overridden per role —
+   every dot uses the shared `--map-dot-border` — except the deliberate
+   "disabled/de-emphasized" look (`.map-dot-home-site`, `.map-dot-disabled`),
+   which intentionally uses its own `--map-dot-disabled-border` instead.
+   Each marker div otherwise gets exactly three classes:
 
      1. `.map-dot`            — shared border chrome (every map)
      2. `.map-dot-size-N`     — one of the fixed pixel sizes below
-     3. a role class          — fill/border color for that marker's role
+     3. a role class          — fill color for that marker's role
 
    Retint or resize every map's dots at once by editing here; --map-dot-*
    variables live in the COLOR PALETTE section of globals.css.
    ============================================================================ */
 :root {
-  --map-dot-fill: var(--brand);
-  --map-dot-special: var(--accent);
+  --map-dot-fill: rgba(var(--brand-rgb), 0.6);
+  --map-dot-special: rgba(var(--accent-rgb), 0.6);
   --map-dot-border: rgba(255, 255, 255, 0.2); /* white with low opacity, so the dot's fill color shows through */
 
   --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
   --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
+
+  /* MapVisCanvas.tsx's quantity-driven dot sizing (Find Site + Mint Town):
+     a single coin sits at the minimum size, growing logarithmically up to
+     the maximum as quantity increases relative to the current list's max. */
+  --map-dot-qty-size-min: 14px;
+  --map-dot-qty-size-max: 40px;
+
+  /* Overall opacity of the density heat-layer gradient (MapVisCanvas.tsx's
+     density view mode, and the homepage's always-on CoinFilterMap density
+     layer) — baked into each gradient stop's color, since leaflet.heat has
+     no single "layer opacity" knob that applies evenly across the ramp. */
+  --heatmap-opacity: 0.5;
 }
 .map-dot {
   border-width: 2px;
@@ -30,18 +49,6 @@
 }
 
 /* --- Sizes — the fixed set of pixel dimensions used across every map --- */
-.map-dot-size-7 {
-  width: 7px;
-  height: 7px;
-}
-.map-dot-size-9 {
-  width: 9px;
-  height: 9px;
-}
-.map-dot-size-11 {
-  width: 11px;
-  height: 11px;
-}
 .map-dot-size-12 {
   width: 12px;
   height: 12px;
@@ -53,10 +60,6 @@
 .map-dot-size-14 {
   width: 14px;
   height: 14px;
-}
-.map-dot-size-15 {
-  width: 15px;
-  height: 15px;
 }
 .map-dot-size-16 {
   width: 16px;
@@ -91,30 +94,25 @@
 
 .map-dot-hoard-mint {
   background: var(--map-dot-special);
-  border-color: var(--map-dot-border);
 }
 
 /* MintIssueDistributionMapCanvas.tsx (mint town page's issued-coin
    distribution map): the mint's own center marker, and each findspot. */
 .map-dot-mint-center {
   background: var(--map-dot-special);
-  border-color: var(--map-dot-border);
 }
 .map-dot-mint-issue-site {
   background: var(--map-dot-fill);
-  border-color: var(--map-dot-border);
 }
 
 /* MintsOverviewMap.tsx (all mint towns overview). */
 .map-dot-mints-overview {
   background: var(--map-dot-special);
-  border-color: var(--map-dot-border);
 }
 
 /* SinglePointMap.tsx (generic one-marker map — a mint town's own location). */
 .map-dot-single-point {
   background: var(--map-dot-special);
-  border-color: var(--map-dot-border);
 }
 
 /* Modifier for de-emphasized/inactive dots. Stack with `.map-dot`:
@@ -124,23 +122,31 @@
   border-color: var(--map-dot-disabled-border);
 }
 
-/* FindSpotsMapCanvas.tsx (Coin Type / Mint visualization tabs) — the initial,
-   no-filter-applied marker, before any coin-type/mint filter is chosen. */
-.map-dot-nofilter {
-  background: var(--brand-bright);
-  border-color: var(--map-dot-border);
-}
-
-/* FindSpotsMapCanvas.tsx again: once a filter IS active, fill/border color is
-   state-driven — a match-ratio "heat" gradient computed in JS (stateColor()
-   in that file), including one genuinely continuous interpolation
-   (ratioToColor), so it can't be pre-enumerated as fixed classes the way the
-   roles above are. This is the one dot that still sets two CSS custom
-   properties inline (--dot-fill / --dot-border) — nothing else; size still
-   comes from a `.map-dot-size-N` class above. */
+/* MapVisCanvas.tsx (Find Site / Mint Town visualization tabs): fill color is
+   always state-driven — a match-ratio "heat" gradient computed in JS
+   (stateColor() in that file), including one genuinely continuous
+   interpolation (ratioToColor), so it can't be pre-enumerated as fixed
+   classes the way the roles above are. This covers the "no filter active"
+   default look too (rendered as the 100%-match color) — there's no separate
+   static "no filter" role class. This is the one dot that sets a CSS custom
+   property inline (--dot-fill) plus explicit width/height (for continuous
+   quantity-based sizing) — border-color is not overridden, same shared
+   `--map-dot-border` as every other role. */
 .map-dot-ratio {
   background: var(--dot-fill);
-  border-color: var(--dot-border);
+}
+
+/* MapVisCanvas.tsx: the extra "filtered mint town" marker shown when Find
+   Site's mint filter (or Mint Town's inscription filter) resolves to a mint
+   with known coordinates. Deliberately not a `.map-dot` — a large square,
+   brand-filled with a higher-opacity white border, so it reads as a
+   distinct "this is the mint itself" marker rather than one more heatmap
+   point. Fully static, so no inline styles are needed at all. */
+.map-mint-highlight {
+  width: 30px;
+  height: 30px;
+  background: var(--brand);
+  border: 3px solid rgba(255, 255, 255, 0.85);
 }
 
 .loc_precision_map {

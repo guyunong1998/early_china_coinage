@@ -1,13 +1,15 @@
 'use client'
 
 /**
- * Pure map, shared by both map-visualization tabs: either every find site as
- * a marker colored/sized by filter match (`kind: 'sites'`, computed by the
- * caller into `siteStates`), or every mint town as a circle marker sized/
- * shaded by coin count (`kind: 'mints'`, mirroring the standalone
- * PointedSpadeHeatmap's logic). Both kinds share the same base-layer setup,
- * resize handling, and density heat-layer rendering. No sidebar, no legend,
- * no padding — just the map.
+ * Pure map, shared by both map-visualization tabs: every find site or every
+ * mint town as a marker, both driven by the exact same mechanism — colored
+ * by filter-match state (`stateColor`), sized by raw coin quantity
+ * (`siteSizeByQuantity`), and built from the same `dot()` HTML/`SiteHeatState`
+ * machinery (`kind: 'sites'` uses `siteStates` computed by the caller;
+ * `kind: 'mints'` uses an analogous `mintStates` map — matched-vs-total coin
+ * count per mint town instead of per site). Both kinds share the same
+ * base-layer setup, resize handling, and density heat-layer rendering. No
+ * sidebar, no legend, no padding — just the map.
  *
  * Used by: components/visualizations/MapVisualization.tsx (FindSpotsVisualization
  * and MintTownVisualization, the find-site and mint-town pages), which own
@@ -15,7 +17,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { CircleMarker, HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
+import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { TFunction } from '@/lib/i18n/LanguageContext'
 import {
@@ -23,8 +25,10 @@ import {
   NO_DATA_COLOR,
   PRESENT_UNQUANTIFIED_COLOR,
   SINGLE_FIND_COLOR,
+  buildDensityGradient,
   hexToRgba,
   ratioToColor,
+  readHeatmapOpacity,
 } from '@/lib/color-scale'
 import {
   fetchCityBoundaryGeoJson,
@@ -34,43 +38,57 @@ import {
 } from '@/lib/city-boundaries'
 import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
 import { toEnglishName } from '@/lib/name-translation'
-import type { HeatmapSource, PointedSpadeMintStat } from '@/lib/pointed-spade-data'
 import type { MapSite } from '@/lib/types'
 
 /**
  * Presentation-layer state: `pure` (from context-heatmap.ts) only means "every
  * find in this context/site matches" — it says nothing about how many coins
- * that is. A site whose *only* recorded coin (across all types) matches the
+ * that is. A point whose *only* recorded coin (across all types) matches the
  * filter is a much more notable "single find" and gets its own color; a
- * larger all-match site just renders like any other 100%-ratio site.
+ * larger all-match point just renders like any other 100%-ratio point.
  */
 type DisplayState = SiteHeatState | { kind: 'single-find' }
 
-function toDisplayState(state: SiteHeatState, site: MapSite | undefined): DisplayState {
-  if (state.kind === 'pure' && site?.total_quantity_for_map === 1) {
+function toDisplayState(state: SiteHeatState, totalQty: number): DisplayState {
+  if (state.kind === 'pure' && totalQty === 1) {
     return { kind: 'single-find' }
   }
   return state
 }
 
-const DENSITY_GRADIENT: Record<number, string> = {
-  0.15: '#f0d56a',
-  0.4: '#e39a2b',
-  0.65: '#d04a1c',
-  0.85: '#a01515',
-  1: '#6e0c0c',
+// Note: this map's fill colors are state-driven (stateColor() below, backed
+// by lib/color-scale.ts's match-ratio gradient, including one genuinely
+// continuous interpolation) rather than fixed per-marker-role classes like
+// the other maps' simple site/mint dots — they're the "heatmap colors" this
+// map is built around, so they can't be pre-enumerated in app/maps.css.
+// Fill color is set via the scoped CSS custom property `.map-dot-ratio`
+// reads (--dot-fill); border-color is never overridden here, same shared
+// `--map-dot-border` as every other role. Size is set with an inline
+// width/height alongside so it isn't limited to the fixed `.map-dot-size-N`
+// steps in app/maps.css (quantity sizing is continuous, not one of the
+// fixed steps).
+function dot(color: string, size = 14) {
+  return `<div class="map-dot map-dot-ratio" style="--dot-fill:${color};width:${size}px;height:${size}px"></div>`
 }
 
-// Note: this map's fill/border colors are state-driven (stateColor() below,
-// backed by lib/color-scale.ts's match-ratio gradient, including one
-// genuinely continuous interpolation) rather than fixed per-marker-role
-// classes like the other maps' simple site/mint dots — they're the "heatmap
-// colors" this map is built around, so they can't be pre-enumerated in
-// app/maps.css. Size still comes from a `.map-dot-size-N` class; fill/border
-// are the only properties still set via two scoped CSS custom properties
-// (`.map-dot-ratio` reads --dot-fill / --dot-border there).
-function dot(color: string, size = 14) {
-  return `<div class="map-dot map-dot-size-${size} map-dot-ratio"></div>`
+/** Min/max pixel size for quantity-driven sizing, read from app/maps.css's
+ * `--map-dot-qty-size-min` / `-max` so the CSS file stays the single source
+ * of truth. Read once per restyle pass, not per marker. */
+function dotSizeRange(): { min: number; max: number } {
+  const styles = getComputedStyle(document.documentElement)
+  const min = parseFloat(styles.getPropertyValue('--map-dot-qty-size-min'))
+  const max = parseFloat(styles.getPropertyValue('--map-dot-qty-size-max'))
+  return { min: Number.isFinite(min) ? min : 14, max: Number.isFinite(max) ? max : 26 }
+}
+
+// Size is its own channel, independent of match state/color: it always
+// reflects the point's raw coin quantity relative to the current list's
+// max, anchored so a single coin sits exactly at `min` (log(1) === 0) and
+// grows logarithmically from there up to `max`.
+function siteSizeByQuantity(qty: number, maxQty: number, min: number, max: number): number {
+  if (qty <= 1 || maxQty <= 1) return min
+  const t = Math.log(qty) / Math.log(maxQty)
+  return Math.round(min + t * (max - min))
 }
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
@@ -94,7 +112,87 @@ function formatCoinTypeBilingual(value: string | null) {
     .join('、')
 }
 
-function buildPopupHtml(site: MapSite, statusLine: string | null, t: TFunction): string {
+/**
+ * `opacity` only affects the "point color" branches (the ratio/single-find/
+ * unquantified hues) — pass it for the actual map marker; leave it at the
+ * default (1, fully opaque) for other uses of this color, like the popup's
+ * ratio bar or a legend swatch, which should stay fully saturated. `no-data`
+ * always keeps its own dedicated `NO_DATA_ALPHA`, regardless of `opacity`.
+ */
+function stateColor(state: DisplayState, opacity = 1): string {
+  switch (state.kind) {
+    case 'no-filter':
+      // Default/unfiltered look matches the "100% match" color everywhere.
+      return hexToRgba(ratioToColor(1), opacity)
+    case 'no-data':
+      return hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
+    case 'unquantified':
+      return hexToRgba(PRESENT_UNQUANTIFIED_COLOR, opacity)
+    case 'single-find':
+      return hexToRgba(SINGLE_FIND_COLOR, opacity)
+    case 'pure':
+      return hexToRgba(ratioToColor(1), opacity)
+    case 'ratio':
+      // A true 0% match reads as "disabled" grey, not the palest step of the
+      // ratio ramp — see the ratioToColor() doc comment in color-scale.ts.
+      return state.ratio <= 0
+        ? hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
+        : hexToRgba(ratioToColor(state.ratio), opacity)
+  }
+}
+
+/** Matched/total coin counts implied by a state, for the popup's numeric
+ * "x of y (~z%)" line + bar — null when there's nothing countable to show
+ * (no filter active, or present-but-unquantified). */
+function ratioNumbers(state: DisplayState, totalQtyFallback: number): { matched: number; total: number } | null {
+  switch (state.kind) {
+    case 'ratio':
+      return { matched: state.matchedQty, total: state.totalQty }
+    case 'pure':
+    case 'single-find':
+      return { matched: totalQtyFallback, total: totalQtyFallback }
+    case 'no-data':
+      return { matched: 0, total: totalQtyFallback }
+    case 'no-filter':
+    case 'unquantified':
+      return null
+  }
+}
+
+/** The popup's status text: always the uniform "{matched} of {total} coins
+ * (~{pct}%)" format — including 0%, 100%, and the 1-of-1 case — for every
+ * state with a computable count. The only exceptions are `unquantified`
+ * (type present but no usable quantity — genuinely unrecorded) and the
+ * degenerate zero-total case (nothing to compute a percentage from at
+ * all), which keep their own text; `no-filter` shows nothing. */
+function statusLine(state: DisplayState, totalQty: number, t: TFunction): string | null {
+  if (state.kind === 'no-filter') return null
+  if (state.kind === 'unquantified') return t('heatmap.popup.presentNoCount')
+  const nums = ratioNumbers(state, totalQty)
+  if (!nums || nums.total <= 0) return t('heatmap.popup.noRecord')
+  return t('heatmap.popup.ratio', {
+    matched: nums.matched,
+    total: nums.total,
+    pct: Math.round((nums.matched / nums.total) * 100),
+  })
+}
+
+function ratioBarHtml(pct: number, color: string): string {
+  const clamped = Math.max(0, Math.min(100, Math.round(pct)))
+  return `<div style="height:6px;width:100%;border-radius:3px;background:#e2e2e2;overflow:hidden;margin-top:3px"><div style="height:100%;width:${clamped}%;background:${color}"></div></div>`
+}
+
+/** Shared "x of y coins (~z%)" line + bar, used by both the site and mint
+ * popups so a filtered point's match share reads identically everywhere. */
+function ratioStatusHtml(state: DisplayState, totalQty: number, t: TFunction): string {
+  const text = statusLine(state, totalQty, t)
+  if (!text) return ''
+  const nums = ratioNumbers(state, totalQty)
+  const bar = nums && nums.total > 0 ? ratioBarHtml((nums.matched / nums.total) * 100, stateColor(state)) : ''
+  return `<div>${text}</div>${bar}<hr style="margin:8px 0;border:none;border-top:1px solid #ddd" />`
+}
+
+function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): string {
   const nameZh = site.site_name_zh ?? '未命名遗址'
   const nameEn = toEnglishName(site.site_name_zh, site.site_name_en)
   const provinceZh = site.province_zh ?? '—'
@@ -104,10 +202,11 @@ function buildPopupHtml(site: MapSite, statusLine: string | null, t: TFunction):
   const countyZh = site.county_zh ?? '—'
   const countyEn = toEnglishName(site.county_zh, site.county_en)
   const typeBilingual = formatCoinTypeBilingual(site.major_types_zh)
+  const status = ratioStatusHtml(state, site.total_quantity_for_map ?? 0, t)
 
   return `
     <div style="min-width:250px;font-size:12.5px;font-family:sans-serif;line-height:1.6">
-      ${statusLine ? `<div>${statusLine}</div><hr style="margin:8px 0;border:none;border-top:1px solid #ddd" />` : ''}
+      ${status}
       <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span style="color:#888;font-style:italic">${nameEn}</span>` : ''}</div>
       <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span style="color:#888">(${provinceEn})</span>` : ''}</div>
       <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span style="color:#888">(${cityEn})</span>` : ''}</div>
@@ -119,86 +218,107 @@ function buildPopupHtml(site: MapSite, statusLine: string | null, t: TFunction):
   `
 }
 
-function stateColor(state: DisplayState): string {
-  switch (state.kind) {
-    case 'no-filter':
-      return '#365727'
-    case 'no-data':
-      return hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
-    case 'unquantified':
-      return PRESENT_UNQUANTIFIED_COLOR
-    case 'single-find':
-      return SINGLE_FIND_COLOR
-    case 'pure':
-      return ratioToColor(1)
-    case 'ratio':
-      return ratioToColor(state.ratio)
-  }
+/** One mint town, aggregated regardless of the active filter (coordinates +
+ * "typical information" — always the mint's full totals/inscriptions, not
+ * just what currently matches). */
+export type MintPoint = {
+  mint_zh: string
+  mint_en: string | null
+  mint_code: string | null
+  lat: number
+  lng: number
+  totalQty: number
+  inscriptions: string[]
+  modern_location_en: string | null
 }
 
-function stateSize(state: DisplayState): number {
-  switch (state.kind) {
-    case 'no-filter':
-      return 12
-    case 'no-data':
-      return 9
-    case 'unquantified':
-      return 12
-    case 'single-find':
-      return 14
-    case 'pure':
-      return 16
-    case 'ratio':
-      return 11 + Math.round(state.ratio * 5)
-  }
-}
+// The "filtered mint" highlight marker: a large square, brand-filled with a
+// higher-opacity white border, visually distinct from the circular heatmap
+// dots so the specific mint being filtered to stands out from the crowd of
+// match-ratio points. Fully static (no continuous/computed values), so it's
+// defined entirely in app/maps.css rather than inline like dot().
+const MINT_HIGHLIGHT_SIZE = 30
 
-function statePopupLine(state: DisplayState, mode: FilterMode, t: TFunction): string | null {
-  switch (state.kind) {
-    case 'no-filter':
-      return null
-    case 'no-data':
-      return t('heatmap.popup.noRecord')
-    case 'unquantified':
-      return t('heatmap.popup.presentNoCount')
-    case 'single-find':
-      return t('map.popup.singleFind')
-    case 'pure':
-      return t(mode === 'mint' ? 'map.popup.pureMint' : 'map.popup.pureContext')
-    case 'ratio':
-      return t('heatmap.popup.ratio', {
-        matched: state.matchedQty,
-        total: state.totalQty,
-        pct: Math.round(state.ratio * 100),
-      })
-  }
-}
-
-// Mint-town circle markers: radius/opacity scale with count relative to the
-// current dataset's max, same curve as the standalone PointedSpadeHeatmap.
-function heatRadius(coinCount: number, maxCount: number) {
-  if (maxCount <= 0) return 12
-  const t = Math.sqrt(coinCount / maxCount)
-  return 10 + t * 34
-}
-
-function heatOpacity(coinCount: number, maxCount: number) {
-  if (coinCount <= 0) return 0.35
-  if (maxCount <= 0) return 0.35
-  return 0.35 + (coinCount / maxCount) * 0.45
-}
-
-function buildMintPopupHtml(mint: PointedSpadeMintStat, source: HeatmapSource): string {
+function buildHighlightMintPopupHtml(mint: HighlightMint): string {
   return `
     <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+      <strong>Mint town / 铸币地：</strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}<br/>
+      ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
+      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
+    </div>
+  `
+}
+
+function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
+  const status = ratioStatusHtml(state, mint.totalQty, t)
+
+  return `
+    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+      ${status}
       <strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}</strong><br/>
-      <strong>${source === 'database' ? 'Coins in database' : 'ANS specimens'}:</strong> ${mint.coinCount || mint.findCount}<br/>
-      ${source === 'database' ? `<strong>Find records:</strong> ${mint.findCount}<br/>` : ''}
+      <strong>Coins:</strong> ${mint.totalQty}<br/>
       ${mint.inscriptions.length > 0 ? `<strong>Inscriptions:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
       ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
       ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
     </div>
   `
+}
+
+/** Recomputes a marker's icon/opacity/z-index/popup from its current heat
+ * state — the one piece of restyle logic shared by both sites and mints. */
+function applyHeatMarkerStyle(
+  L: typeof import('leaflet'),
+  marker: Marker,
+  rawState: SiteHeatState | undefined,
+  totalQty: number,
+  maxQty: number,
+  sizeRange: { min: number; max: number },
+  pointOpacity: number,
+  inDensity: boolean,
+  popupHtml: string
+) {
+  const state = toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty)
+  const color = inDensity
+    ? state.kind === 'no-data'
+      ? 'transparent'
+      : 'rgba(40,40,40,0.45)'
+    : stateColor(state, pointOpacity)
+  const size = inDensity
+    ? state.kind === 'no-data'
+      ? 0
+      : 7
+    : // No-data points stay small and fixed (not quantity-scaled) — there's
+      // nothing to size by for a type/mint that isn't recorded there at all.
+      state.kind === 'no-data'
+      ? sizeRange.min
+      : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
+
+  marker.setIcon(
+    L.divIcon({
+      className: '',
+      html: size > 0 ? dot(color, size) : '',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  )
+  marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
+  marker.setZIndexOffset(
+    state.kind === 'no-data'
+      ? -1000
+      : state.kind === 'pure' || state.kind === 'single-find' || state.kind === 'ratio'
+        ? 500
+        : 0
+  )
+  marker.setPopupContent(popupHtml)
+}
+
+export type HighlightMint = {
+  mint_zh: string
+  mint_en: string | null
+  mint_code: string | null
+  modern_location_en: string | null
+  lat: number
+  lng: number
 }
 
 type SitesCanvasProps = {
@@ -209,15 +329,21 @@ type SitesCanvasProps = {
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
   filterActive: boolean
+  /** Extra distinct point for the mint the active filter resolves to (Find
+   * Site's "by mint" filter mode), when it has known coordinates. */
+  highlightMint?: HighlightMint | null
   height?: string
 }
 
 type MintsCanvasProps = {
   kind: 'mints'
-  mints: PointedSpadeMintStat[]
-  source: HeatmapSource
+  mintPoints: MintPoint[]
+  mintStates: Map<string, SiteHeatState> | null
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
+  /** Extra distinct point for the mint the active coin-type filter resolves
+   * to (e.g. a specific inscription), when it has known coordinates. */
+  highlightMint?: HighlightMint | null
   height?: string
 }
 
@@ -228,17 +354,18 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const { t } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
-  const siteMarkersRef = useRef<Map<string, Marker>>(new Map())
-  const mintMarkersRef = useRef<Map<string, CircleMarker>>(new Map())
+  const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
+  const highlightMarkerRef = useRef<Marker | null>(null)
   const heatLayerRef = useRef<HeatLayer | null>(null)
 
   // Kind-specific fields, pulled out of the discriminated union once so effect
   // dependency arrays below stay simple, statically-checkable expressions.
-  const siteStatesOrMints = props.kind === 'sites' ? props.siteStates : props.mints
-  const sitesOrSource = props.kind === 'sites' ? props.sites : props.source
+  const statesForRestyle = props.kind === 'sites' ? props.siteStates : props.mintStates
+  const sitesForRestyle = props.kind === 'sites' ? props.sites : null
   const modeForSites = props.kind === 'sites' ? props.mode : null
   const filterActiveForSites = props.kind === 'sites' ? props.filterActive : null
   const sitesForInit = props.kind === 'sites' ? props.sites : null
+  const highlightMint = props.highlightMint ?? null
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -255,53 +382,75 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       await import('leaflet.heat')
 
       const inDensity = viewMode === 'density'
+      const sizeRange = dotSizeRange()
+      const pointOpacity = readHeatmapOpacity()
 
       if (props.kind === 'sites') {
-        const { sites, mode, siteStates } = props
-        siteMarkersRef.current.forEach((marker, code) => {
+        const { sites, siteStates } = props
+        const maxQty = Math.max(...sites.map((s) => s.total_quantity_for_map ?? 0), 1)
+        pointMarkersRef.current.forEach((marker, code) => {
           const site = sites.find((s) => s.site_code === code)
-          const rawState: SiteHeatState = siteStates?.get(code) ?? { kind: 'no-filter' }
-          const state = toDisplayState(rawState, site)
-          const color = inDensity
-            ? state.kind === 'no-data'
-              ? 'transparent'
-              : 'rgba(40,40,40,0.45)'
-            : stateColor(state)
-          const size = inDensity ? (state.kind === 'no-data' ? 0 : 7) : stateSize(state)
-
-          marker.setIcon(
-            L.divIcon({
-              className: '',
-              html: size > 0 ? dot(color, size) : '',
-              iconSize: [size, size],
-              iconAnchor: [size / 2, size / 2],
-            })
-          )
-          marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
-          marker.setZIndexOffset(
-            state.kind === 'no-data'
-              ? -1000
-              : state.kind === 'pure' || state.kind === 'single-find' || state.kind === 'ratio'
-                ? 500
-                : 0
-          )
-
           if (!site) return
-          marker.setPopupContent(buildPopupHtml(site, statePopupLine(state, mode, t), t))
+          const totalQty = site.total_quantity_for_map ?? 0
+          const rawState = siteStates?.get(code)
+          applyHeatMarkerStyle(
+            L,
+            marker,
+            rawState,
+            totalQty,
+            maxQty,
+            sizeRange,
+            pointOpacity,
+            inDensity,
+            buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t)
+          )
         })
       } else {
-        const { mints, source } = props
-        const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
-        mintMarkersRef.current.forEach((marker, mintZh) => {
-          const mint = mints.find((m) => m.mint_zh === mintZh)
+        const { mintPoints, mintStates } = props
+        const maxQty = Math.max(...mintPoints.map((m) => m.totalQty), 1)
+        pointMarkersRef.current.forEach((marker, mintZh) => {
+          const mint = mintPoints.find((m) => m.mint_zh === mintZh)
           if (!mint) return
-          marker.setRadius(heatRadius(mint.coinCount, maxCount))
-          marker.setStyle({
-            fillOpacity: inDensity ? 0 : heatOpacity(mint.coinCount, maxCount),
-            opacity: inDensity ? 0 : 1,
-          })
-          marker.setPopupContent(buildMintPopupHtml(mint, source))
+          const rawState = mintStates?.get(mintZh)
+          applyHeatMarkerStyle(
+            L,
+            marker,
+            rawState,
+            mint.totalQty,
+            maxQty,
+            sizeRange,
+            pointOpacity,
+            inDensity,
+            buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t)
+          )
         })
+      }
+
+      // Extra highlight point for the mint the active filter resolves to
+      // (Find Site's "by mint" mode, or Mint Town's inscription filter) —
+      // shared by both kinds, shown on top with its popup open by default.
+      if (highlightMint) {
+        const popupHtml = buildHighlightMintPopupHtml(highlightMint)
+        if (!highlightMarkerRef.current) {
+          highlightMarkerRef.current = L.marker([highlightMint.lat, highlightMint.lng], {
+            icon: L.divIcon({
+              className: '',
+              html: '<div class="map-mint-highlight"></div>',
+              iconSize: [MINT_HIGHLIGHT_SIZE, MINT_HIGHLIGHT_SIZE],
+              iconAnchor: [MINT_HIGHLIGHT_SIZE / 2, MINT_HIGHLIGHT_SIZE / 2],
+            }),
+            zIndexOffset: 1000,
+          })
+            .addTo(map)
+            .bindPopup(popupHtml)
+        } else {
+          highlightMarkerRef.current.setLatLng([highlightMint.lat, highlightMint.lng])
+          highlightMarkerRef.current.setPopupContent(popupHtml)
+        }
+        highlightMarkerRef.current.openPopup()
+      } else if (highlightMarkerRef.current) {
+        map.removeLayer(highlightMarkerRef.current)
+        highlightMarkerRef.current = null
       }
 
       try {
@@ -313,7 +462,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
               maxZoom: 9,
               max: 1,
               minOpacity: 0.25,
-              gradient: DENSITY_GRADIENT,
+              gradient: buildDensityGradient(readHeatmapOpacity()),
             }).addTo(map)
           } else {
             heatLayerRef.current.setLatLngs(densityLatLngs)
@@ -332,19 +481,20 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteStatesOrMints, sitesOrSource, modeForSites, t, viewMode, densityLatLngs])
+  }, [statesForRestyle, sitesForRestyle, modeForSites, highlightMint, t, viewMode, densityLatLngs])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,
-  // the caller remounts this component (via a `key`) when the underlying
-  // dataset changes (source/ANS-kind), so this never needs to re-run for a
-  // coin-type filter tweak — only marker styling (above) reacts to that.
+  // the mint list is stable regardless of the coin-type filter (every known
+  // mint town is always registered, just with a different matched count), so
+  // this never needs to re-run for a filter tweak — only marker styling
+  // (above) reacts to that.
   useEffect(() => {
     let cancelled = false
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addLayerControl, addStaticMajorRivers } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
 
       const center: [number, number] = props.kind === 'sites' ? [35.8, 105.4] : [37.5, 112]
@@ -356,33 +506,46 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
 
+      // Full layer-switcher + river-mode controls are reserved for these
+      // dedicated Map Visualizations pages, desktop only — on mobile there's
+      // no room for the extra chrome, so it drops back to the same
+      // "just the bilingual labels + static major rivers" baseline every
+      // other map on the site uses.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
-      addLayerControl(L, map, osm, satellite, satelliteLabels, {
-        collapsed: true,
-        position: 'bottomright',
-        showRiverControl: !isMobile,
-      })
+      if (isMobile) {
+        satelliteLabels.addTo(map)
+        addStaticMajorRivers(L, map)
+      } else {
+        addLayerControl(L, map, osm, satellite, satelliteLabels, {
+          collapsed: true,
+          position: 'bottomright',
+        })
+      }
 
       const bounds: [number, number][] = []
+      const initialColor = hexToRgba(ratioToColor(1), readHeatmapOpacity())
+      const sizeRange = dotSizeRange()
 
       if (props.kind === 'sites') {
         const { sites } = props
+        const maxQty = Math.max(...sites.map((s) => s.total_quantity_for_map ?? 0), 1)
         sites.forEach((site) => {
           if (site.lat == null || site.lng == null) return
           bounds.push([site.lat, site.lng])
 
+          const size = siteSizeByQuantity(site.total_quantity_for_map ?? 0, maxQty, sizeRange.min, sizeRange.max)
           const marker = L.marker([site.lat, site.lng], {
             icon: L.divIcon({
               className: '',
-              html: '<div class="map-dot map-dot-size-12 map-dot-nofilter"></div>',
-              iconSize: [12, 12],
-              iconAnchor: [6, 6],
+              html: dot(initialColor, size),
+              iconSize: [size, size],
+              iconAnchor: [size / 2, size / 2],
             }),
           })
             .addTo(map)
-            .bindPopup(buildPopupHtml(site, null, t))
+            .bindPopup(buildPopupHtml(site, { kind: 'no-filter' }, t))
 
-          siteMarkersRef.current.set(site.site_code, marker)
+          pointMarkersRef.current.set(site.site_code, marker)
         })
 
         const candidateCities = new Map<string, { cityZh: string; provinceZh?: string | null }>()
@@ -448,22 +611,24 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           )
         }
       } else {
-        const { mints, source } = props
-        const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
-        mints.forEach((mint) => {
+        const { mintPoints } = props
+        const maxQty = Math.max(...mintPoints.map((m) => m.totalQty), 1)
+        mintPoints.forEach((mint) => {
           bounds.push([mint.lat, mint.lng])
 
-          const marker = L.circleMarker([mint.lat, mint.lng], {
-            radius: heatRadius(mint.coinCount, maxCount),
-            fillColor: '#c0392b',
-            color: '#ffffff',
-            weight: 1.5,
-            fillOpacity: heatOpacity(mint.coinCount, maxCount),
+          const size = siteSizeByQuantity(mint.totalQty, maxQty, sizeRange.min, sizeRange.max)
+          const marker = L.marker([mint.lat, mint.lng], {
+            icon: L.divIcon({
+              className: '',
+              html: dot(initialColor, size),
+              iconSize: [size, size],
+              iconAnchor: [size / 2, size / 2],
+            }),
           })
             .addTo(map)
-            .bindPopup(buildMintPopupHtml(mint, source))
+            .bindPopup(buildMintPopupHtml(mint, { kind: 'no-filter' }, t))
 
-          mintMarkersRef.current.set(mint.mint_zh, marker)
+          pointMarkersRef.current.set(mint.mint_zh, marker)
         })
       }
 
@@ -471,15 +636,14 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     }
 
     init()
-    const siteMarkers = siteMarkersRef.current
-    const mintMarkers = mintMarkersRef.current
+    const pointMarkers = pointMarkersRef.current
     return () => {
       cancelled = true
       heatLayerRef.current = null
+      highlightMarkerRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
-      siteMarkers.clear()
-      mintMarkers.clear()
+      pointMarkers.clear()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sitesForInit])

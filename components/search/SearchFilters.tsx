@@ -53,7 +53,7 @@ export function SearchFilters({
   sort: SortOption
 }) {
   return (
-    <div className="panel divide-y divide-brand/10">
+    <div className="search-filter panel divide-y divide-brand/10">
       <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
         <T k="filters.panelTitle" />
       </div>
@@ -120,7 +120,7 @@ export function SearchFilters({
       <div className="p-4">
         <button
           type="submit"
-          className="w-full rounded bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+          className="filter-button w-full rounded bg-[var(--brand-bright)] px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
         >
           <T k="filters.apply" />
         </button>

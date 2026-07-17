@@ -47,7 +47,7 @@ export function PointedSpadeHeatmap({
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
@@ -55,15 +55,13 @@ export function PointedSpadeHeatmap({
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      // Single-page map: no layer-switcher or river-mode controls (those are
+      // reserved for the dedicated Map Visualizations pages) — just the
+      // street tiles, bilingual labels, and major rivers as a fixed layer.
+      const { osm, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-
-      const isMobile = window.matchMedia('(max-width: 768px)').matches
-      addLayerControl(L, map, osm, satellite, satelliteLabels, {
-        collapsed: true,
-        position: 'bottomright',
-        showRiverControl: !isMobile,
-      })
+      satelliteLabels.addTo(map)
+      addStaticMajorRivers(L, map)
 
       const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
       const bounds: [number, number][] = []

@@ -182,13 +182,20 @@ export function buildBaseLayers(L: LeafletNS) {
   return { osm, satellite, satelliteLabels }
 }
 
+/**
+ * Full interactive chrome: the Street map/Satellite/English-labels layer
+ * switcher, plus the Off/Major/Minor/All river-mode control. Reserved for
+ * the dedicated Map Visualizations pages (desktop only — see
+ * `addStaticMajorRivers` below for every other map, and for all maps on
+ * mobile screens).
+ */
 export function addLayerControl(
   L: LeafletNS,
   map: import('leaflet').Map,
   osm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
   satelliteLabels: import('leaflet').TileLayer,
-  options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition; showRiverControl?: boolean}
+  options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
   // On by default on top of either base layer — gives bilingual labels on
   // the street map, and is the only text shown on the satellite view. Users
@@ -205,9 +212,17 @@ export function addLayerControl(
     )
     .addTo(map)
 
-  if (options?.showRiverControl ?? true) {
-    const majorRivers = buildRiverLayer(L, '/data/rivers-major.geojson')
-    const minorRivers = buildRiverLayer(L, '/data/rivers-minor.geojson')
-    addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
-  }
+  const majorRivers = buildRiverLayer(L, '/data/rivers-major.geojson')
+  const minorRivers = buildRiverLayer(L, '/data/rivers-minor.geojson')
+  addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
+}
+
+/**
+ * Every map outside the dedicated Map Visualizations pages (and every map on
+ * mobile screens, including those pages): no layer-switcher or river-mode
+ * controls at all — just the major river network, always on, as a fixed
+ * reference layer with no way to toggle it off.
+ */
+export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
+  buildRiverLayer(L, '/data/rivers-major.geojson').addTo(map)
 }

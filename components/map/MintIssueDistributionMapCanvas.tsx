@@ -39,16 +39,20 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
       const map = L.map(containerRef.current).setView([mint.lat, mint.lng], 6)
       mapRef.current = map
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      // Single-page map: no layer-switcher or river-mode controls (those are
+      // reserved for the dedicated Map Visualizations pages) — just the
+      // street tiles, bilingual labels, and major rivers as a fixed layer.
+      const { osm, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      addLayerControl(L, map, osm, satellite, satelliteLabels)
+      satelliteLabels.addTo(map)
+      addStaticMajorRivers(L, map)
 
       const bounds: [number, number][] = [[mint.lat, mint.lng]]
 

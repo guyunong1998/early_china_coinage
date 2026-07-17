@@ -71,12 +71,18 @@
   --brand-dark: #213509;
   --brand: #304912;
   --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
+  /* Raw R,G,B channels of --brand, for rgba(var(--brand-rgb), alpha) — a hex
+     custom property can't be fed directly into rgba(), so this is kept in
+     sync by hand whenever --brand changes (used by app/maps.css). */
+  --brand-rgb: 48, 73, 18;
 
   /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
      the default interactive color) --- */
   --accent: #e1941f;
   --accent-dark: #6b4520;
   --accent-light: #efe0c3;
+  /* Raw R,G,B channels of --accent — see --brand-rgb above. */
+  --accent-rgb: 225, 148, 31;
 
   /* Shared shadow + radius so cards/inputs/buttons stay visually consistent */
   --shadow: 0 1px 2px rgba(35, 34, 32, 0.04), 0 2px 8px rgba(35, 34, 32, 0.06);
@@ -162,9 +168,10 @@ a {
 /* The label bar that sits above a panel body (see DataCard.tsx) — a quiet
    tinted strip, rounded on top like a tab, rather than a bold color block. */
 .panel-header {
-  background: var(--brand-light);
-  color: var(--brand-dark);
+  background: var(--brand);
+  color: var(--paper);
   border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
 }
 
 /* The bordered body underneath a `.panel-header`. Default rule: its border
@@ -190,10 +197,6 @@ a {
 .panel-nav-card{
   background: var(--paper);
   border: 5px dotted var(--brand);
-}
-.panel-search-item{
-  background: var(--paper);
-  border: 3px solid var(--brand-light);
 }
 
 
@@ -332,6 +335,16 @@ button:not(:disabled):hover {
   pointer-events: none;
 }
 
+.hero-banner-content {
+  position: relative;
+  display: grid;
+  max-width: 64rem; /* max-w-5xl */
+  margin-left: auto;
+  margin-right: auto;
+  gap: 1rem; /* gap-4 */
+  padding: 3rem 1rem; /* py-12 px-4 */
+}
+
 .title-en {
   font-family: serif;
   font-size: 1.125rem; /* text-lg */
@@ -342,4 +355,31 @@ button:not(:disabled):hover {
 .title-zh {
   font-size: 0.75rem;  /* text-xs */
   color: #6b7280;      /* gray-500 */
+}
+
+.search-filter{
+  border-radius: var(--radius) var(--radius) 0 0;
+  border: 1px solid var(--brand);
+}
+
+.filter-button{
+  background: var(--brand-light);
+  color: var(--paper);
+  border-radius: var(--radius);
+  transition: background-color 0.15s ease;
+  width: 100%;
+  font-weight: 600; 
+}
+
+.search-result-card{
+  border: 1px solid var(--brand);
+  border-radius: var(--radius) var(--radius) 0 0;
+
+}
+
+.search-result-card-header{
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
 }

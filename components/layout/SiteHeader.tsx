@@ -22,23 +22,23 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-6">
-          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-700 lg:flex">
-            <Link href="/mints" className="hover:text-brand">
+          <nav className="hidden items-center gap-1 text-sm font-medium text-gray-700 lg:flex">
+            <Link href="/mints" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.mints" />
             </Link>
-            <Link href="/coin-types" className="hover:text-brand">
+            <Link href="/coin-types" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.coinTypes" />
             </Link>
-            <Link href="/visualizations" className="hover:text-brand">
+            <Link href="/visualizations" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.map" />
             </Link>
-            <Link href="/museum-collections" className="hover:text-brand">
+            <Link href="/museum-collections" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.spadeHeatmap" />
             </Link>
-            <Link href="/search" className="hover:text-brand">
+            <Link href="/search" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.search" />
             </Link>
-            <Link href="/about" className="hover:text-brand">
+            <Link href="/about" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.about" />
             </Link>
           </nav>

@@ -7,10 +7,11 @@
 const RAMP_LIGHT: [number, number, number] = [0xd9, 0xa4, 0x06] // low ratio: yellow
 const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: red
 
-// Site/context has no record of the selected type at all. Very faint so it
-// recedes behind real data.
+// Site/context has no record of the selected type at all. Faint (paired with
+// a smaller, fixed dot size at the call sites) so it recedes behind real
+// data, but still visible against the basemap rather than disappearing.
 export const NO_DATA_COLOR = '#c5c5c5'
-export const NO_DATA_ALPHA = 0.18
+export const NO_DATA_ALPHA = 0.45
 
 // Type is present in a context but quantities cannot be computed — full
 // opacity so it doesn't read as "less certain" than quantified sites.
@@ -55,3 +56,32 @@ export const RAMP_LEGEND_STOPS = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
   ratio,
   color: ratioToColor(ratio),
 }))
+
+// Shared leaflet.heat gradient (light yellow -> red) used by every density
+// heat layer in the app (MapVisCanvas.tsx's density view mode, and the
+// homepage CoinFilterMap's always-on density layer) — one definition so
+// retinting/opacity changes apply everywhere at once.
+const DENSITY_GRADIENT_STOPS: [number, string][] = [
+  [0.15, '#f0d56a'],
+  [0.4, '#e39a2b'],
+  [0.65, '#d04a1c'],
+  [0.85, '#a01515'],
+  [1, '#6e0c0c'],
+]
+
+/** Reads app/maps.css's `--heatmap-opacity` (single source of truth) so the
+ * gradient stops below can bake it into each color — leaflet.heat has no
+ * single "layer opacity" option that applies evenly across the ramp. */
+export function readHeatmapOpacity(): number {
+  if (typeof document === 'undefined') return 0.5
+  const raw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--heatmap-opacity'))
+  return Number.isFinite(raw) ? raw : 0.5
+}
+
+export function buildDensityGradient(opacity: number): Record<number, string> {
+  const gradient: Record<number, string> = {}
+  DENSITY_GRADIENT_STOPS.forEach(([stop, hex]) => {
+    gradient[stop] = hexToRgba(hex, opacity)
+  })
+  return gradient
+}
