@@ -5,10 +5,11 @@
  * sized/shaded by coin (or ANS specimen) count. No caption, no wrapper —
  * just the map.
  *
- * Used by: components/heatmap/HeatmapPanel.tsx (app/heatmap/page.tsx) and
- * components/visualizations/QuantityVisualization.tsx
- * (app/visualizations/quantity/page.tsx), both of which render their own
- * caption text below it.
+ * Used by: components/heatmap/HeatmapPanel.tsx (app/museum-collections/page.tsx),
+ * which renders its own caption text below it. The map visualizations page's
+ * Mint Town tab (components/visualizations/MapVisualization.tsx) has its own
+ * copy of this same circle-marker logic folded into components/map/MapVisCanvas.tsx,
+ * so it can share that canvas's points/density toggle and coin-type filter.
  */
 
 import { useEffect, useRef } from 'react'
@@ -30,9 +31,13 @@ function heatOpacity(coinCount: number, maxCount: number) {
 export function PointedSpadeHeatmap({
   mints,
   source = 'database',
+  fill = false,
 }: {
   mints: PointedSpadeMintStat[]
   source?: HeatmapSource
+  /** Fill the relatively-positioned parent instead of using a fixed 480px
+   * height — for full-bleed map layouts (the Mint Town visualization tab). */
+  fill?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
@@ -42,16 +47,21 @@ export function PointedSpadeHeatmap({
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
-      const map = L.map(containerRef.current).setView([37.5, 112], 6)
+      const map = L.map(containerRef.current, { zoomControl: false }).setView([37.5, 112], 6)
       mapRef.current = map
+      L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
+      // Single-page map: no layer-switcher or river-mode controls (those are
+      // reserved for the dedicated Map Visualizations pages) — just the
+      // street tiles, bilingual labels, and major rivers as a fixed layer.
+      const { osm, satelliteLabels } = buildBaseLayers(L)
       osm.addTo(map)
-      addLayerControl(L, map, osm, satellite, satelliteLabels)
+      satelliteLabels.addTo(map)
+      addStaticMajorRivers(L, map)
 
       const maxCount = Math.max(...mints.map((m) => m.coinCount), 1)
       const bounds: [number, number][] = []
@@ -90,7 +100,8 @@ export function PointedSpadeHeatmap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-  }, [mints, source])
+  }, [mints, source, fill])
 
+  if (fill) return <div ref={containerRef} className="absolute inset-0" />
   return <div ref={containerRef} style={{ height: '480px', width: '100%' }} />
 }

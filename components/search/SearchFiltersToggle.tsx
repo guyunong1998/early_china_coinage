@@ -14,7 +14,7 @@ export function SearchFiltersToggle({ children }: { children: ReactNode }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="mb-3 flex w-full items-center justify-between border border-brand/30 bg-white px-3 py-2 text-sm font-semibold text-brand min-[1440px]:hidden"
+        className="mb-3 flex w-full items-center justify-between rounded bg-[var(--brand-bright)] px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark min-[1440px]:hidden"
       >
         <T k="filters.toggle" />
         <span aria-hidden>{open ? '▲' : '▼'}</span>

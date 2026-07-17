@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./maps.css";
 
 /* ============================================================================
    EARLY CHINESE COIN FINDS — CLEAN CATALOGUE THEME
@@ -70,12 +71,18 @@
   --brand-dark: #213509;
   --brand: #304912;
   --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
+  /* Raw R,G,B channels of --brand, for rgba(var(--brand-rgb), alpha) — a hex
+     custom property can't be fed directly into rgba(), so this is kept in
+     sync by hand whenever --brand changes (used by app/maps.css). */
+  --brand-rgb: 48, 73, 18;
 
   /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
      the default interactive color) --- */
   --accent: #e1941f;
   --accent-dark: #6b4520;
   --accent-light: #efe0c3;
+  /* Raw R,G,B channels of --accent — see --brand-rgb above. */
+  --accent-rgb: 225, 148, 31;
 
   /* Shared shadow + radius so cards/inputs/buttons stay visually consistent */
   --shadow: 0 1px 2px rgba(35, 34, 32, 0.04), 0 2px 8px rgba(35, 34, 32, 0.06);
@@ -85,12 +92,12 @@
   --card-border: var(--brand);
   --card-border-hover: var(--brand-light);
 
-  --map-dot-fill: var(--brand);
-  --map-dot-special: var(--accent);
-  --map-dot-border: rgba(255, 255, 255, 0.2); /* white with low opacity, so the dot's fill color shows through */
-
-  --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
-  --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
+  /* Homepage hero banner's left-to-right sweep — separate from --brand /
+     --brand-dark above so you can retint just the hero without touching the
+     rest of the site's palette. The coins SVG overlay reuses these same two
+     colors in reverse (see .hero-banner__overlay below). */
+  --hero-gradient-start: var(--brand);
+  --hero-gradient-end: var(--brand-dark);
 }
 
 /* Hand this palette to Tailwind so `bg-brand`, `text-accent`, `border-paper`,
@@ -161,9 +168,10 @@ a {
 /* The label bar that sits above a panel body (see DataCard.tsx) — a quiet
    tinted strip, rounded on top like a tab, rather than a bold color block. */
 .panel-header {
-  background: var(--brand-light);
-  color: var(--brand-dark);
+  background: var(--brand);
+  color: var(--paper);
   border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
 }
 
 /* The bordered body underneath a `.panel-header`. Default rule: its border
@@ -189,10 +197,6 @@ a {
 .panel-nav-card{
   background: var(--paper);
   border: 5px dotted var(--brand);
-}
-.panel-search-item{
-  background: var(--paper);
-  border: 3px solid var(--brand-light);
 }
 
 
@@ -290,25 +294,8 @@ button:not(:disabled):hover {
   /* border: 3px solid var(--brand); */
 }
 
-/* Shared marker-dot look, used by every map's L.divIcon markers (fill color
-   and size stay inline per-marker, set by each map component — see the
-   commented color constants near the top of those files). Tweak here to
-   restyle every map's dots at once. */
-.map-dot {
-  border-width: 2px;
-  border-style: solid;
-  border-color: var(--map-dot-border); /* fallback if a component doesn't set its own */
-  background: var(--map-dot-fill); /* fallback if a component doesn't set its own */
-  border-radius: 50%;
-  /* box-shadow: 0 0 4px rgba(0, 0, 0, 0.35); */
-}
-
-/* Modifier for de-emphasized/inactive dots (e.g. markers outside the current
-   focus). Stack with `.map-dot`: className="map-dot map-dot-disabled". */
-.map-dot-disabled {
-  border-color: var(--map-dot-border);
-  background: var(--map-dot-border);
-}
+/* Map marker dot styling (base + size + per-role color classes) now lives in
+   app/maps.css, imported at the top of this file. */
 
 .marker-cluster-small,
 .marker-cluster-medium,
@@ -346,4 +333,53 @@ button:not(:disabled):hover {
   background: linear-gradient(to left, var(--brand), var(--brand-dark));
   mix-blend-mode: multiply;
   pointer-events: none;
+}
+
+.hero-banner-content {
+  position: relative;
+  display: grid;
+  max-width: 64rem; /* max-w-5xl */
+  margin-left: auto;
+  margin-right: auto;
+  gap: 1rem; /* gap-4 */
+  padding: 3rem 1rem; /* py-12 px-4 */
+}
+
+.title-en {
+  font-family: serif;
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600;    /* font-semibold */
+  color: var(--brand); /* replace with your brand color */
+}
+
+.title-zh {
+  font-size: 0.75rem;  /* text-xs */
+  color: #6b7280;      /* gray-500 */
+}
+
+.search-filter{
+  border-radius: var(--radius) var(--radius) 0 0;
+  border: 1px solid var(--brand);
+}
+
+.filter-button{
+  background: var(--brand-light);
+  color: var(--paper);
+  border-radius: var(--radius);
+  transition: background-color 0.15s ease;
+  width: 100%;
+  font-weight: 600; 
+}
+
+.search-result-card{
+  border: 1px solid var(--brand);
+  border-radius: var(--radius) var(--radius) 0 0;
+
+}
+
+.search-result-card-header{
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%;
 }

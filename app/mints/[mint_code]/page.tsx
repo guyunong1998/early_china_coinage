@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation'
 import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
+import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
-import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getMintDossierByCode } from '@/lib/mint-dossiers'
 import { getMintByCode } from '@/lib/mint-towns'
 import { getMintFindspotsData } from '@/lib/queries'
@@ -33,6 +33,9 @@ export default async function MintDetailPage({ params }: PageProps) {
     sites: [],
     typeOptions: [],
     siteTypeKeys: {},
+    inscriptions: [],
+    totalCoinCount: 0,
+    siteCount: 0,
   }))
   const dossier = getMintDossierByCode(mint_code)
 
@@ -52,9 +55,16 @@ export default async function MintDetailPage({ params }: PageProps) {
           </div>
           <div className="p-4">
             <dl>
-              <Row labelKey="mintDetail.row.state" value={`${mint.state_zh} (${mint.state_en})`} />
-              <Row labelKey="mintDetail.row.modernLocation" value={mint.modern_location_en} />
-              <Row
+              <DetailRow labelKey="mintDetail.row.state" value={`${mint.state_zh} (${mint.state_en})`} />
+              <DetailRow
+                labelKey="mintDetail.row.modernLocation"
+                value={
+                  mint.modern_location_zh
+                    ? `${mint.modern_location_zh} (${mint.modern_location_en})`
+                    : mint.modern_location_en
+                }
+              />
+              <DetailRow
                 labelKey="mintDetail.row.coordinates"
                 value={
                   mint.lat != null && mint.lng != null
@@ -88,14 +98,26 @@ export default async function MintDetailPage({ params }: PageProps) {
           </div>
           <div className="p-4">
             <dl>
-              <Row labelKey="mintDetail.row.chineseName" value={mint.name_zh} />
-              <Row labelKey="mintDetail.row.romanisation" value={mint.name_en} />
-              <Row labelKey="mintDetail.row.state" value={`${mint.state_en} (${mint.state_zh})`} />
-              <Row
+              <DetailRow labelKey="mintDetail.row.chineseName" value={mint.name_zh} />
+              <DetailRow labelKey="mintDetail.row.romanisation" value={mint.name_en} />
+              <DetailRow labelKey="mintDetail.row.state" value={`${mint.state_en} (${mint.state_zh})`} />
+              <DetailRow
                 labelKey="mintDetail.row.coinTypes"
                 value={
                   mint.coin_types.length > 0
                     ? mint.coin_types.join(', ')
+                    : '—'
+                }
+              />
+              <DetailRow
+                labelKey="mintDetail.row.inscriptions"
+                value={distribution.inscriptions.length > 0 ? distribution.inscriptions.join('、') : '—'}
+              />
+              <DetailRow
+                labelKey="mintDetail.row.coinsAndSites"
+                value={
+                  distribution.totalCoinCount > 0
+                    ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
                     : '—'
                 }
               />
@@ -250,17 +272,6 @@ export default async function MintDetailPage({ params }: PageProps) {
         <code className="font-mono">lib/mint-towns.ts</code> (core data). Place images under{' '}
         <code className="font-mono">public/images/mints/</code>.
       </p>
-    </div>
-  )
-}
-
-function Row({ labelKey, value }: { labelKey: DictionaryKey; value: string }) {
-  return (
-    <div className="grid grid-cols-[130px_1fr] gap-3 border-b border-gray-100 py-2 last:border-b-0">
-      <dt className="text-right text-sm font-semibold text-gray-700">
-        <T k={labelKey} />
-      </dt>
-      <dd className="text-sm text-gray-800">{value}</dd>
     </div>
   )
 }

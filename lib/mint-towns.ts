@@ -19,6 +19,10 @@ export type MintTown = {
   state_zh: string
   state_en: string
   modern_location_en: string
+  /** Not yet filled in for most entries — the source dossiers are English-
+   * first. Optional so callers can fall back to modern_location_en alone
+   * until this gets backfilled (e.g. once this data moves to Supabase). */
+  modern_location_zh?: string | null
   /** null/undefined when the source document does not give a specific geolocation */
   lat?: number | null
   lng?: number | null

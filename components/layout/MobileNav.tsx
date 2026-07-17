@@ -15,8 +15,9 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const NAV_LINKS: { href: string; key: DictionaryKey }[] = [
   { href: '/mints', key: 'nav.mints' },
+  { href: '/coin-types', key: 'nav.coinTypes' },
   { href: '/visualizations', key: 'nav.map' },
-  { href: '/heatmap', key: 'nav.spadeHeatmap' },
+  { href: '/museum-collections', key: 'nav.spadeHeatmap' },
   { href: '/search', key: 'nav.search' },
   { href: '/about', key: 'nav.about' },
 ]
