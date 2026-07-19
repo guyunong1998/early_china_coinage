@@ -11,6 +11,7 @@ const SEARCH_THRESHOLD = 15
 type SelectedState = {
   mints: string[]
   coinTypes: string[]
+  inscriptions: string[]
   states: string[]
   regions: string[]
   periods: string[]
@@ -20,12 +21,14 @@ type SelectedState = {
 type ModesState = {
   mints: FacetMode
   coinTypes: FacetMode
+  inscriptions: FacetMode
   states: FacetMode
 }
 
 export function SearchFilters({
   mintOptions,
   coinTypeOptions,
+  inscriptionOptions,
   stateOptions,
   regionOptions,
   periodOptions,
@@ -40,6 +43,7 @@ export function SearchFilters({
 }: {
   mintOptions: FacetOption[]
   coinTypeOptions: FacetOption[]
+  inscriptionOptions: FacetOption[]
   stateOptions: FacetOption[]
   regionOptions: FacetOption[]
   periodOptions: FacetOption[]
@@ -53,12 +57,8 @@ export function SearchFilters({
   sort: SortOption
 }) {
   return (
-    <div className="search-filter panel divide-y divide-brand/10">
-      <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
-        <T k="filters.panelTitle" />
-      </div>
-
-      <div className="p-4">
+    <>
+      <div className="border-t border-brand/10 p-4">
         <SortSelect value={sort} />
       </div>
 
@@ -101,6 +101,14 @@ export function SearchFilters({
         modeName="coinTypeMode"
       />
       <CheckboxFacetGroup
+        titleKey="filters.inscription.title"
+        name="inscription"
+        options={inscriptionOptions}
+        selected={selected.inscriptions}
+        mode={modes.inscriptions}
+        modeName="inscriptionMode"
+      />
+      <CheckboxFacetGroup
         titleKey="filters.state.title"
         name="state"
         options={stateOptions}
@@ -117,7 +125,7 @@ export function SearchFilters({
         modeName="mintMode"
       />
 
-      <div className="p-4">
+      <div className="border-t border-brand/10 p-4">
         <button
           type="submit"
           className="filter-button w-full rounded bg-[var(--brand-bright)] px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
@@ -125,7 +133,7 @@ export function SearchFilters({
           <T k="filters.apply" />
         </button>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -136,7 +144,7 @@ const labelClass =
 
 function FacetGroup({ titleKey, children }: { titleKey: DictionaryKey; children: ReactNode }) {
   return (
-    <details className="p-4">
+    <details className="border-t border-brand/10 p-4">
       <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
         <T k={titleKey} />
       </summary>
@@ -174,7 +182,7 @@ function CheckboxFacetGroup({
   if (options.length === 0) return null
 
   return (
-    <details className="p-4">
+    <details className="border-t border-brand/10 p-4">
       <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
         <T k={titleKey} /> ({options.length})
       </summary>

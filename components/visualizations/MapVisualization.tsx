@@ -40,7 +40,6 @@ import { getMintByNameZh } from '@/lib/mint-towns'
 import { computeMintStatsFromFinds, toMintPoints, type HeatmapSource } from '@/lib/pointed-spade-data'
 import {
   emptyTypologySelection,
-  getInscriptionEntries,
   getMatchingCoinTypeCodes,
   hasTypologyFilter,
   type TypologyFilterSelection,
@@ -253,7 +252,7 @@ export function FindSpotsVisualization({
       <Link
         key={tab.id}
         href={href}
-        className={`pointer-events-auto rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
+        className={`pointer-events-auto shrink-0 whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
           isActive
             ? 'border-brand bg-brand text-white'
             : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
@@ -283,7 +282,7 @@ export function FindSpotsVisualization({
           {/* Below `lg` the floating top-right precision bar is hidden (no
               room next to this panel on narrow screens), so it lives here
               instead, inside the same collapsible dropdown. */}
-          <div className="flex flex-wrap items-center gap-1.5 lg:hidden">{precisionButtons}</div>
+          <div className="loc_precision_map-m flex items-center gap-1.5 lg:hidden">{precisionButtons}</div>
 
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-semibold text-gray-700">
@@ -447,7 +446,11 @@ export function MintTownVisualization({
     totalStats.mapped.forEach((mint) => {
       const total = mint.coinCount
       const matched = matchedByMint.get(mint.mint_zh) ?? 0
-      if (total <= 0) {
+      // "no-data" means the active filter matches nothing at this mint —
+      // not "this mint has zero coins recorded" (total is basically always
+      // >0 for a mapped mint, which made foundInSummary's count constant
+      // regardless of the filter).
+      if (matched <= 0) {
         states.set(mint.mint_zh, { kind: 'no-data' })
         return
       }
@@ -465,26 +468,6 @@ export function MintTownVisualization({
     })
     return states
   }, [matchedCodes, matchedStats, totalStats])
-
-  // When the filter narrows to one specific inscription, that inscription
-  // resolves to one known mint (via the typology data's mint_zh field) —
-  // plot it as an extra, distinct point when we know where it is.
-  const highlightMint = useMemo(() => {
-    if (source !== 'database' || !sel.inscription) return null
-    const entry = getInscriptionEntries(sel).find((e) => e.inscription_zh === sel.inscription)
-    const mintZh = entry?.mint_zh?.trim()
-    if (!mintZh) return null
-    const town = getMintByNameZh(mintZh)
-    if (town?.lat == null || town?.lng == null) return null
-    return {
-      mint_zh: mintZh,
-      mint_en: town.name_en ?? null,
-      mint_code: town.mint_code ?? null,
-      modern_location_en: town.modern_location_en ?? null,
-      lat: town.lat,
-      lng: town.lng,
-    }
-  }, [source, sel])
 
   const densityLatLngs = useMemo(() => {
     const points: [number, number, number][] = []
@@ -515,7 +498,6 @@ export function MintTownVisualization({
         mintStates={mintStates}
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
-        highlightMint={highlightMint}
       />
 
       <MapVisualizationOverlay>

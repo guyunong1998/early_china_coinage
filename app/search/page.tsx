@@ -18,6 +18,7 @@ import {
   parseFacetMode,
   parseSortOption,
   siteCoinTypeValues,
+  siteInscriptionValues,
   siteMatchesFilters,
   sortSites,
   withEnglish,
@@ -59,6 +60,8 @@ type PageProps = {
     mintMode?: string
     coinType?: string | string[]
     coinTypeMode?: string
+    inscription?: string | string[]
+    inscriptionMode?: string
     state?: string | string[]
     stateMode?: string
     region?: string | string[]
@@ -89,6 +92,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
     mintsMode: parseFacetMode(params.mintMode),
     coinTypes: toArray(params.coinType),
     coinTypesMode: parseFacetMode(params.coinTypeMode),
+    inscriptions: toArray(params.inscription),
+    inscriptionsMode: parseFacetMode(params.inscriptionMode),
     states: toArray(params.state),
     statesMode: parseFacetMode(params.stateMode),
     regions: toArray(params.region),
@@ -152,6 +157,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   )
   const coinTypeOptions = withEnglish(
     buildFacetOptions(baseResults, filters, 'coinType', siteCoinTypeValues, filters.coinTypes),
+    coinTypeEnByZh
+  )
+  const inscriptionOptions = withEnglish(
+    buildFacetOptions(baseResults, filters, 'inscription', siteInscriptionValues, filters.inscriptions),
     coinTypeEnByZh
   )
   const stateOptions = withEnglish(
@@ -226,6 +235,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
     if (filters.mintsMode !== 'any') p.set('mintMode', filters.mintsMode)
     filters.coinTypes.forEach((v) => p.append('coinType', v))
     if (filters.coinTypesMode !== 'any') p.set('coinTypeMode', filters.coinTypesMode)
+    filters.inscriptions.forEach((v) => p.append('inscription', v))
+    if (filters.inscriptionsMode !== 'any') p.set('inscriptionMode', filters.inscriptionsMode)
     filters.states.forEach((v) => p.append('state', v))
     if (filters.statesMode !== 'any') p.set('stateMode', filters.statesMode)
     filters.regions.forEach((v) => p.append('region', v))
@@ -304,35 +315,47 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </div>
 
         <div className="grid gap-6 min-[1440px]:grid-cols-[280px_1fr]">
-          <div className="min-[1440px]:sticky min-[1440px]:top-4 min-[1440px]:max-h-[calc(100vh-2rem)] min-[1440px]:overflow-y-auto">
-            <SearchFiltersToggle>
-              <SearchFilters
-                mintOptions={mintOptions}
-                coinTypeOptions={coinTypeOptions}
-                stateOptions={stateOptions}
-                regionOptions={regionOptions}
-                periodOptions={periodOptions}
-                siteTypeOptions={siteTypeOptions}
-                selected={{
-                  mints: filters.mints,
-                  coinTypes: filters.coinTypes,
-                  states: filters.states,
-                  regions: filters.regions,
-                  periods: filters.periods,
-                  siteTypes: filters.siteTypes,
-                }}
-                modes={{
-                  mints: filters.mintsMode,
-                  coinTypes: filters.coinTypesMode,
-                  states: filters.statesMode,
-                }}
-                minQty={filters.minQty}
-                maxQty={filters.maxQty}
-                onlySingle={filters.onlySingle}
-                excludeSingle={filters.excludeSingle}
-                sort={sort}
-              />
-            </SearchFiltersToggle>
+          {/* Sticky positioning and internal scrolling are split across two
+              nested elements on purpose — a position:sticky element that is
+              also its own overflow:auto scroll container is a known bad
+              combination (it can get stuck partway and refuse to reveal the
+              rest of its content once nested accordions make it taller than
+              the viewport). The outer div only sticks; the inner div owns
+              the max-height + scrollbar. */}
+          <div className="min-[1440px]:sticky min-[1440px]:top-4 min-[1440px]:self-start">
+            <div className="min-[1440px]:max-h-[calc(100vh-2rem)] min-[1440px]:overflow-y-auto">
+              <SearchFiltersToggle>
+                <SearchFilters
+                  mintOptions={mintOptions}
+                  coinTypeOptions={coinTypeOptions}
+                  inscriptionOptions={inscriptionOptions}
+                  stateOptions={stateOptions}
+                  regionOptions={regionOptions}
+                  periodOptions={periodOptions}
+                  siteTypeOptions={siteTypeOptions}
+                  selected={{
+                    mints: filters.mints,
+                    coinTypes: filters.coinTypes,
+                    inscriptions: filters.inscriptions,
+                    states: filters.states,
+                    regions: filters.regions,
+                    periods: filters.periods,
+                    siteTypes: filters.siteTypes,
+                  }}
+                  modes={{
+                    mints: filters.mintsMode,
+                    coinTypes: filters.coinTypesMode,
+                    inscriptions: filters.inscriptionsMode,
+                    states: filters.statesMode,
+                  }}
+                  minQty={filters.minQty}
+                  maxQty={filters.maxQty}
+                  onlySingle={filters.onlySingle}
+                  excludeSingle={filters.excludeSingle}
+                  sort={sort}
+                />
+              </SearchFiltersToggle>
+            </div>
           </div>
 
           <div>

@@ -62,14 +62,14 @@ export function TypologyFilterBar({
           label={t('map.filter.l1')}
           value={sel.l1}
           options={l1Options}
-          onChange={(v) => onChange({ ...emptyTypologySelection(), l1: v })}
+          onChange={(v) => onChange({ ...emptyTypologySelection(), l1: v, inscription: sel.inscription })}
         />
         {sel.l1 && l2Options.length > 0 && (
           <FilterSelect
             label={t('map.filter.l2')}
             value={sel.l2}
             options={l2Options}
-            onChange={(v) => onChange({ ...sel, l2: v, l3: '', l4: '', inscription: '' })}
+            onChange={(v) => onChange({ ...sel, l2: v, l3: '', l4: '' })}
           />
         )}
         {sel.l2 && l3Options.length > 0 && (
@@ -77,7 +77,7 @@ export function TypologyFilterBar({
             label={t('map.filter.l3')}
             value={sel.l3}
             options={l3Options}
-            onChange={(v) => onChange({ ...sel, l3: v, l4: '', inscription: '' })}
+            onChange={(v) => onChange({ ...sel, l3: v, l4: '' })}
           />
         )}
         {sel.l3 && l4Options.length > 0 && (
@@ -85,7 +85,7 @@ export function TypologyFilterBar({
             label={t('map.filter.l4')}
             value={sel.l4}
             options={l4Options}
-            onChange={(v) => onChange({ ...sel, l4: v, inscription: '' })}
+            onChange={(v) => onChange({ ...sel, l4: v })}
           />
         )}
 
@@ -130,7 +130,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+        className="w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
       >
         <option value="">{`${label} – ${t('map.filter.none')}`}</option>
         {options.map((opt) => (

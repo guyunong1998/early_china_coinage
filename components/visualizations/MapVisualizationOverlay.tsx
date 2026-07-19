@@ -39,10 +39,25 @@ export const VISUALIZATION_TABS: {
   },
 ]
 
+// Mint Town and Find Site are separate routes, so switching tabs unmounts
+// and remounts this component — a plain useState default would reset the
+// panel closed every time. Mirroring the open/closed state into this
+// module-level variable (read only as the next mount's initial value)
+// makes it survive that remount within the same client session.
+let lastOpenState = false
+
 export function MapVisualizationOverlay({ children }: { children?: React.ReactNode }) {
   const pathname = usePathname()
   const { t } = useLanguage()
-  const [open, setOpen] = useState(false)
+  const [open, setOpenState] = useState(lastOpenState)
+
+  function setOpen(value: boolean | ((prev: boolean) => boolean)) {
+    setOpenState((prev) => {
+      const next = typeof value === 'function' ? value(prev) : value
+      lastOpenState = next
+      return next
+    })
+  }
 
   const active = VISUALIZATION_TABS.find((tab) => pathname.startsWith(tab.href)) ?? VISUALIZATION_TABS[0]
   const detail = t(active.detailKey)

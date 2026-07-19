@@ -17,6 +17,8 @@ export type FilterState = {
   mintsMode: FacetMode
   coinTypes: string[]
   coinTypesMode: FacetMode
+  inscriptions: string[]
+  inscriptionsMode: FacetMode
   states: string[]
   statesMode: FacetMode
   regions: string[]
@@ -74,6 +76,7 @@ export type FacetCategory =
   | 'precision'
   | 'mint'
   | 'coinType'
+  | 'inscription'
   | 'state'
   | 'region'
   | 'period'
@@ -93,10 +96,15 @@ export function getRegionLabels(site: Pick<SearchSite, 'province_zh' | 'city_zh'
   return labels
 }
 
-/** Coin type / subtype / inscription are merged into one facet, so a checked
- * value can come from any of the three granularities — check all of them. */
+/** Coin type / subtype are merged into one facet, so a checked value can
+ * come from either granularity — check both. Inscription is its own
+ * separate facet (siteInscriptionValues below), not merged in here. */
 export function siteCoinTypeValues(site: SearchSite): string[] {
-  return [...splitCsv(site.major_types_zh), ...splitCsv(site.minor_types_zh), ...splitCsv(site.inscriptions)]
+  return [...splitCsv(site.major_types_zh), ...splitCsv(site.minor_types_zh)]
+}
+
+export function siteInscriptionValues(site: SearchSite): string[] {
+  return splitCsv(site.inscriptions)
 }
 
 /** 'any' = at least one selected value present (OR); 'all' = every selected value present (AND). */
@@ -112,6 +120,8 @@ export function siteMatchesFilters(site: SearchSite, f: FilterState, skip?: Face
 
   if (skip !== 'mint' && !matchesFacet(splitCsv(site.mints_zh), f.mints, f.mintsMode)) return false
   if (skip !== 'coinType' && !matchesFacet(siteCoinTypeValues(site), f.coinTypes, f.coinTypesMode)) return false
+  if (skip !== 'inscription' && !matchesFacet(siteInscriptionValues(site), f.inscriptions, f.inscriptionsMode))
+    return false
   if (skip !== 'state' && !matchesFacet(splitCsv(site.states_zh), f.states, f.statesMode)) return false
   if (skip !== 'region' && f.regions.length > 0) {
     const labels = getRegionLabels(site)

@@ -64,7 +64,7 @@ export function MobileNav() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded border border-brand/20 bg-white py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-[1100] mt-2 w-48 rounded border border-brand/20 bg-white py-1 shadow-lg">
           <nav className="flex flex-col divide-y divide-brand/10 text-sm font-medium text-gray-700">
             {NAV_LINKS.map((link) => (
               <Link

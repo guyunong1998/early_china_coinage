@@ -152,7 +152,7 @@ a {
 .panel {
   background: var(--paper);
   border: 3px solid var(--brand);
-  /* box-shadow: var(--shadow); */
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 .panel .home-panel {
   background: var(--paper);
@@ -364,7 +364,7 @@ button:not(:disabled):hover {
 
 .filter-button{
   background: var(--brand-light);
-  color: var(--paper);
+  color: var(--brand);
   border-radius: var(--radius);
   transition: background-color 0.15s ease;
   width: 100%;
@@ -382,4 +382,39 @@ button:not(:disabled):hover {
   color: var(--brand-dark);
   border-radius: var(--radius) var(--radius) 0 0;
   width: 100%;
+}
+
+/* Collapsible panels built from .panel/.search-filter + .panel-header (a
+   native <details> for server-rendered accordions like coin-types'
+   "Related Finds", or SearchFiltersToggle's client-toggled button):
+   rounded on all four corners while collapsed, so the closed header reads
+   as one complete rounded shape, reverting to top-only once expanded to
+   match .panel-header's own always-top-rounded look. Every rule here is a
+   compound selector (.panel-collapsible plus whatever base class it's
+   paired with) specifically so it outranks .panel/.search-filter's own
+   radius rule on specificity alone — same-specificity + source-order was
+   fragile here since Tailwind's build can reorder/merge plain CSS blocks
+   relative to its own generated utilities. */
+.panel.panel-collapsible,
+.search-filter.panel-collapsible {
+  border-radius: var(--radius);
+}
+.panel.panel-collapsible[open],
+.panel.panel-collapsible.is-open,
+.search-filter.panel-collapsible[open],
+.search-filter.panel-collapsible.is-open {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.panel-collapsible > summary,
+.panel-collapsible > button {
+  border-radius: inherit;
+}
+/* SearchFiltersToggle forces its content always visible from 1440px up
+   regardless of `open`/`.is-open` — match that by forcing top-only
+   rounding there too, so it doesn't look "closed" once content can't
+   actually collapse. */
+@media (min-width: 1440px) {
+  .search-filter.panel-collapsible {
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
 }

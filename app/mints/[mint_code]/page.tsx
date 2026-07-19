@@ -98,9 +98,23 @@ export default async function MintDetailPage({ params }: PageProps) {
           </div>
           <div className="p-4">
             <dl>
-              <DetailRow labelKey="mintDetail.row.chineseName" value={mint.name_zh} />
-              <DetailRow labelKey="mintDetail.row.romanisation" value={mint.name_en} />
-              <DetailRow labelKey="mintDetail.row.state" value={`${mint.state_en} (${mint.state_zh})`} />
+              <DetailRow
+                labelKey="mintDetail.row.name"
+                value={
+                  <>
+                    {mint.name_zh}{' '}
+                    <span className="text-xs italic text-gray-400">({mint.name_en})</span>
+                  </>
+                }
+              />
+              <DetailRow
+                labelKey="mintDetail.row.coinsAndSites"
+                value={
+                  distribution.totalCoinCount > 0
+                    ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
+                    : '—'
+                }
+              />
               <DetailRow
                 labelKey="mintDetail.row.coinTypes"
                 value={
@@ -112,14 +126,6 @@ export default async function MintDetailPage({ params }: PageProps) {
               <DetailRow
                 labelKey="mintDetail.row.inscriptions"
                 value={distribution.inscriptions.length > 0 ? distribution.inscriptions.join('、') : '—'}
-              />
-              <DetailRow
-                labelKey="mintDetail.row.coinsAndSites"
-                value={
-                  distribution.totalCoinCount > 0
-                    ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
-                    : '—'
-                }
               />
             </dl>
           </div>

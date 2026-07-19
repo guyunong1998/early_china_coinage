@@ -105,6 +105,46 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
               labelKey="mintDetail.row.coinsAndSites"
               value={counts.coinCount > 0 ? `${counts.coinCount} coins across ${counts.siteCount} sites` : '—'}
             />
+            <DetailRow
+              labelKey="coinTypeDetail.row.mints"
+              value={
+                node.mints.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {node.mints.map((m) => (
+                      <span
+                        key={m.mint_zh}
+                        className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+                      >
+                        {m.mint_zh}
+                        {m.mint_en && <span className="italic text-brand/70"> ({m.mint_en})</span>}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  '—'
+                )
+              }
+            />
+            <DetailRow
+              labelKey="mintDetail.row.inscriptions"
+              value={
+                node.inscriptions.length > 0 ? (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {node.inscriptions.map((insc) => (
+                      <span key={insc.inscription_zh}>
+                        {insc.inscription_zh}
+                        {insc.inscription_en && insc.inscription_en !== insc.inscription_zh && (
+                          <span className="ml-1 text-xs italic text-gray-400">({insc.inscription_en})</span>
+                        )}
+                        {insc.mint_zh && <span className="ml-1 text-xs text-gray-400">— {insc.mint_zh}</span>}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  '—'
+                )
+              }
+            />
           </dl>
         </div>
       </section>
@@ -123,60 +163,26 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Inscriptions + Mints */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="panel overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <T k="mintDetail.row.inscriptions" />
-          </div>
-          <div className="p-4">
-            {node.inscriptions.length === 0 ? (
-              <p className="text-sm text-gray-500">—</p>
-            ) : (
-              <ul className="space-y-1 text-sm text-gray-800">
-                {node.inscriptions.map((insc) => (
-                  <li key={insc.inscription_zh}>
-                    {insc.inscription_zh}
-                    {insc.inscription_en && insc.inscription_en !== insc.inscription_zh && (
-                      <span className="ml-1.5 text-xs italic text-gray-400">({insc.inscription_en})</span>
-                    )}
-                    {insc.mint_zh && <span className="ml-1.5 text-xs text-gray-400">— {insc.mint_zh}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        <section className="panel overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <T k="coinTypeDetail.row.mints" />
-          </div>
-          <div className="p-4">
-            {node.mints.length === 0 ? (
-              <p className="text-sm text-gray-500">—</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {node.mints.map((m) => (
-                  <span
-                    key={m.mint_zh}
-                    className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
-                  >
-                    {m.mint_zh}
-                    {m.mint_en && <span className="italic text-brand/70"> ({m.mint_en})</span>}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* Related finds */}
+      {/* Issues — placeholder for now, no data source wired up yet */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeDetail.relatedFinds" />
+          <T k="coinTypeDetail.issues.title" />
         </div>
+        <div className="p-5">
+          <p className="text-sm italic text-gray-400">
+            <T k="coinTypeDetail.issues.placeholder" />
+          </p>
+        </div>
+      </section>
+
+      {/* Related finds — collapsible, closed by default */}
+      <details className="group panel panel-collapsible mt-6 overflow-hidden">
+        <summary className="panel-header flex list-none cursor-pointer items-center justify-between px-4 py-2 text-sm font-bold uppercase tracking-wide">
+          <T k="coinTypeDetail.relatedFinds" />
+          <span aria-hidden className="transition-transform group-open:rotate-180">
+            ▼
+          </span>
+        </summary>
         <div className="p-4">
           {relatedSites.length === 0 ? (
             <p className="text-sm text-gray-500">
@@ -212,7 +218,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             </div>
           )}
         </div>
-      </section>
+      </details>
 
       {/* Typology hierarchy — accordion, expanded down to this node */}
       <section className="panel mt-6 overflow-hidden">

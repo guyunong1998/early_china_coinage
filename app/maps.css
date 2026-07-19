@@ -179,8 +179,18 @@
   gap: 0.375rem;
 }
 
-.loc_precision_map-m{
-
+/* Mobile/tablet variant of the precision buttons row, rendered inline in
+   the filter panel (below `lg`) instead of floating top-right — scrolls
+   horizontally on narrow screens instead of wrapping, with the scrollbar
+   itself hidden across browsers. */
+.loc_precision_map-m {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.loc_precision_map-m::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .heatmap_legend{
