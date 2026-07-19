@@ -63,30 +63,34 @@ export function NavCards() {
             <Link
               key={card.labelKey}
               href={card.links[0].href}
-              className="panel-nav-card group flex flex-col px-5 py-4"
+              className="panel-nav-card group flex flex-col p-3"
             >
-              <CardBody card={card} />
-              <span className="mt-3 text-xs text-brand opacity-0 transition group-hover:opacity-100">
-                →
-              </span>
+              <div className="panel-nav-card-inner flex flex-1 flex-col px-4 py-3">
+                <CardBody card={card} />
+                <span className="mt-3 text-xs text-brand opacity-0 transition group-hover:opacity-100">
+                  →
+                </span>
+              </div>
             </Link>
           )
         }
 
         return (
-          <div key={card.labelKey} className="panel-nav-card flex flex-col px-5 py-4">
-            <CardBody card={card} />
-            <div className="mt-3 flex flex-col gap-1.5">
-              {card.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="group inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand hover:underline"
-                >
-                  <T k={link.labelKey} />
-                  <span className="opacity-0 transition group-hover:opacity-100">→</span>
-                </Link>
-              ))}
+          <div key={card.labelKey} className="panel-nav-card flex flex-col p-3">
+            <div className="panel-nav-card-inner flex flex-1 flex-col px-4 py-3">
+              <CardBody card={card} />
+              <div className="mt-3 flex flex-col gap-1.5">
+                {card.links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="group inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand hover:underline"
+                  >
+                    <T k={link.labelKey} />
+                    <span className="opacity-0 transition group-hover:opacity-100">→</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         )

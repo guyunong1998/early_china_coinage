@@ -8,9 +8,11 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
         <Link href="/" className="group flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
-            钱
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- plain
+              img keeps this a static, non-Next-Image-optimized asset load
+              for a small SVG whose intrinsic aspect ratio (tall, spade-coin
+              shaped) should drive its own width, not a fixed square box. */}
+          <img src="/coin.svg" alt="" className="h-10 w-auto shrink-0" />
           <div>
             <p className="title-en">
               Early Chinese Coin Finds

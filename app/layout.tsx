@@ -38,7 +38,11 @@ export const metadata: Metadata = {
   description:
     'A searchable database of pre-Qin to early Han coin discoveries across China.',
   icons: {
-    icon: '/coin.svg',
+    // `sizes: 'any'` tells the browser this SVG scales losslessly to
+    // whatever tab-icon resolution it needs, rather than assuming a small
+    // fixed raster size — the standard way to get a crisp, properly-sized
+    // favicon from a vector source.
+    icon: [{ url: '/coin.svg', type: 'image/svg+xml', sizes: 'any' }],
   },
 }
 

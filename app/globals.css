@@ -194,8 +194,15 @@ a {
   border: 3px solid var(--brand);
   /* border-radius: var(--radius); */
 }
+/* Homepage nav cards + the map-visualizations panel: a solid outer border,
+   with the dotted border that used to be on this same box now nested one
+   level in (.panel-nav-card-inner) — wrapping the card's own content, or
+   just the text/link column on the map panel (not the map itself). */
 .panel-nav-card{
   background: var(--paper);
+  border: 3px solid var(--brand);
+}
+.panel-nav-card-inner {
   border: 5px dotted var(--brand);
 }
 
