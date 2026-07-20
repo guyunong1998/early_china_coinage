@@ -3,6 +3,7 @@ import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
+import { getCoinTypeImagePaths, type CoinTypeImagePaths } from '@/lib/coin-images'
 import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
 
 export const metadata = {
@@ -23,6 +24,10 @@ export default async function CoinTypesPage() {
   // level1 (钱币 / 钱范) is a matching/grouping concept, not a browsable
   // card — the listing starts at level2.
   const cardNodes = nodes.filter((n) => n.level !== 'level1')
+  const imagesBySlug: Record<string, CoinTypeImagePaths> = {}
+  cardNodes.forEach((n) => {
+    imagesBySlug[n.slug] = getCoinTypeImagePaths(n.imgAccNum)
+  })
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -73,7 +78,7 @@ export default async function CoinTypesPage() {
 
       {/* Searchable list */}
       <div className="mt-8">
-        <CoinTypeListClient nodes={cardNodes} countsBySlug={countsBySlug} />
+        <CoinTypeListClient nodes={cardNodes} countsBySlug={countsBySlug} imagesBySlug={imagesBySlug} />
       </div>
     </div>
   )

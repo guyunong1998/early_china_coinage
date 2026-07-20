@@ -177,6 +177,8 @@ export default function CoinMap({
         )
       }
 
+      if (cancelled) return
+
       const candidateCounties = new Map<
         string,
         { countyZh: string; cityZh?: string | null; provinceZh?: string | null }
@@ -213,6 +215,7 @@ export default function CoinMap({
         )
       }
 
+      if (cancelled) return
       if (fitBounds && bounds.length > 0) {
         map.fitBounds(bounds, { padding: [30, 30] })
       } else if (highlightSiteCode) {

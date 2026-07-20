@@ -85,6 +85,7 @@ export type CoinTypeHierarchyRow = {
   level4_en: string | null
   level5_zh: string | null
   level5_en: string | null
+  img_acc_num: string | null
 }
 
 /**

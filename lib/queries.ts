@@ -460,7 +460,7 @@ export async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {
     supabase
       .from('coin_type_hierarchy')
       .select(
-        'id, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en'
+        'id, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en, img_acc_num'
       )
       .order('level2_zh')
       .range(from, to)

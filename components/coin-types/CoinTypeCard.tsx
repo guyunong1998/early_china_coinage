@@ -1,9 +1,11 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { T } from '@/components/i18n/T'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
 import { stateTagColor } from '@/lib/state-colors'
 import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
+import type { CoinTypeImagePaths } from '@/lib/coin-images'
 
 /** One typology node (L1–L4) as a card — mirrors MintListClient's card
  * shape/CSS (`panel`, tag styling, hover reveal) so the two list pages read
@@ -11,15 +13,41 @@ import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
 export function CoinTypeCard({
   node,
   counts,
+  images,
   isMould = false,
 }: {
   node: CoinTypeNode
   counts?: CoinTypeCounts
+  images?: CoinTypeImagePaths
   isMould?: boolean
 }) {
+  const panes = [
+    images?.obverseSrc ? { src: images.obverseSrc, key: 'obv' } : null,
+    images?.reverseSrc ? { src: images.reverseSrc, key: 'rev' } : null,
+  ].filter((p): p is { src: string; key: string } => p !== null)
+
   return (
     <Link href={`/coin-types/${node.slug}`} className="panel group flex flex-col p-5">
-      <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="h-28 w-full rounded" />
+      {panes.length > 0 ? (
+        <div className={`grid gap-1.5 ${panes.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {panes.map((pane) => (
+            <div
+              key={pane.key}
+              className="relative h-28 w-full overflow-hidden rounded border border-gray-200 bg-white"
+            >
+              <Image
+                src={pane.src}
+                alt={node.label_en}
+                width={300}
+                height={200}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="h-28 w-full rounded" />
+      )}
 
       <div className="mt-3 flex items-start justify-between gap-2">
         <h2 className="font-serif text-lg font-semibold text-gray-900 group-hover:text-brand">

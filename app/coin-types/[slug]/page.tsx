@@ -2,10 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DetailRow } from '@/components/ui/DetailRow'
 import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
+import { CoinTypeImages } from '@/components/coin-types/CoinTypeImages'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
+import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import {
   buildCoinTypeNodes,
   computeCoinTypeCounts,
@@ -60,6 +62,8 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   const node = getCoinTypeNodeBySlug(nodes, slug)
   if (!node) notFound()
 
+  const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum)
+
   const hierarchyIdByCode = new Map(coinIssues.map((c) => [c.coin_type_code, c.coin_type_hierarchy_id]))
   const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByCode)
 
@@ -93,7 +97,11 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         <MouldTag isMould={isMouldNode(node)} />
       </div>
 
-      <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="mt-4 h-56 w-full rounded" />
+      {obverseSrc || reverseSrc ? (
+        <CoinTypeImages obverseSrc={obverseSrc} reverseSrc={reverseSrc} accNum={node.imgAccNum} />
+      ) : (
+        <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="mt-4 h-56 w-full rounded" />
+      )}
 
       {/* Information card */}
       <section className="panel mt-4 overflow-hidden">

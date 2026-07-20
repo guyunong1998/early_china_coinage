@@ -598,6 +598,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           )
         }
 
+        if (cancelled) return
+
         const candidateCounties = new Map<
           string,
           { countyZh: string; cityZh?: string | null; provinceZh?: string | null }
@@ -658,6 +660,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       }
 
+      if (cancelled) return
       if (bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] })
     }
 

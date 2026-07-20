@@ -38,6 +38,10 @@ export type CoinTypeNode = {
   states: StateRef[]
   mints: MintRef[]
   inscriptions: InscriptionRef[]
+  /** img_acc_num from this node's own row (the one that doesn't subdivide
+   * any further), if a specimen was photographed for it — never sourced
+   * from a deeper descendant's row. */
+  imgAccNum: string | null
 }
 
 const LEVELS: CoinTypeLevel[] = ['level1', 'level2', 'level3', 'level4', 'level5']
@@ -88,6 +92,15 @@ function dedupeMints(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>):
     seen.set(zh, { mint_zh: zh, mint_en: c.mint_en })
   })
   return [...seen.values()].sort((a, b) => a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
+}
+
+/** img_acc_num from the row(s) that terminate exactly at this level — i.e.
+ * don't subdivide further — as opposed to a deeper descendant's row that
+ * happens to share `group.rows` with this node. */
+function ownImgAccNum(rows: CoinTypeHierarchyRow[], depthIndex: number): string | null {
+  const nextLevel = LEVELS[depthIndex + 1]
+  const ownRows = nextLevel ? rows.filter((r) => !zhOf(r, nextLevel)) : rows
+  return ownRows.find((r) => r.img_acc_num)?.img_acc_num ?? null
 }
 
 function dedupeInscriptions(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): InscriptionRef[] {
@@ -149,6 +162,7 @@ function buildLevel(
         states: dedupeStates(coinIssues, hierarchyIds),
         mints: dedupeMints(coinIssues, hierarchyIds),
         inscriptions: dedupeInscriptions(coinIssues, hierarchyIds),
+        imgAccNum: ownImgAccNum(group.rows, depthIndex),
       })
 
       if (depthIndex < LEVELS.length - 1) {

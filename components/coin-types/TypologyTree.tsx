@@ -52,7 +52,7 @@ function TreeNode({
 
   return (
     <details open={expandedSlugs.has(node.slug)} className="py-0.5">
-      <summary className="cursor-pointer list-outside py-0.5 marker:text-brand/50">{label}</summary>
+      <summary className="cursor-pointer list-outside py-0.5 pl-5 marker:text-brand/50">{label}</summary>
       <div className="ml-4 border-l border-brand/10 pl-3">
         {children.map((child) => (
           <TreeNode key={child.slug} nodes={nodes} node={child} currentSlug={currentSlug} expandedSlugs={expandedSlugs} />
