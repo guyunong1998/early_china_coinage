@@ -174,6 +174,8 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
         )
       }
 
+      if (cancelled) return
+
       const candidateCounties = new Map<
         string,
         { countyZh: string; cityZh?: string | null; provinceZh?: string | null }
@@ -210,6 +212,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
         )
       }
 
+      if (cancelled) return
       if (bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] })
     }
 

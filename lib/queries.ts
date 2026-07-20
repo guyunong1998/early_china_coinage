@@ -491,7 +491,7 @@ export async function getMints(): Promise<MintRow[]> {
 
 export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
   const rows = await fetchAllPages<{
-    coin_type_code: string | null
+    coin_issues: { coin_type_code: string } | { coin_type_code: string }[] | null
     context_code: string | null
     quantity_total: number | null
     quantity_min: number | null
@@ -502,7 +502,7 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
     supabase
       .from('finds')
       .select(
-        'coin_type_code, context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
+        'coin_issues(coin_type_code), context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
       )
       .order('find_code')
       .range(from, to)
@@ -510,8 +510,9 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
 
   return rows.map((row) => {
     const context = Array.isArray(row.contexts) ? row.contexts[0] : row.contexts
+    const coinIssue = one(row.coin_issues)
     return {
-      coin_type_code: row.coin_type_code,
+      coin_type_code: coinIssue?.coin_type_code ?? null,
       context_code: row.context_code,
       quantity_total: row.quantity_total,
       quantity_min: row.quantity_min,
@@ -592,7 +593,7 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   const { data: mintedIssueRows, error: coinError } = await supabase
     .from('coin_issues')
     .select(
-      'coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+      'id, coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
     )
     .in('mint_id', mintIds)
 
@@ -603,6 +604,7 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
 
   const mintedCoinTypes = (
     mintedIssueRows as Array<{
+      id: string
       coin_type_code: string
       mint_id: string | null
       inscriptions:
@@ -614,6 +616,7 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   ).map((row) => {
     const { major_zh, minor_zh } = deriveMajorMinor(row.coin_type_hierarchy)
     return {
+      id: row.id,
       coin_type_code: row.coin_type_code,
       major_type_zh: major_zh,
       minor_type_zh: minor_zh,
@@ -628,21 +631,21 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
     (a, b) => a.localeCompare(b, 'zh-CN')
   )
 
-  const coinTypeCodes = mintedCoinTypes.map((row) => row.coin_type_code).filter(Boolean)
-  if (coinTypeCodes.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions }
+  const coinIssueIds = mintedCoinTypes.map((row) => row.id).filter(Boolean)
+  if (coinIssueIds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions }
 
   const finds = await fetchAllPages<{
     find_code: string
     context_code: string
-    coin_type_code: string | null
+    coin_issues_id: string | null
     quantity_total: number | null
     quantity_estimated: number | null
     quantity_min: number | null
   }>((from, to) =>
     supabase
       .from('finds')
-      .select('find_code, context_code, coin_type_code, quantity_total, quantity_estimated, quantity_min')
-      .in('coin_type_code', coinTypeCodes)
+      .select('find_code, context_code, coin_issues_id, quantity_total, quantity_estimated, quantity_min')
+      .in('coin_issues_id', coinIssueIds)
       .order('find_code')
       .range(from, to)
   )
@@ -670,14 +673,14 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   const siteTypeSetMap = new Map<string, Set<string>>()
   const typeKeyToLabel = new Map<string, string>()
 
-  const codeToTypeRow = new Map(
-    mintedCoinTypes.map((row) => [row.coin_type_code, row] as const)
+  const idToTypeRow = new Map(
+    mintedCoinTypes.map((row) => [row.id, row] as const)
   )
 
   finds.forEach((find) => {
     const siteCode = contextToSite.get(find.context_code)
     if (!siteCode) return
-    const typeRow = codeToTypeRow.get(find.coin_type_code ?? '')
+    const typeRow = idToTypeRow.get(find.coin_issues_id ?? '')
     if (!typeRow) return
 
     const typeKey = buildTypeKey({
