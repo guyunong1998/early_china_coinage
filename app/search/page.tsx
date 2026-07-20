@@ -10,7 +10,7 @@ import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
 import { displayValue, formatNumber, splitCsv } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
-import { getAllSites, getCoinTypes, getFindsForHeatmap, searchSites } from '@/lib/queries'
+import { getAllSites, getCoinIssues, getFindsForHeatmap, searchSites } from '@/lib/queries'
 import type { HeatmapFind } from '@/lib/types'
 import {
   buildFacetOptions,
@@ -108,9 +108,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const currentPage = Math.max(1, Number(params.page) || 1)
 
-  const [baseResults, coinTypes, allFinds] = await Promise.all([
+  const [baseResults, coinIssues, allFinds] = await Promise.all([
     q ? searchSites(q) : getAllSites(),
-    getCoinTypes(),
+    getCoinIssues(),
     getFindsForHeatmap(),
   ])
 
@@ -119,7 +119,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const mintEnByZh = new Map<string, string>()
   const coinTypeEnByZh = new Map<string, string>()
   const stateEnByZh = new Map<string, string>()
-  coinTypes.forEach((c) => {
+  coinIssues.forEach((c) => {
     if (c.mint_zh && c.mint_en) mintEnByZh.set(c.mint_zh, c.mint_en)
     if (c.major_type_zh && c.major_type_en) coinTypeEnByZh.set(c.major_type_zh, c.major_type_en)
     if (c.minor_type_zh && c.minor_type_en) coinTypeEnByZh.set(c.minor_type_zh, c.minor_type_en)
@@ -194,7 +194,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   // breakdown) for the visible page — cheap since it's just an in-memory
   // group-by over the already-fetched finds, scoped to the 20 visible sites.
   const majorTypeByCode = new Map<string, { zh: string; en: string | null }>()
-  coinTypes.forEach((c) => {
+  coinIssues.forEach((c) => {
     if (c.major_type_zh) majorTypeByCode.set(c.coin_type_code, { zh: c.major_type_zh, en: c.major_type_en })
   })
   const visibleCodes = new Set(pageResults.map((s) => s.site_code))
@@ -409,7 +409,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                         </p>
                         <p>
                           <span className="font-semibold"><T k="search.field.coinType" /> </span>
-                          {formatCoinTypeBilingual(site.major_types_zh)}
+                          {formatCoinTypeBilingual(site.level2_types_zh)}
                         </p>
                         <p>
                           <span className="font-semibold"><T k="search.field.quantity" /> </span>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { CoinTypeCard } from '@/components/coin-types/CoinTypeCard'
-import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
+import { isMouldNode, type CoinTypeCounts, type CoinTypeNode } from '@/lib/coin-type-catalog'
 
 /** Searchable grid of coin-type cards — mirrors MintListClient's search bar
  * + grid so the two list pages read as one system. */
@@ -49,7 +49,7 @@ export function CoinTypeListClient({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((node) => (
-            <CoinTypeCard key={node.slug} node={node} counts={countsBySlug[node.slug]} />
+            <CoinTypeCard key={node.slug} node={node} counts={countsBySlug[node.slug]} isMould={isMouldNode(node)} />
           ))}
         </div>
       )}

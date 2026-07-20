@@ -260,6 +260,10 @@ export const DICTIONARY = {
   'visualizations.data.database': { en: 'Database finds', zh: '数据库记录' },
   'visualizations.mintHeatmapTitle': { en: 'Mint Production Heatmap', zh: '铸地产量热力图' },
   'visualizations.noMappedMints': { en: 'No mapped mint towns for this data source.', zh: '该数据来源暂无已定位铸地。' },
+  'visualizations.mintsPlotted': {
+    en: '{plotted} of {total} mint towns plotted (the rest have no coordinates yet).',
+    zh: '已标注 {plotted} / {total} 个铸地（其余暂无坐标）。',
+  },
   'visualizations.mintHeatmapCaption.database': {
     en: 'Circle size and intensity reflect the number of coins recorded in the database for each mint town. Only mints with mapped coordinates are shown.',
     zh: '圆圈大小与深浅反映数据库中各铸地记录的钱币数量。仅显示已定位坐标的铸地。',
@@ -302,6 +306,7 @@ export const DICTIONARY = {
   },
   'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
+  'map.filter.l0': { en: 'Category', zh: '类别' },
   'map.filter.l1': { en: 'Major category', zh: '大类' },
   'map.filter.l2': { en: 'Subcategory', zh: '中类' },
   'map.filter.l3': { en: 'Type', zh: '类型' },
@@ -366,10 +371,10 @@ export const DICTIONARY = {
     en: 'No description recorded yet for this coin type.',
     zh: '该币种暂无描述。',
   },
-  'coinTypeDetail.issues.title': { en: 'Issues', zh: '钱币品种' },
-  'coinTypeDetail.issues.placeholder': {
-    en: 'Individual coin issues will be listed here.',
-    zh: '具体钱币品种将在此列出。',
+  'coinTypeDetail.issues.title': { en: 'Coin Issues ({count})', zh: '钱币品种（{count}）' },
+  'coinTypeDetail.issues.noIssues': {
+    en: 'No coin issues catalogued yet under this type.',
+    zh: '该类型下暂无具体钱币品种记录。',
   },
   'coinTypeDetail.hierarchy': { en: 'Typology Hierarchy', zh: '类型学层级' },
   'coinTypeDetail.imagePlaceholder': { en: 'Coin image', zh: '钱币图片' },

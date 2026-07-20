@@ -1,21 +1,23 @@
-import { getMintByNameZh, getMintNameVariants, resolveMintNameZh } from '@/lib/mint-towns'
-import type { CoinType } from '@/lib/types'
-import { ALL_MINTS } from '@/lib/typology-data'
+import { getMintByNameZh } from '@/lib/mint-towns'
+import type { CoinIssueDisplay } from '@/lib/types'
 
 export type MintFilterOption = {
+  mint_id: string
   mint_zh: string
   mint_en: string | null
   state_zh: string | null
   state_en: string | null
-  /** Number of coin_types rows attributed to this mint (incl. aliases). */
+  /** Number of coin_issues rows attributed to this mint. */
   coinTypeCount: number
 }
 
-/** Mint options grounded in DB coin_types, consolidated by alias. */
-export function buildMintFilterOptions(coinTypes: CoinType[]): MintFilterOption[] {
+/** Mint options grounded in live coin_issues.mint_id — no alias table needed,
+ * since coin_issues already resolved each coin to a single mints row. */
+export function buildMintFilterOptions(coinIssues: CoinIssueDisplay[]): MintFilterOption[] {
   const groups = new Map<
     string,
     {
+      mint_zh: string
       mint_en: string | null
       state_zh: string | null
       state_en: string | null
@@ -23,16 +25,10 @@ export function buildMintFilterOptions(coinTypes: CoinType[]): MintFilterOption[
     }
   >()
 
-  const metaByCanonical = new Map<string, (typeof ALL_MINTS)[number]>()
-  ALL_MINTS.forEach((m) => {
-    metaByCanonical.set(resolveMintNameZh(m.mint_zh), m)
-  })
-
-  coinTypes.forEach((coin) => {
+  coinIssues.forEach((coin) => {
+    if (!coin.mint_id) return
     const zh = (coin.mint_zh ?? '').trim()
-    if (!zh) return
-    const key = resolveMintNameZh(zh)
-    const existing = groups.get(key)
+    const existing = groups.get(coin.mint_id)
     if (existing) {
       existing.coinTypeCount += 1
       if (!existing.mint_en && coin.mint_en) existing.mint_en = coin.mint_en
@@ -41,19 +37,20 @@ export function buildMintFilterOptions(coinTypes: CoinType[]): MintFilterOption[
       return
     }
 
-    const town = getMintByNameZh(zh)
-    const meta = metaByCanonical.get(key)
-    groups.set(key, {
-      mint_en: town?.name_en ?? meta?.mint_en ?? coin.mint_en ?? null,
-      state_zh: town?.state_zh ?? meta?.state_zh ?? coin.state_zh ?? null,
-      state_en: town?.state_en ?? meta?.state_en ?? coin.state_en ?? null,
+    const town = zh ? getMintByNameZh(zh) : undefined
+    groups.set(coin.mint_id, {
+      mint_zh: zh || town?.name_zh || '',
+      mint_en: town?.name_en ?? coin.mint_en ?? null,
+      state_zh: town?.state_zh ?? coin.state_zh ?? null,
+      state_en: town?.state_en ?? coin.state_en ?? null,
       coinTypeCount: 1,
     })
   })
 
   return [...groups.entries()]
-    .map(([mint_zh, g]) => ({
-      mint_zh,
+    .map(([mint_id, g]) => ({
+      mint_id,
+      mint_zh: g.mint_zh,
       mint_en: g.mint_en,
       state_zh: g.state_zh,
       state_en: g.state_en,
@@ -70,15 +67,9 @@ export function formatMintOptionLabel(opt: MintFilterOption): string {
 
 /** Returns matching coin_type_codes for a mint, or null when no mint is selected. */
 export function getMatchingCoinTypeCodesByMint(
-  coinTypes: CoinType[],
-  mintZh: string
+  coinIssues: CoinIssueDisplay[],
+  mintId: string
 ): Set<string> | null {
-  const trimmed = mintZh.trim()
-  if (!trimmed) return null
-  const variants = new Set(getMintNameVariants(trimmed))
-  return new Set(
-    coinTypes
-      .filter((c) => c.mint_zh && variants.has(c.mint_zh.trim()))
-      .map((c) => c.coin_type_code)
-  )
+  if (!mintId) return null
+  return new Set(coinIssues.filter((c) => c.mint_id === mintId).map((c) => c.coin_type_code))
 }

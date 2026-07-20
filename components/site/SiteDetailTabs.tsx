@@ -13,19 +13,19 @@ function findQuantity(find: Find) {
 /** Level 1 of the chart: coin type (major/minor type). */
 function coinTypeLabel(find: Find) {
   const zh =
-    find.coin_types?.minor_type_zh?.trim() ||
-    find.coin_types?.major_type_zh?.trim() ||
+    find.coin_issues?.minor_type_zh?.trim() ||
+    find.coin_issues?.major_type_zh?.trim() ||
     find.description_zh?.trim() ||
     'Unclassified'
-  const en = find.coin_types?.minor_type_en?.trim() || find.coin_types?.major_type_en?.trim() || null
+  const en = find.coin_issues?.minor_type_en?.trim() || find.coin_issues?.major_type_en?.trim() || null
   return { zh, en }
 }
 
 /** Level 2 of the chart: inscription, within its parent coin type. */
 function inscriptionLabel(find: Find) {
-  const raw = find.coin_types?.inscription?.trim()
+  const raw = find.coin_issues?.inscription?.trim()
   if (raw) {
-    return { zh: raw, en: find.coin_types?.inscription_en?.trim() || null }
+    return { zh: raw, en: find.coin_issues?.inscription_en?.trim() || null }
   }
   return { zh: '无铭文', en: 'No inscription recorded' }
 }
@@ -271,22 +271,22 @@ export function SiteDetailTabs({
                 <td className="py-2 pr-4 text-gray-500">{find.context_code}</td>
                 <td className="py-2 pr-4">
                   {bi(
-                    find.coin_types?.minor_type_zh ??
-                      find.coin_types?.major_type_zh ??
+                    find.coin_issues?.minor_type_zh ??
+                      find.coin_issues?.major_type_zh ??
                       find.description_zh,
-                    find.coin_types?.minor_type_en ??
-                      find.coin_types?.major_type_en ??
+                    find.coin_issues?.minor_type_en ??
+                      find.coin_issues?.major_type_en ??
                       find.description_en
                   )}
                 </td>
                 <td className="py-2 pr-4">
-                  {bi(find.coin_types?.inscription, find.coin_types?.inscription_en)}
+                  {bi(find.coin_issues?.inscription, find.coin_issues?.inscription_en)}
                 </td>
                 <td className="py-2 pr-4">
-                  {bi(find.coin_types?.state_zh, find.coin_types?.state_en)}
+                  {bi(find.coin_issues?.state_zh, find.coin_issues?.state_en)}
                 </td>
                 <td className="py-2 pr-4">
-                  {bi(find.coin_types?.mint_zh, find.coin_types?.mint_en)}
+                  {bi(find.coin_issues?.mint_zh, find.coin_issues?.mint_en)}
                 </td>
                 <td className="py-2 text-right tabular-nums">
                   {formatNumber(find.quantity_total ?? find.quantity_min ?? find.quantity_estimated)}

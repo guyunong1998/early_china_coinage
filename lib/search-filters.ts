@@ -45,7 +45,16 @@ export function parseSortOption(value: string | undefined): SortOption {
 export function sortSites<
   T extends Pick<
     SearchSite,
-    'site_name_zh' | 'province_zh' | 'total_quantity_for_map' | 'find_record_count' | 'major_types_zh' | 'states_zh'
+    | 'site_name_zh'
+    | 'province_zh'
+    | 'total_quantity_for_map'
+    | 'find_record_count'
+    | 'level1_types_zh'
+    | 'level2_types_zh'
+    | 'level3_types_zh'
+    | 'level4_types_zh'
+    | 'level5_types_zh'
+    | 'states_zh'
   >,
 >(sites: T[], sort: SortOption): T[] {
   const sorted = [...sites]
@@ -56,9 +65,16 @@ export function sortSites<
     case 'finds':
       sorted.sort((a, b) => (b.find_record_count ?? 0) - (a.find_record_count ?? 0))
       break
-    case 'coinTypes':
-      sorted.sort((a, b) => splitCsv(b.major_types_zh).length - splitCsv(a.major_types_zh).length)
+    case 'coinTypes': {
+      const count = (s: T) =>
+        splitCsv(s.level1_types_zh).length +
+        splitCsv(s.level2_types_zh).length +
+        splitCsv(s.level3_types_zh).length +
+        splitCsv(s.level4_types_zh).length +
+        splitCsv(s.level5_types_zh).length
+      sorted.sort((a, b) => count(b) - count(a))
       break
+    }
     case 'states':
       sorted.sort((a, b) => splitCsv(b.states_zh).length - splitCsv(a.states_zh).length)
       break
@@ -96,11 +112,17 @@ export function getRegionLabels(site: Pick<SearchSite, 'province_zh' | 'city_zh'
   return labels
 }
 
-/** Coin type / subtype are merged into one facet, so a checked value can
- * come from either granularity — check both. Inscription is its own
+/** All five typology levels are merged into one facet, so a checked value
+ * can come from any granularity — check all of them. Inscription is its own
  * separate facet (siteInscriptionValues below), not merged in here. */
 export function siteCoinTypeValues(site: SearchSite): string[] {
-  return [...splitCsv(site.major_types_zh), ...splitCsv(site.minor_types_zh)]
+  return [
+    ...splitCsv(site.level1_types_zh),
+    ...splitCsv(site.level2_types_zh),
+    ...splitCsv(site.level3_types_zh),
+    ...splitCsv(site.level4_types_zh),
+    ...splitCsv(site.level5_types_zh),
+  ]
 }
 
 export function siteInscriptionValues(site: SearchSite): string[] {

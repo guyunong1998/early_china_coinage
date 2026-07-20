@@ -4,7 +4,7 @@ import {
   parsePrecisionFilter,
   siteMatchesPrecisionFilter,
 } from '@/lib/city-boundaries'
-import { getCoinTypes, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
+import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
 
 type PageProps = {
   searchParams: Promise<{ precision?: string }>
@@ -20,9 +20,10 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
   const { precision: precisionParam } = await searchParams
   const currentPrecision = parsePrecisionFilter(precisionParam)
 
-  const [allSites, coinTypes, finds] = await Promise.all([
+  const [allSites, coinIssues, hierarchyRows, finds] = await Promise.all([
     getFindSpotsMapSites(),
-    getCoinTypes(),
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
     getFindsForHeatmap(),
   ])
 
@@ -33,7 +34,8 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
     <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
       <FindSpotsVisualization
         sites={sites}
-        coinTypes={coinTypes}
+        coinIssues={coinIssues}
+        hierarchyRows={hierarchyRows}
         finds={finds}
         currentPrecision={currentPrecision}
         precisionCounts={counts}

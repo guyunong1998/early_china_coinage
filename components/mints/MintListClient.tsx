@@ -4,11 +4,27 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
-import { searchMints } from '@/lib/mint-towns'
 import type { MintTown } from '@/lib/mint-towns'
 import { stateTagColor } from '@/lib/state-colors'
 
 type MintStats = { coinCount: number; siteCount: number }
+
+/** Searches the list actually being displayed (`all`), not the static
+ * MINT_TOWNS dossier list — `all` may include DB-only mints with no
+ * dossier entry, which would otherwise be unsearchable. */
+function filterMints(mints: MintTown[], query: string): MintTown[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return mints
+  return mints.filter(
+    (m) =>
+      m.name_en.toLowerCase().includes(q) ||
+      m.name_zh.includes(q) ||
+      m.state_en.toLowerCase().includes(q) ||
+      m.state_zh.includes(q) ||
+      m.modern_location_en.toLowerCase().includes(q) ||
+      m.coin_types.some((t) => t.toLowerCase().includes(q))
+  )
+}
 
 export function MintListClient({
   all,
@@ -19,7 +35,7 @@ export function MintListClient({
 }) {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
-  const results = query ? searchMints(query) : all
+  const results = query ? filterMints(all, query) : all
 
   return (
     <div>

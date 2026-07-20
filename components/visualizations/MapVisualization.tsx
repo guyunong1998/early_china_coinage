@@ -44,7 +44,7 @@ import {
   hasTypologyFilter,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
-import type { CoinType, HeatmapFind, MapSite } from '@/lib/types'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MapSite } from '@/lib/types'
 
 /* ── shared filter-panel pieces ─────────────────────────────────────────── */
 
@@ -158,13 +158,15 @@ function heatIntensity(state: SiteHeatState, totalQty: number): number | null {
 
 export function FindSpotsVisualization({
   sites,
-  coinTypes,
+  coinIssues,
+  hierarchyRows,
   finds,
   currentPrecision,
   precisionCounts,
 }: {
   sites: MapSite[]
-  coinTypes: CoinType[]
+  coinIssues: CoinIssueDisplay[]
+  hierarchyRows: CoinTypeHierarchyRow[]
   finds: HeatmapFind[]
   /** Precision (site/county/city) links re-fetch sites server-side via
    * searchParams, so the page filters `sites` and hands down only the
@@ -178,11 +180,11 @@ export function FindSpotsVisualization({
   const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [mintFilter, setMintFilter] = useState('')
 
-  const mintOptions = useMemo(() => buildMintFilterOptions(coinTypes), [coinTypes])
+  const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues), [coinIssues])
   const mintSelectOptions = useMemo(
     () =>
       mintOptions.map((m) => ({
-        value: m.mint_zh,
+        value: m.mint_id,
         label: formatMintOptionLabel(m),
         searchText: `${m.mint_zh} ${m.mint_en ?? ''} ${m.state_zh ?? ''} ${m.state_en ?? ''}`,
       })),
@@ -192,9 +194,9 @@ export function FindSpotsVisualization({
   const filterActive = mode === 'type' ? hasTypologyFilter(sel) : !!mintFilter
 
   const matchedCodes = useMemo(() => {
-    if (mode === 'mint') return getMatchingCoinTypeCodesByMint(coinTypes, mintFilter)
-    return getMatchingCoinTypeCodes(coinTypes, sel)
-  }, [mode, coinTypes, mintFilter, sel])
+    if (mode === 'mint') return getMatchingCoinTypeCodesByMint(coinIssues, mintFilter)
+    return getMatchingCoinTypeCodes(coinIssues, hierarchyRows, sel)
+  }, [mode, coinIssues, hierarchyRows, mintFilter, sel])
 
   const siteStates = useMemo(
     () =>
@@ -228,7 +230,8 @@ export function FindSpotsVisualization({
   // when we know where it is.
   const highlightMint = useMemo(() => {
     if (mode !== 'mint' || !mintFilter) return null
-    const town = getMintByNameZh(mintFilter)
+    const mintZh = mintOptions.find((m) => m.mint_id === mintFilter)?.mint_zh
+    const town = mintZh ? getMintByNameZh(mintZh) : undefined
     if (town?.lat == null || town?.lng == null) return null
     return {
       mint_zh: town.name_zh,
@@ -238,7 +241,7 @@ export function FindSpotsVisualization({
       lat: town.lat,
       lng: town.lng,
     }
-  }, [mode, mintFilter])
+  }, [mode, mintFilter, mintOptions])
 
   function clearFilters() {
     setSel(emptyTypologySelection())
@@ -277,8 +280,7 @@ export function FindSpotsVisualization({
       />
 
       <MapVisualizationOverlay>
-        <div className="space-y-2.5 max-h-[calc(100vh-2rem)]
-      overflow-y-auto">
+        <div className="space-y-2.5">
           {/* Below `lg` the floating top-right precision bar is hidden (no
               room next to this panel on narrow screens), so it lives here
               instead, inside the same collapsible dropdown. */}
@@ -309,7 +311,14 @@ export function FindSpotsVisualization({
           <SizeCalcHint viewMode={viewMode} />
 
           {mode === 'type' && (
-            <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList coinTypes={coinTypes} compact />
+            <TypologyFilterBar
+              sel={sel}
+              onChange={setSel}
+              showInscriptionList
+              hierarchyRows={hierarchyRows}
+              coinIssues={coinIssues}
+              compact
+            />
           )}
 
           {mode === 'mint' && (
@@ -406,10 +415,12 @@ export function FindSpotsVisualization({
 
 export function MintTownVisualization({
   finds,
-  coinTypes,
+  coinIssues,
+  hierarchyRows,
 }: {
   finds: HeatmapFind[]
-  coinTypes: CoinType[]
+  coinIssues: CoinIssueDisplay[]
+  hierarchyRows: CoinTypeHierarchyRow[]
 }) {
   // Only one data source exists today (database finds) — the toggle row is
   // kept (rather than collapsed away) so a future data source is just
@@ -420,17 +431,20 @@ export function MintTownVisualization({
 
   const filterActive = hasTypologyFilter(sel)
 
-  const matchedCodes = useMemo(() => getMatchingCoinTypeCodes(coinTypes, sel), [coinTypes, sel])
+  const matchedCodes = useMemo(
+    () => getMatchingCoinTypeCodes(coinIssues, hierarchyRows, sel),
+    [coinIssues, hierarchyRows, sel]
+  )
 
   // Every known mint town's full totals, regardless of the active filter —
   // this is both the plotted point list (always complete, like Find Site's
   // site list) and the "typical information" source for popups.
-  const totalStats = useMemo(() => computeMintStatsFromFinds(finds, coinTypes, null), [finds, coinTypes])
+  const totalStats = useMemo(() => computeMintStatsFromFinds(finds, coinIssues, null), [finds, coinIssues])
   // The same aggregation narrowed to the active filter, used only to read
   // off each mint's matched coin count.
   const matchedStats = useMemo(
-    () => computeMintStatsFromFinds(finds, coinTypes, matchedCodes),
-    [finds, coinTypes, matchedCodes]
+    () => computeMintStatsFromFinds(finds, coinIssues, matchedCodes),
+    [finds, coinIssues, matchedCodes]
   )
 
   const mintPoints = useMemo(() => toMintPoints(totalStats.mapped), [totalStats])
@@ -486,6 +500,14 @@ export function MintTownVisualization({
     return { foundCount, totalCount: mintPoints.length }
   }, [mintStates, mintPoints])
 
+  // Not every documented mint has known coordinates yet — this is separate
+  // from foundInSummary (which is about the active type/inscription filter,
+  // not about which mints could be geocoded at all).
+  const plottedSummary = useMemo(
+    () => ({ plotted: totalStats.mapped.length, total: totalStats.mapped.length + totalStats.unmapped.length }),
+    [totalStats]
+  )
+
   function clearFilters() {
     setSel(emptyTypologySelection())
   }
@@ -523,7 +545,20 @@ export function MintTownVisualization({
             <T k="map.filter.hintMintTown" />
           </p>
           <SizeCalcHint viewMode={viewMode} />
-          <TypologyFilterBar sel={sel} onChange={setSel} showInscriptionList coinTypes={coinTypes} compact />
+          <p className="text-sm text-gray-700">
+            <T
+              k="visualizations.mintsPlotted"
+              vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
+            />
+          </p>
+          <TypologyFilterBar
+            sel={sel}
+            onChange={setSel}
+            showInscriptionList
+            hierarchyRows={hierarchyRows}
+            coinIssues={coinIssues}
+            compact
+          />
 
           {mintPoints.length === 0 && (
             <p className="text-sm text-gray-700">

@@ -1,215 +1,163 @@
-import type { CoinType } from '@/lib/types'
-import { TYPOLOGY, type TypologyL1, type TypologyL2, type TypologyL3, type TypologyLeaf } from '@/lib/typology-data'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow } from '@/lib/types'
 import { splitCsv } from '@/lib/format'
 
+/**
+ * Selection through the live coin_type_hierarchy tree. level1 is a real,
+ * meaningful choice — NOT always '钱币' (Coin): '钱范' (Coin Mould) is its
+ * own top-level category with major/minor type one level shallower (see
+ * majorDepth below). level1..level5 hold the zh label chosen at each depth
+ * (empty string = unset; levels are meaningful only contiguously — level3
+ * is ignored unless level2 is also set, etc). inscriptionId is a
+ * coin_issues.inscription_id, not text, since that's already a stable id
+ * available on every coin.
+ */
 export type TypologyFilterSelection = {
-  l1: string
-  l2: string
-  l3: string
-  l4: string
-  inscription: string
+  level1: string
+  level2: string
+  level3: string
+  level4: string
+  level5: string
+  inscriptionId: string
 }
 
 export function emptyTypologySelection(): TypologyFilterSelection {
-  return { l1: '', l2: '', l3: '', l4: '', inscription: '' }
-}
-
-export function resolveTypologyPath(sel: TypologyFilterSelection) {
-  const l1 = TYPOLOGY.find((t) => t.label_en === sel.l1)
-  const l2 = l1?.children.find((t) => t.label_en === sel.l2)
-  const l3 = l2?.children.find((t) => t.label_en === sel.l3)
-  const l4 = l3?.children.find((t) => t.label_en === sel.l4)
-  return { l1, l2, l3, l4 }
-}
-
-/**
- * DB coin_types sometimes use slightly different Chinese labels than Typology.xlsx.
- * Map DB wording → canonical typology key before matching.
- */
-const DB_LABEL_ALIASES: Record<string, string> = {
-  大型尖足布: '大尖足布',
-  大型方足布: '大方足布',
-  大型圆足布: '大圆足布',
-  大型锐角布: '大锐角布',
-  大型平肩空首布: '大型平肩空首布',
-  大型耸肩空首布: '尖肩空首布',
-  耸肩空首布: '尖肩空首布',
-  '明刀（1-4式）': '明刀',
-  大型原始刀币: '原始大型刀币',
-}
-
-function normalizeLabel(value: string | null | undefined): string {
-  const trimmed = (value ?? '').trim()
-  if (!trimmed) return ''
-  return DB_LABEL_ALIASES[trimmed] ?? trimmed
-}
-
-function addLabel(set: Set<string>, ...values: Array<string | null | undefined>) {
-  values.forEach((v) => {
-    const n = normalizeLabel(v)
-    if (n) set.add(n)
-    const raw = (v ?? '').trim()
-    if (raw) set.add(raw)
-  })
-}
-
-function addL3Subtree(set: Set<string>, l3: TypologyL3) {
-  addLabel(set, l3.label_zh, l3.type_key)
-  l3.children.forEach((l4) => addLabel(set, l4.label_zh, l4.filter_key))
-}
-
-function addL2Subtree(set: Set<string>, l2: TypologyL2) {
-  addLabel(set, l2.label_zh, l2.type_key)
-  if (l2.children.length === 0) return
-  l2.children.forEach((l3) => addL3Subtree(set, l3))
-}
-
-function addL1Subtree(set: Set<string>, l1: TypologyL1) {
-  addLabel(set, l1.label_zh)
-  l1.children.forEach((l2) => addL2Subtree(set, l2))
-}
-
-/**
- * Chinese labels that may appear in coin_types.major_type_zh / minor_type_zh
- * (or site aggregate CSV fields) for the current typology selection.
- *
- * Broader selections include all descendant type keys so a DB row stored as
- * major=尖足布 still matches L1=布币.
- */
-export function collectMatchLabels(sel: TypologyFilterSelection): Set<string> {
-  const labels = new Set<string>()
-  const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
-  if (!l1) return labels
-
-  if (l4) {
-    addLabel(labels, l4.label_zh, l4.filter_key)
-    return labels
-  }
-  if (l3) {
-    addL3Subtree(labels, l3)
-    return labels
-  }
-  if (l2) {
-    addL2Subtree(labels, l2)
-    return labels
-  }
-  addL1Subtree(labels, l1)
-  return labels
-}
-
-/** @deprecated Prefer collectMatchLabels — kept for CoinFilterMap call sites during migration. */
-export function collectTypeKeys(sel: TypologyFilterSelection): Set<string> {
-  return collectMatchLabels(sel)
-}
-
-/** Every inscription entry across the whole typology tree, for when no
- * major category is selected yet — lets a user jump straight to filtering
- * by inscription without picking L1/L2/L3 first. */
-function getAllInscriptionEntries(): TypologyLeaf[] {
-  const entries: TypologyLeaf[] = []
-  TYPOLOGY.forEach((l1) => {
-    if (l1.children.length === 0) entries.push(...(l1.entries ?? []))
-    l1.children.forEach((l2) => {
-      if (l2.children.length === 0) entries.push(...(l2.entries ?? []))
-      l2.children.forEach((l3) => entries.push(...(l3.entries ?? [])))
-    })
-  })
-  return entries
-}
-
-export function getInscriptionEntries(sel: TypologyFilterSelection): TypologyLeaf[] {
-  const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
-  // L4 has no own inscription list; use parent L3 entries while L4 type filter still applies.
-  if (l4 || l3) return l3?.entries ?? []
-  if (l2 && l2.children.length === 0) return l2.entries ?? []
-  if (l2) return l2.children.flatMap((c) => c.entries ?? [])
-  // L1 leaf (e.g. Round Coin 圜钱): use entries attached on L1 if present
-  if (l1 && l1.children.length === 0) return l1.entries ?? []
-  if (l1) {
-    return (l1.children ?? []).flatMap((child) =>
-      child.children.length === 0
-        ? child.entries ?? []
-        : child.children.flatMap((c) => c.entries ?? [])
-    )
-  }
-  return getAllInscriptionEntries()
+  return { level1: '', level2: '', level3: '', level4: '', level5: '', inscriptionId: '' }
 }
 
 export function hasTypologyFilter(sel: TypologyFilterSelection): boolean {
-  return !!sel.l1 || !!sel.inscription
+  return !!sel.level1 || !!sel.inscriptionId
 }
 
-function coinTypeLabels(coin: Pick<CoinType, 'major_type_zh' | 'minor_type_zh'>): string[] {
-  return [coin.major_type_zh, coin.minor_type_zh]
-    .map((v) => (v ?? '').trim())
-    .filter(Boolean)
-}
+const LEVEL_KEYS: Array<keyof Pick<TypologyFilterSelection, 'level1' | 'level2' | 'level3' | 'level4' | 'level5'>> = [
+  'level1',
+  'level2',
+  'level3',
+  'level4',
+  'level5',
+]
 
-export function coinMatchesTypologyFilter(coin: CoinType, sel: TypologyFilterSelection): boolean {
-  if (!sel.l1) {
-    // No major category picked — an inscription alone is still a valid
-    // filter, matched directly with no category constraint.
-    if (!sel.inscription) return false
-    return (coin.inscription ?? '').trim() === sel.inscription
+/** A hierarchy row's own path, trimmed at the first unset level (level1 is
+ * never null; once a deeper level is null, every level below it is null
+ * too). */
+function rowPath(row: CoinTypeHierarchyRow): string[] {
+  const path: string[] = []
+  const values = [row.level1_zh, row.level2_zh, row.level3_zh, row.level4_zh, row.level5_zh]
+  for (const v of values) {
+    if (!v) break
+    path.push(v)
   }
+  return path
+}
 
-  const { l1 } = resolveTypologyPath(sel)
-  if (!l1) return false
+/** The selected path, stopping at the first unset level (selection is only
+ * meaningful contiguously from level1). */
+function selectionPath(sel: TypologyFilterSelection): string[] {
+  const path: string[] = []
+  for (const key of LEVEL_KEYS) {
+    const v = sel[key]
+    if (!v) break
+    path.push(v)
+  }
+  return path
+}
 
-  const matchLabels = collectMatchLabels(sel)
-  if (matchLabels.size === 0) return false
+function pathStartsWith(path: string[], prefix: string[]): boolean {
+  if (prefix.length > path.length) return false
+  return prefix.every((v, i) => path[i] === v)
+}
 
-  const typeOk = coinTypeLabels(coin).some((label) => {
-    if (matchLabels.has(label)) return true
-    return matchLabels.has(normalizeLabel(label))
+/**
+ * Every coin_type_hierarchy row id whose own path (a specific leaf, or a
+ * "generic bucket" row with trailing nulls) starts with the selected path —
+ * this single prefix rule covers both a node's own generic-bucket row (if
+ * one exists) and every deeper descendant, with no alias table needed:
+ * both the selection and the rows being matched come from the same table.
+ */
+export function getMatchingHierarchyIds(
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
+): Set<string> | null {
+  const prefix = selectionPath(sel)
+  if (prefix.length === 0) return null
+  const ids = new Set<string>()
+  hierarchyRows.forEach((row) => {
+    if (pathStartsWith(rowPath(row), prefix)) ids.add(row.id)
   })
-  if (!typeOk) return false
+  return ids
+}
 
-  if (sel.inscription) {
-    return (coin.inscription ?? '').trim() === sel.inscription
+export function coinMatchesTypologyFilter(
+  coin: Pick<CoinIssueDisplay, 'coin_type_hierarchy_id' | 'inscription_id'>,
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
+): boolean {
+  if (!sel.level1) {
+    if (!sel.inscriptionId) return false
+    return coin.inscription_id === sel.inscriptionId
   }
 
+  const matchedIds = getMatchingHierarchyIds(hierarchyRows, sel)
+  if (!matchedIds || !coin.coin_type_hierarchy_id || !matchedIds.has(coin.coin_type_hierarchy_id)) return false
+
+  if (sel.inscriptionId) return coin.inscription_id === sel.inscriptionId
   return true
 }
 
 /** Returns matching coin_type_codes, or null when no typology filter is active. */
 export function getMatchingCoinTypeCodes(
-  coinTypes: CoinType[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): Set<string> | null {
   if (!hasTypologyFilter(sel)) return null
   return new Set(
-    coinTypes.filter((c) => coinMatchesTypologyFilter(c, sel)).map((c) => c.coin_type_code)
+    coinIssues.filter((c) => coinMatchesTypologyFilter(c, hierarchyRows, sel)).map((c) => c.coin_type_code)
   )
 }
 
-/** Site-aggregate match for the homepage CoinFilterMap (CSV fields on MapSite). */
-export function siteMatchesTypologyFilter(
-  site: {
-    major_types_zh: string | null
-    minor_types_zh: string | null
-    inscriptions: string | null
-  },
-  sel: TypologyFilterSelection
-): boolean {
-  if (!sel.l1) {
-    // No major category picked — an inscription alone is still a valid
-    // filter, matched directly with no category constraint.
-    if (!sel.inscription) return false
-    return splitCsv(site.inscriptions).includes(sel.inscription)
+type SiteLevelFields = {
+  level1_types_zh: string | null
+  level2_types_zh: string | null
+  level3_types_zh: string | null
+  level4_types_zh: string | null
+  level5_types_zh: string | null
+  inscriptions: string | null
+}
+
+/** The deepest level set in `sel`, and its value — v_coin_map_sites carries
+ * one CSV column per level, so a selection at depth N is matched directly
+ * against that site's levelN_types_zh, no derivation needed. */
+function deepestSelectedLevel(sel: TypologyFilterSelection): { depth: 1 | 2 | 3 | 4 | 5; value: string } | null {
+  for (let i = LEVEL_KEYS.length - 1; i >= 0; i--) {
+    const value = sel[LEVEL_KEYS[i]]
+    if (value) return { depth: (i + 1) as 1 | 2 | 3 | 4 | 5, value }
   }
-  const { l1 } = resolveTypologyPath(sel)
-  if (!l1) return false
+  return null
+}
 
-  const matchLabels = collectMatchLabels(sel)
-  const siteLabels = [...splitCsv(site.major_types_zh), ...splitCsv(site.minor_types_zh)]
-  const typeOk = siteLabels.some(
-    (label) => matchLabels.has(label) || matchLabels.has(normalizeLabel(label))
-  )
-  if (!typeOk) return false
+/**
+ * Site-aggregate match for the homepage CoinFilterMap (CSV text fields on
+ * MapSite). Sites only carry text, not hierarchy ids, so an inscription-only
+ * selection needs its zh text resolved by the caller (from the same
+ * inscription option list the UI already fetched) and passed as
+ * `inscriptionZh`.
+ */
+export function siteMatchesTypologyFilter(
+  site: SiteLevelFields,
+  sel: TypologyFilterSelection,
+  inscriptionZh: string | null
+): boolean {
+  const deepest = deepestSelectedLevel(sel)
+  if (!deepest) {
+    if (!sel.inscriptionId) return false
+    return !!inscriptionZh && splitCsv(site.inscriptions).includes(inscriptionZh)
+  }
 
-  if (sel.inscription) {
-    return splitCsv(site.inscriptions).includes(sel.inscription)
+  const siteValues = splitCsv(site[`level${deepest.depth}_types_zh` as const])
+  if (!siteValues.includes(deepest.value)) return false
+
+  if (sel.inscriptionId) {
+    return !!inscriptionZh && splitCsv(site.inscriptions).includes(inscriptionZh)
   }
   return true
 }
@@ -220,92 +168,79 @@ export function optionLabel(en: string, zh: string, lang: 'en' | 'zh'): string {
   return en || zh
 }
 
-export function getL1Options(lang: 'en' | 'zh') {
-  return TYPOLOGY.map((l1) => ({
-    value: l1.label_en,
-    label: optionLabel(l1.label_en, l1.label_zh, lang),
-  }))
+export type HierarchyLevelOption = { value: string; label_zh: string; label_en: string }
+
+/** The selected path up to (but not including) `depth`, or null if a
+ * shallower level hasn't been picked yet (so this depth's options aren't
+ * meaningful yet). depth=1 always resolves to []. */
+function prefixUpTo(sel: TypologyFilterSelection, depth: 1 | 2 | 3 | 4 | 5): string[] | null {
+  const prefix: string[] = []
+  for (let i = 0; i < depth - 1; i++) {
+    const v = sel[LEVEL_KEYS[i]]
+    if (!v) return null
+    prefix.push(v)
+  }
+  return prefix
 }
 
-export function getL2Options(sel: TypologyFilterSelection, lang: 'en' | 'zh') {
-  const { l1 } = resolveTypologyPath(sel)
-  return (l1?.children ?? []).map((l2) => ({
-    value: l2.label_en,
-    label: optionLabel(l2.label_en, l2.label_zh, lang),
-  }))
-}
+/**
+ * Distinct (zh, en) label options at `depth` among hierarchy rows whose
+ * shallower levels match `sel` — the DB-backed replacement for the old
+ * static tree's getL1Options..getL4Options. depth=1 lists the top-level
+ * branches (钱币 / 钱范) with no selection required.
+ */
+export function getLevelOptions(
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection,
+  depth: 1 | 2 | 3 | 4 | 5
+): HierarchyLevelOption[] {
+  const prefix = prefixUpTo(sel, depth)
+  if (prefix === null) return []
 
-export function getL3Options(sel: TypologyFilterSelection, lang: 'en' | 'zh') {
-  const { l2 } = resolveTypologyPath(sel)
-  return (l2?.children ?? []).map((l3) => ({
-    value: l3.label_en,
-    label: optionLabel(l3.label_en, l3.label_zh, lang),
-  }))
-}
-
-export function getL4Options(sel: TypologyFilterSelection, lang: 'en' | 'zh') {
-  const { l3 } = resolveTypologyPath(sel)
-  return (l3?.children ?? []).map((l4) => ({
-    value: l4.label_en,
-    label: optionLabel(l4.label_en, l4.label_zh, lang),
-  }))
+  const zhKey = `level${depth}_zh` as const
+  const enKey = `level${depth}_en` as const
+  const seen = new Map<string, HierarchyLevelOption>()
+  hierarchyRows.forEach((row) => {
+    if (!pathStartsWith(rowPath(row), prefix)) return
+    const zh = row[zhKey]
+    if (!zh || seen.has(zh)) return
+    seen.set(zh, { value: zh, label_zh: zh, label_en: row[enKey] ?? zh })
+  })
+  return [...seen.values()].sort((a, b) => a.label_zh.localeCompare(b.label_zh, 'zh-CN'))
 }
 
 export type InscriptionOption = {
+  id: string
   zh: string
   en: string
   mint_zh: string | null
 }
 
 /**
- * Inscription choices for the current typology selection.
- * Falls back to DB coin_types when Typology.xlsx has no entries for this branch
- * (e.g. Round Coin 圜钱 is an L1 leaf with no 国别判断 rows).
+ * Inscription choices for the current type selection, live from coin_issues
+ * — dedupe by inscription_id among coins matching the current level1..level5
+ * selection (ignoring any inscription already picked, so the list always
+ * covers the whole type selection). With no type picked yet, every
+ * inscription across all coin_issues is offered, so a user can jump
+ * straight to filtering by inscription.
  */
 export function getInscriptionOptions(
-  sel: TypologyFilterSelection,
-  coinTypes?: CoinType[]
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
 ): InscriptionOption[] {
-  const seen = new Set<string>()
-  const fromTypology = getInscriptionEntries(sel)
-    .filter((e) => e.inscription_zh)
-    .filter((e) => {
-      if (seen.has(e.inscription_zh!)) return false
-      seen.add(e.inscription_zh!)
-      return true
-    })
-    .map((e) => ({
-      zh: e.inscription_zh!,
-      en: e.inscription_en ?? e.inscription_zh!,
-      mint_zh: e.mint_zh,
-    }))
-
-  if (fromTypology.length > 0 || !coinTypes?.length || !sel.l1) return fromTypology
-
-  // Type-only match (ignore inscription) so the list covers the whole selection
-  const typeOnly: TypologyFilterSelection = { ...sel, inscription: '' }
-  const fromDb: InscriptionOption[] = []
-  coinTypes.forEach((coin) => {
-    if (!coinMatchesTypologyFilter(coin, typeOnly)) return
-    const zh = (coin.inscription ?? '').trim()
-    if (!zh || seen.has(zh)) return
-    seen.add(zh)
-    fromDb.push({
-      zh,
-      en: (coin.inscription_en ?? zh).trim() || zh,
+  const typeOnly: TypologyFilterSelection = { ...sel, inscriptionId: '' }
+  const seen = new Map<string, InscriptionOption>()
+  coinIssues.forEach((coin) => {
+    if (!coin.inscription_id || !coin.inscription) return
+    if (sel.level1 && !coinMatchesTypologyFilter(coin, hierarchyRows, typeOnly)) return
+    if (seen.has(coin.inscription_id)) return
+    seen.set(coin.inscription_id, {
+      id: coin.inscription_id,
+      zh: coin.inscription,
+      en: coin.inscription_en ?? coin.inscription,
       mint_zh: coin.mint_zh,
     })
   })
-  return fromDb.sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
-}
-
-/** Deepest selected typology node label for display. */
-export function selectedTypologyLabel(sel: TypologyFilterSelection, lang: 'en' | 'zh'): string | null {
-  const { l1, l2, l3, l4 } = resolveTypologyPath(sel)
-  if (sel.inscription) return sel.inscription
-  if (l4) return optionLabel(l4.label_en, l4.label_zh, lang)
-  if (l3) return optionLabel(l3.label_en, l3.label_zh, lang)
-  if (l2) return optionLabel(l2.label_en, l2.label_zh, lang)
-  if (l1) return optionLabel(l1.label_en, l1.label_zh, lang)
-  return null
+  return [...seen.values()].sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
 }

@@ -208,7 +208,7 @@ function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): strin
   const cityEn = toEnglishName(site.city_zh, site.city_en)
   const countyZh = site.county_zh ?? '—'
   const countyEn = toEnglishName(site.county_zh, site.county_en)
-  const typeBilingual = formatCoinTypeBilingual(site.major_types_zh)
+  const typeBilingual = formatCoinTypeBilingual(site.level2_types_zh)
   const status = ratioStatusHtml(state, site.total_quantity_for_map ?? 0, t)
 
   return `
@@ -633,9 +633,13 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           )
         }
       } else {
-        const { mintPoints } = props
-        const maxQty = Math.max(...mintPoints.map((m) => m.totalQty), 1)
-        mintPoints.forEach((mint) => {
+        // Some mint towns have no known coordinates yet — plotting them
+        // would push NaN into fitBounds and break Leaflet's internal
+        // position tracking (the `_leaflet_pos` crash), so skip them here
+        // too even though callers are expected to have filtered already.
+        const plottableMints = props.mintPoints.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng))
+        const maxQty = Math.max(...plottableMints.map((m) => m.totalQty), 1)
+        plottableMints.forEach((mint) => {
           bounds.push([mint.lat, mint.lng])
 
           const size = siteSizeByQuantity(mint.totalQty, maxQty, sizeRange.min, sizeRange.max)

@@ -7,32 +7,38 @@ import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import {
-  COIN_TYPE_NODES,
+  buildCoinTypeNodes,
   computeCoinTypeCounts,
   getCoinTypeNodeBySlug,
+  isMouldNode,
   type CoinTypeLevel,
 } from '@/lib/coin-type-catalog'
-import { getCoinTypes, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
-import { getMatchingCoinTypeCodes } from '@/lib/typology-filter'
+import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
 
 type PageProps = {
   params: Promise<{ slug: string }>
 }
 
 const LEVEL_LABEL_KEY: Record<CoinTypeLevel, DictionaryKey> = {
-  l1: 'map.filter.l1',
-  l2: 'map.filter.l2',
-  l3: 'map.filter.l3',
-  l4: 'map.filter.l4',
+  level1: 'map.filter.l0',
+  level2: 'map.filter.l1',
+  level3: 'map.filter.l2',
+  level4: 'map.filter.l3',
+  level5: 'map.filter.l4',
 }
 
 export async function generateStaticParams() {
-  return COIN_TYPE_NODES.map((n) => ({ slug: n.slug }))
+  const hierarchyRows = await getCoinTypeHierarchy()
+  // Slugs/labels/parents don't depend on coinIssues — only states/mints/
+  // inscriptions dedup does, which generateStaticParams doesn't need.
+  const nodes = buildCoinTypeNodes(hierarchyRows, [])
+  return nodes.map((n) => ({ slug: n.slug }))
 }
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
-  const node = getCoinTypeNodeBySlug(slug)
+  const hierarchyRows = await getCoinTypeHierarchy()
+  const node = getCoinTypeNodeBySlug(buildCoinTypeNodes(hierarchyRows, []), slug)
   if (!node) return { title: 'Not found' }
   return {
     title: `${node.label_zh} ${node.label_en} | Coin Types`,
@@ -42,21 +48,29 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function CoinTypeDetailPage({ params }: PageProps) {
   const { slug } = await params
-  const node = getCoinTypeNodeBySlug(slug)
-  if (!node) notFound()
 
-  const [coinTypes, finds, sites] = await Promise.all([
-    getCoinTypes(),
+  const [coinIssues, hierarchyRows, finds, sites] = await Promise.all([
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
     getFindsForHeatmap(),
     getFindSpotsMapSites(),
   ])
 
-  const counts = computeCoinTypeCounts(node.sel, finds, coinTypes)
+  const nodes = buildCoinTypeNodes(hierarchyRows, coinIssues)
+  const node = getCoinTypeNodeBySlug(nodes, slug)
+  if (!node) notFound()
 
-  const matchedCodes = getMatchingCoinTypeCodes(coinTypes, node.sel)
+  const hierarchyIdByCode = new Map(coinIssues.map((c) => [c.coin_type_code, c.coin_type_hierarchy_id]))
+  const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByCode)
+
+  const matchedIds = new Set(node.matchedHierarchyIds)
+  const matchedCoinIssues = coinIssues
+    .filter((c) => c.coin_type_hierarchy_id && matchedIds.has(c.coin_type_hierarchy_id))
+    .sort((a, b) => a.coin_type_code.localeCompare(b.coin_type_code))
+  const matchedCodes = new Set(matchedCoinIssues.map((c) => c.coin_type_code))
   const matchedSiteCodes = new Set<string>()
   finds.forEach((f) => {
-    if (f.coin_type_code && matchedCodes?.has(f.coin_type_code) && f.site_code) {
+    if (f.coin_type_code && matchedCodes.has(f.coin_type_code) && f.site_code) {
       matchedSiteCodes.add(f.site_code)
     }
   })
@@ -76,7 +90,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         <h1 className="font-serif text-3xl font-semibold text-brand">
           {node.label_zh} <span className="text-xl font-normal text-gray-500">({node.label_en})</span>
         </h1>
-        <MouldTag />
+        <MouldTag isMould={isMouldNode(node)} />
       </div>
 
       <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="mt-4 h-56 w-full rounded" />
@@ -163,17 +177,61 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Issues — placeholder for now, no data source wired up yet */}
-      <section className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeDetail.issues.title" />
+      {/* Coin issues — collapsible, closed by default, same pattern as Related Finds */}
+      <details className="group panel panel-collapsible mt-6 overflow-hidden">
+        <summary className="panel-header flex list-none cursor-pointer items-center justify-between px-4 py-2 text-sm font-bold uppercase tracking-wide">
+          <T k="coinTypeDetail.issues.title" vars={{ count: matchedCoinIssues.length }} />
+          <span aria-hidden className="transition-transform group-open:rotate-180">
+            ▼
+          </span>
+        </summary>
+        <div className="p-4">
+          {matchedCoinIssues.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              <T k="coinTypeDetail.issues.noIssues" />
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                    <th className="py-2 pr-4">Code</th>
+                    <th className="py-2 pr-4">Type</th>
+                    <th className="py-2 pr-4">Inscription</th>
+                    <th className="py-2 pr-4">State</th>
+                    <th className="py-2 pr-4">Mint</th>
+                    <th className="py-2">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchedCoinIssues.map((issue) => (
+                    <tr key={issue.coin_type_code} className="border-b border-gray-50 align-top">
+                      <td className="py-2 pr-4 font-mono text-xs">{issue.coin_type_code}</td>
+                      <td className="py-2 pr-4 text-gray-600">
+                        {issue.minor_type_zh ?? issue.major_type_zh ?? '—'}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {issue.inscription ?? '—'}
+                        {issue.inscription_en && issue.inscription_en !== issue.inscription && (
+                          <span className="ml-1 text-xs italic text-gray-400">({issue.inscription_en})</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-600">{issue.state_zh ?? '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">
+                        {issue.mint_zh ?? '—'}
+                        {issue.mint_en && <span className="ml-1 text-xs italic text-gray-400">({issue.mint_en})</span>}
+                      </td>
+                      <td className="py-2 text-gray-600">
+                        {issue.description_zh ?? issue.description_en ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <div className="p-5">
-          <p className="text-sm italic text-gray-400">
-            <T k="coinTypeDetail.issues.placeholder" />
-          </p>
-        </div>
-      </section>
+      </details>
 
       {/* Related finds — collapsible, closed by default */}
       <details className="group panel panel-collapsible mt-6 overflow-hidden">
@@ -225,8 +283,8 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="coinTypeDetail.hierarchy" />
         </div>
-        <div className="p-4">
-          <TypologyTree currentSlug={node.slug} />
+        <div className="p-4 pl-8">
+          <TypologyTree nodes={nodes} currentSlug={node.slug} />
         </div>
       </section>
     </div>

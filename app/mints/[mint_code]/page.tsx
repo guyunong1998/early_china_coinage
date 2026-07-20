@@ -7,8 +7,8 @@ import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
 import { getMintDossierByCode } from '@/lib/mint-dossiers'
-import { getMintByCode } from '@/lib/mint-towns'
-import { getMintFindspotsData } from '@/lib/queries'
+import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
+import { getMintFindspotsData, getMints } from '@/lib/queries'
 
 type PageProps = {
   params: Promise<{ mint_code: string }>
@@ -16,17 +16,17 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps) {
   const { mint_code } = await params
-  const mint = getMintByCode(mint_code)
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(await getMints()), mint_code)
   if (!mint) return { title: 'Not found' }
   return {
     title: `${mint.name_zh} ${mint.name_en} | Mint Town Locations`,
-    description: mint.description_en,
+    description: mint.db_description_zh ?? mint.description_en,
   }
 }
 
 export default async function MintDetailPage({ params }: PageProps) {
   const { mint_code } = await params
-  const mint = getMintByCode(mint_code)
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(await getMints()), mint_code)
   if (!mint) notFound()
 
   const distribution = await getMintFindspotsData(mint.name_zh).catch(() => ({
@@ -38,6 +38,9 @@ export default async function MintDetailPage({ params }: PageProps) {
     siteCount: 0,
   }))
   const dossier = getMintDossierByCode(mint_code)
+
+  const descriptionZh = mint.db_description_zh ?? dossier?.description_zh ?? null
+  const descriptionEn = mint.description_en || dossier?.description_en || null
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -132,25 +135,24 @@ export default async function MintDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      {/* Description — dossier takes priority; falls back to mint.description_en */}
+      {/* Description — Supabase mints table takes priority; the local
+          dossier (lib/mint-dossiers.ts) fills in gaps and supplies the
+          location note / coin-types-from-document / source-doc lines it
+          alone carries. */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mintDetail.description" />
         </div>
         <div className="space-y-3 p-5">
-          {dossier?.description_zh && (
-            <p className="leading-7 text-gray-800">{dossier.description_zh}</p>
-          )}
-          {dossier?.description_en ? (
-            <p className="leading-7 italic text-gray-600">{dossier.description_en}</p>
-          ) : mint.description_en ? (
-            <p className="leading-7 text-gray-800">{mint.description_en}</p>
+          {descriptionZh && <p className="leading-7 text-gray-800">{descriptionZh}</p>}
+          {descriptionEn ? (
+            <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
           ) : (
             <p className="text-sm italic text-gray-400">
               No English description available yet in the source document.
             </p>
           )}
-          {!dossier?.description_zh && !dossier?.description_en && !mint.description_en && (
+          {!descriptionZh && !descriptionEn && (
             <p className="text-sm italic text-gray-400">
               No description recorded yet for this mint town.
             </p>
@@ -158,6 +160,11 @@ export default async function MintDetailPage({ params }: PageProps) {
           {dossier?.location_note && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded">
               ⚠ {dossier.location_note}
+            </p>
+          )}
+          {mint.citation && (
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Citation:</span> {mint.citation}
             </p>
           )}
           {dossier?.coin_types && dossier.coin_types.length > 0 && (
@@ -273,10 +280,11 @@ export default async function MintDetailPage({ params }: PageProps) {
 
       {/* Editing note */}
       <p className="mt-4 text-xs text-gray-400">
-        To update descriptions, references, or images, edit{' '}
-        <code className="font-mono">lib/mint-dossiers.ts</code> (research content) and{' '}
-        <code className="font-mono">lib/mint-towns.ts</code> (core data). Place images under{' '}
-        <code className="font-mono">public/images/mints/</code>.
+        Geolocation, description, and citation now come from the{' '}
+        <code className="font-mono">mints</code> table in Supabase. To add supplementary content not
+        yet in Supabase (images, additional references, coin types, location notes), edit{' '}
+        <code className="font-mono">lib/mint-dossiers.ts</code> / <code className="font-mono">lib/mint-towns.ts</code>{' '}
+        and place image files under <code className="font-mono">public/images/mints/</code>.
       </p>
     </div>
   )

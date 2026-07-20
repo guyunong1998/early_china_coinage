@@ -1,5 +1,5 @@
 import { MintTownVisualization } from '@/components/visualizations/MapVisualization'
-import { getCoinTypes, getFindsForHeatmap } from '@/lib/queries'
+import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap } from '@/lib/queries'
 
 export const metadata = {
   title: 'Mint Town Visualization | Early Chinese Coin Finds',
@@ -7,11 +7,15 @@ export const metadata = {
 }
 
 export default async function MintTownVisualizationPage() {
-  const [coinTypes, finds] = await Promise.all([getCoinTypes(), getFindsForHeatmap()])
+  const [coinIssues, hierarchyRows, finds] = await Promise.all([
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
+    getFindsForHeatmap(),
+  ])
 
   return (
     <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
-      <MintTownVisualization finds={finds} coinTypes={coinTypes} />
+      <MintTownVisualization finds={finds} coinIssues={coinIssues} hierarchyRows={hierarchyRows} />
     </div>
   )
 }

@@ -17,8 +17,11 @@ export type MapSite = {
   site_type_en: string | null
   find_record_count: number | null
   total_quantity_for_map: number | null
-  major_types_zh: string | null
-  minor_types_zh: string | null
+  level1_types_zh: string | null
+  level2_types_zh: string | null
+  level3_types_zh: string | null
+  level4_types_zh: string | null
+  level5_types_zh: string | null
   inscriptions: string | null
   states_zh: string | null
   mints_zh: string | null
@@ -70,6 +73,46 @@ export type CoinType = {
   description_en: string | null
 }
 
+export type CoinTypeHierarchyRow = {
+  id: string
+  level1_zh: string | null
+  level1_en: string | null
+  level2_zh: string | null
+  level2_en: string | null
+  level3_zh: string | null
+  level3_en: string | null
+  level4_zh: string | null
+  level4_en: string | null
+  level5_zh: string | null
+  level5_en: string | null
+}
+
+/**
+ * Flattened view of a coin_issues row joined to mints/states/inscriptions/
+ * coin_type_hierarchy — same shape as the old CoinType (for display call
+ * sites that only read text) plus the FK ids (for matching call sites,
+ * see lib/typology-filter.ts and lib/mint-filter.ts).
+ */
+export type CoinIssueDisplay = {
+  coin_type_code: string
+  major_type_zh: string | null
+  major_type_en: string | null
+  minor_type_zh: string | null
+  minor_type_en: string | null
+  inscription: string | null
+  inscription_en: string | null
+  mint_zh: string | null
+  mint_en: string | null
+  state_zh: string | null
+  state_en: string | null
+  description_zh: string | null
+  description_en: string | null
+  mint_id: string | null
+  state_id: string | null
+  inscription_id: string | null
+  coin_type_hierarchy_id: string | null
+}
+
 export type Find = {
   id: string
   find_code: string
@@ -87,7 +130,7 @@ export type Find = {
   description_zh: string | null
   description_en: string | null
   note_zh: string | null
-  coin_types: CoinType | null
+  coin_issues: CoinIssueDisplay | null
 }
 
 export type Source = {

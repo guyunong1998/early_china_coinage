@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
-import { COIN_TYPE_NODES, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
-import { getCoinTypes, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
+import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
+import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
 
 export const metadata = {
   title: 'Coin Types | Early Chinese Coin Finds',
@@ -11,13 +11,18 @@ export const metadata = {
 }
 
 export default async function CoinTypesPage() {
-  const [sites, coinTypes, finds] = await Promise.all([
+  const [sites, coinIssues, hierarchyRows, finds] = await Promise.all([
     getFindSpotsMapSites(),
-    getCoinTypes(),
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
     getFindsForHeatmap(),
   ])
 
-  const countsBySlug = computeAllCoinTypeCounts(finds, coinTypes)
+  const nodes = buildCoinTypeNodes(hierarchyRows, coinIssues)
+  const countsBySlug = computeAllCoinTypeCounts(nodes, finds, coinIssues)
+  // level1 (钱币 / 钱范) is a matching/grouping concept, not a browsable
+  // card — the listing starts at level2.
+  const cardNodes = nodes.filter((n) => n.level !== 'level1')
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -26,7 +31,7 @@ export default async function CoinTypesPage() {
           <T k="nav.coinTypes" />
         </h1>
         <p className="mt-1 text-sm text-gray-600">
-          {COIN_TYPE_NODES.length} coin types documented, grouped by the typology hierarchy.
+          {cardNodes.length} coin types documented, grouped by the typology hierarchy.
         </p>
       </div>
 
@@ -68,7 +73,7 @@ export default async function CoinTypesPage() {
 
       {/* Searchable list */}
       <div className="mt-8">
-        <CoinTypeListClient nodes={COIN_TYPE_NODES} countsBySlug={countsBySlug} />
+        <CoinTypeListClient nodes={cardNodes} countsBySlug={countsBySlug} />
       </div>
     </div>
   )

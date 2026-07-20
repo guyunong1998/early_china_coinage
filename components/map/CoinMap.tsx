@@ -127,7 +127,7 @@ export default function CoinMap({
         const cityEn = toEnglishName(site.city_zh, site.city_en)
         const countyZh = site.county_zh ?? '—'
         const countyEn = toEnglishName(site.county_zh, site.county_en)
-        const typeBilingual = formatCoinTypeBilingual(site.major_types_zh)
+        const typeBilingual = formatCoinTypeBilingual(site.level2_types_zh)
 
         marker.bindPopup(`
           <div style="min-width:250px;font-family:sans-serif;font-size:12.5px;line-height:1.6">

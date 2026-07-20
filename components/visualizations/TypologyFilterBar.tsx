@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * Not a map itself — the coin-type filter control (major category / sub-
- * category / type / variant / inscription dropdowns).
+ * Not a map itself — the coin-type filter control (category / major
+ * category / subcategory / type / variant / inscription dropdowns), backed
+ * by the live coin_type_hierarchy table.
  *
  * Used by: FindSpotsVisualization and MintTownVisualization in
  * components/visualizations/MapVisualization.tsx (the find-site and
@@ -10,96 +11,104 @@
  */
 
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import {
   emptyTypologySelection,
   getInscriptionOptions,
-  getL1Options,
-  getL2Options,
-  getL3Options,
-  getL4Options,
+  getLevelOptions,
+  optionLabel,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
-import type { CoinType } from '@/lib/types'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow } from '@/lib/types'
 
 type TypologyFilterBarProps = {
   sel: TypologyFilterSelection
   onChange: (sel: TypologyFilterSelection) => void
   /** Show inscription list below dropdowns (find spots page). */
   showInscriptionList?: boolean
-  /**
-   * When Typology.xlsx has no inscription rows for a leaf category
-   * (e.g. Round Coin), options are taken from these DB coin types.
-   */
-  coinTypes?: CoinType[]
+  hierarchyRows: CoinTypeHierarchyRow[]
+  coinIssues: CoinIssueDisplay[]
   compact?: boolean
 }
+
+const LEVEL_DICT_KEY: DictionaryKey[] = [
+  'map.filter.l0',
+  'map.filter.l1',
+  'map.filter.l2',
+  'map.filter.l3',
+  'map.filter.l4',
+]
 
 export function TypologyFilterBar({
   sel,
   onChange,
-  showInscriptionList = false,
-  coinTypes,
+  hierarchyRows,
+  coinIssues,
   compact = false,
 }: TypologyFilterBarProps) {
   const { lang, t } = useLanguage()
 
-  const l1Options = getL1Options(lang)
-  const l2Options = getL2Options(sel, lang)
-  const l3Options = getL3Options(sel, lang)
-  const l4Options = getL4Options(sel, lang)
-  const inscriptionOptions = getInscriptionOptions(sel, coinTypes)
+  const level1Options = getLevelOptions(hierarchyRows, sel, 1)
+  const level2Options = getLevelOptions(hierarchyRows, sel, 2)
+  const level3Options = getLevelOptions(hierarchyRows, sel, 3)
+  const level4Options = getLevelOptions(hierarchyRows, sel, 4)
+  const level5Options = getLevelOptions(hierarchyRows, sel, 5)
+  const inscriptionOptions = getInscriptionOptions(coinIssues, hierarchyRows, sel)
 
-  // Shown as soon as a major category is picked — not gated behind also
-  // drilling into subcategory/type/variant first, since a given inscription
-  // can span multiple of those sub-branches under the same category.
-  // const showInscriptions = showInscriptionList && inscriptionOptions.length > 0 && !!sel.l1
-  const showInscriptions = true;
+  const toOptions = (opts: { value: string; label_zh: string; label_en: string }[]) =>
+    opts.map((o) => ({ value: o.value, label: optionLabel(o.label_en, o.label_zh, lang) }))
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <div className="flex flex-wrap items-start gap-2.5">
         <FilterSelect
-          label={t('map.filter.l1')}
-          value={sel.l1}
-          options={l1Options}
-          onChange={(v) => onChange({ ...emptyTypologySelection(), l1: v, inscription: sel.inscription })}
+          label={t(LEVEL_DICT_KEY[0])}
+          value={sel.level1}
+          options={toOptions(level1Options)}
+          onChange={(v) => onChange({ ...emptyTypologySelection(), level1: v, inscriptionId: sel.inscriptionId })}
         />
-        {sel.l1 && l2Options.length > 0 && (
+        {sel.level1 && level2Options.length > 0 && (
           <FilterSelect
-            label={t('map.filter.l2')}
-            value={sel.l2}
-            options={l2Options}
-            onChange={(v) => onChange({ ...sel, l2: v, l3: '', l4: '' })}
+            label={t(LEVEL_DICT_KEY[1])}
+            value={sel.level2}
+            options={toOptions(level2Options)}
+            onChange={(v) => onChange({ ...sel, level2: v, level3: '', level4: '', level5: '' })}
           />
         )}
-        {sel.l2 && l3Options.length > 0 && (
+        {sel.level2 && level3Options.length > 0 && (
           <FilterSelect
-            label={t('map.filter.l3')}
-            value={sel.l3}
-            options={l3Options}
-            onChange={(v) => onChange({ ...sel, l3: v, l4: '' })}
+            label={t(LEVEL_DICT_KEY[2])}
+            value={sel.level3}
+            options={toOptions(level3Options)}
+            onChange={(v) => onChange({ ...sel, level3: v, level4: '', level5: '' })}
           />
         )}
-        {sel.l3 && l4Options.length > 0 && (
+        {sel.level3 && level4Options.length > 0 && (
           <FilterSelect
-            label={t('map.filter.l4')}
-            value={sel.l4}
-            options={l4Options}
-            onChange={(v) => onChange({ ...sel, l4: v })}
+            label={t(LEVEL_DICT_KEY[3])}
+            value={sel.level4}
+            options={toOptions(level4Options)}
+            onChange={(v) => onChange({ ...sel, level4: v, level5: '' })}
+          />
+        )}
+        {sel.level4 && level5Options.length > 0 && (
+          <FilterSelect
+            label={t(LEVEL_DICT_KEY[4])}
+            value={sel.level5}
+            options={toOptions(level5Options)}
+            onChange={(v) => onChange({ ...sel, level5: v })}
           />
         )}
 
-        {showInscriptions && (
-          <FilterSelect
-            label={t('map.filter.inscription', { count: inscriptionOptions.length })}
-            value={sel.inscription}
-            options={inscriptionOptions.map((e) => ({
-              value: e.zh,
-              label: formatInscriptionOptionLabel(e),
-            }))}
-            onChange={(v) => onChange({ ...sel, inscription: v })}
-          />
-        )}
+        <FilterSelect
+          label={t('map.filter.inscription', { count: inscriptionOptions.length })}
+          value={sel.inscriptionId}
+          options={inscriptionOptions.map((e) => ({
+            value: e.id,
+            label: formatInscriptionOptionLabel(e),
+          }))}
+          onChange={(v) => onChange({ ...sel, inscriptionId: v })}
+        />
       </div>
     </div>
   )

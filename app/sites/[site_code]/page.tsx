@@ -38,9 +38,9 @@ function findQuantity(find: Find) {
 
 function coinTypeLabel(find: Find) {
   return (
-    find.coin_types?.inscription?.trim() ||
-    find.coin_types?.minor_type_zh?.trim() ||
-    find.coin_types?.major_type_zh?.trim() ||
+    find.coin_issues?.inscription?.trim() ||
+    find.coin_issues?.minor_type_zh?.trim() ||
+    find.coin_issues?.major_type_zh?.trim() ||
     find.description_zh?.trim() ||
     null
   )
@@ -62,13 +62,13 @@ function buildMintOrigins(finds: Find[]): {
   const groups = new Map<string, MintOriginGroup>()
 
   finds.forEach((find) => {
-    const mintZh = find.coin_types?.mint_zh?.trim() ?? ''
+    const mintZh = find.coin_issues?.mint_zh?.trim() ?? ''
     if (UNKNOWN_MINT_TOKENS.includes(mintZh.toLowerCase())) return
 
     if (!groups.has(mintZh)) {
       groups.set(mintZh, {
         mint_zh: mintZh,
-        mint_en: find.coin_types?.mint_en ?? null,
+        mint_en: find.coin_issues?.mint_en ?? null,
         quantity: 0,
         findCount: 0,
         coinTypes: new Set(),
@@ -289,8 +289,11 @@ export default async function SitePage({ params }: PageProps) {
         <DataCard title="Record Classification">
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
-              <Row labelKey="siteTabs.row.majorTypes">{bi(summary?.major_types_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.minorTypes">{bi(summary?.minor_types_zh, null)}</Row>
+              <Row labelKey="map.filter.l0">{bi(summary?.level1_types_zh, null)}</Row>
+              <Row labelKey="map.filter.l1">{bi(summary?.level2_types_zh, null)}</Row>
+              <Row labelKey="map.filter.l2">{bi(summary?.level3_types_zh, null)}</Row>
+              <Row labelKey="map.filter.l3">{bi(summary?.level4_types_zh, null)}</Row>
+              <Row labelKey="map.filter.l4">{bi(summary?.level5_types_zh, null)}</Row>
               <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, null)}</Row>
             </dl>
             <dl>

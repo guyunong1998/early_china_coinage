@@ -1,11 +1,124 @@
 import { splitCsv } from '@/lib/format'
+import { getMintNameVariants } from '@/lib/mint-towns'
 import { supabase } from '@/lib/supabase'
-import type { Context, CoinType, DatabaseStats, Find, HeatmapFind, MapSite, Site, Source } from '@/lib/types'
+import type {
+  CoinIssueDisplay,
+  CoinTypeHierarchyRow,
+  Context,
+  DatabaseStats,
+  Find,
+  HeatmapFind,
+  MapSite,
+  Site,
+  Source,
+} from '@/lib/types'
 
 const MAP_SITE_FIELDS =
-  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, major_types_zh, minor_types_zh, inscriptions, states_zh, mints_zh'
+  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, inscriptions, states_zh, mints_zh'
 
 export type SearchSite = MapSite & { period_zh: string | null; period_en: string | null }
+
+/** Without generated Database types, supabase-js/postgrest-js can't always
+ * infer a to-one embed's cardinality from the select string alone and
+ * sometimes types it as an array — same ambiguity getFindsForHeatmap's
+ * `contexts` field below already works around. Normalizes either shape to a
+ * single row. */
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
+
+type CoinTypeHierarchyFields = {
+  level1_zh: string | null
+  level1_en: string | null
+  level2_zh: string | null
+  level2_en: string | null
+  level3_zh: string | null
+  level3_en: string | null
+  level4_zh: string | null
+  level4_en: string | null
+  level5_zh: string | null
+  level5_en: string | null
+}
+
+/** Raw shape of a coin_type_hierarchy embed as returned by PostgREST. */
+type CoinTypeHierarchyEmbed = CoinTypeHierarchyFields | CoinTypeHierarchyFields[] | null
+
+/**
+ * coin_type_hierarchy.level1_zh isn't a single fixed root — it's '钱币' for
+ * ordinary coins (major type one level down, at level2) but also '钱范'
+ * (coin moulds) as its own top-level category (major type is level1
+ * itself). Derive "major/minor type" text accordingly rather than assuming
+ * level1 is always '钱币'.
+ */
+function deriveMajorMinor(cthRaw: CoinTypeHierarchyEmbed) {
+  const cth = one(cthRaw)
+  if (!cth) return { major_zh: null, major_en: null, minor_zh: null, minor_en: null }
+  const isCoin = cth.level1_zh === '钱币'
+  return {
+    major_zh: isCoin ? cth.level2_zh : cth.level1_zh,
+    major_en: isCoin ? cth.level2_en : cth.level1_en,
+    minor_zh: isCoin
+      ? cth.level5_zh ?? cth.level4_zh ?? cth.level3_zh ?? null
+      : cth.level5_zh ?? cth.level4_zh ?? cth.level3_zh ?? cth.level2_zh ?? null,
+    minor_en: isCoin
+      ? cth.level5_en ?? cth.level4_en ?? cth.level3_en ?? null
+      : cth.level5_en ?? cth.level4_en ?? cth.level3_en ?? cth.level2_en ?? null,
+  }
+}
+
+/** Raw shape of a coin_issues row joined to its four FK tables, as returned
+ * by PostgREST — the embed shape used both for `.from('coin_issues')` and
+ * for `.from('finds').select('*, coin_issues(...)')`. Each joined relation
+ * may come back as an object or a single-element array (see `one` above). */
+type CoinIssueEmbed = {
+  coin_type_code: string
+  description_zh: string | null
+  description_en: string | null
+  mint_id: string | null
+  state_id: string | null
+  inscription_id: string | null
+  coin_type_hierarchy_id: string | null
+  mints: { name_zh: string; name_en: string | null } | { name_zh: string; name_en: string | null }[] | null
+  states: { state_zh: string; state_en: string | null } | { state_zh: string; state_en: string | null }[] | null
+  inscriptions:
+    | { inscription_zh: string; inscription_en: string | null }
+    | { inscription_zh: string; inscription_en: string | null }[]
+    | null
+  coin_type_hierarchy: CoinTypeHierarchyEmbed
+}
+
+const COIN_ISSUE_FIELDS =
+  'coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+
+/** Flattens a joined coin_issues row into the same flat zh/en text shape the
+ * old coin_types table provided, plus the FK ids for match-logic callers
+ * (see lib/typology-filter.ts, lib/mint-filter.ts). */
+function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
+  const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
+  const mint = one(row.mints)
+  const state = one(row.states)
+  const inscription = one(row.inscriptions)
+  return {
+    coin_type_code: row.coin_type_code,
+    major_type_zh: major_zh,
+    major_type_en: major_en,
+    minor_type_zh: minor_zh,
+    minor_type_en: minor_en,
+    inscription: inscription?.inscription_zh ?? null,
+    inscription_en: inscription?.inscription_en ?? null,
+    mint_zh: mint?.name_zh ?? null,
+    mint_en: mint?.name_en ?? null,
+    state_zh: state?.state_zh ?? null,
+    state_en: state?.state_en ?? null,
+    description_zh: row.description_zh,
+    description_en: row.description_en,
+    mint_id: row.mint_id,
+    state_id: row.state_id,
+    inscription_id: row.inscription_id,
+    coin_type_hierarchy_id: row.coin_type_hierarchy_id,
+  }
+}
 
 function splitSourceCodes(raw: string | null | undefined): string[] {
   if (!raw) return []
@@ -108,8 +221,11 @@ function siteRowToMapSite(row: SitePrecisionRow): MapSite {
     site_type_en: row.site_type_en,
     find_record_count: null,
     total_quantity_for_map: null,
-    major_types_zh: null,
-    minor_types_zh: null,
+    level1_types_zh: null,
+    level2_types_zh: null,
+    level3_types_zh: null,
+    level4_types_zh: null,
+    level5_types_zh: null,
     inscriptions: null,
     states_zh: null,
     mints_zh: null,
@@ -241,12 +357,20 @@ export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
 
   const { data, error } = await supabase
     .from('finds')
-    .select('*, coin_types(*)')
+    .select(`*, coin_issues(${COIN_ISSUE_FIELDS})`)
     .in('context_code', contextCodes)
     .order('find_code')
 
   if (error) throw error
-  return (data ?? []) as Find[]
+  return (
+    (data ?? []) as Array<Omit<Find, 'coin_issues'> & { coin_issues: CoinIssueEmbed | CoinIssueEmbed[] | null }>
+  ).map((row) => {
+    const coinIssue = one(row.coin_issues)
+    return {
+      ...row,
+      coin_issues: coinIssue ? flattenCoinIssue(coinIssue) : null,
+    }
+  })
 }
 
 export async function getSources(sourceCodes: string[]): Promise<Source[]> {
@@ -264,7 +388,7 @@ export async function getSources(sourceCodes: string[]): Promise<Source[]> {
  * hold at once) rather than as a Postgres ilike query, for two reasons:
  * 1. The aggregated view only stores Chinese text for coin type/mint/state/
  *    inscription, so an English search term (e.g. "Handan") has to be translated
- *    to its Chinese equivalent via the coin_types catalog before it can match.
+ *    to its Chinese equivalent via the coin_issues catalog before it can match.
  * 2. Site period isn't on the view at all — it's joined in from `sites` — so it
  *    can't be expressed as a single SQL OR clause against v_coin_map_sites.
  */
@@ -272,10 +396,10 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
   const trimmed = query.trim().toLowerCase()
   if (!trimmed) return []
 
-  const [sites, coinTypes] = await Promise.all([getAllSites(), getCoinTypes()])
+  const [sites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
 
   const zhTerms = new Set<string>()
-  coinTypes.forEach((c) => {
+  coinIssues.forEach((c) => {
     if (textIncludes(c.major_type_en, trimmed) && c.major_type_zh) zhTerms.add(c.major_type_zh)
     if (textIncludes(c.minor_type_en, trimmed) && c.minor_type_zh) zhTerms.add(c.minor_type_zh)
     if (textIncludes(c.inscription_en, trimmed) && c.inscription) zhTerms.add(c.inscription)
@@ -297,8 +421,11 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
       textIncludes(site.site_type_en, trimmed) ||
       textIncludes(site.period_zh, trimmed) ||
       textIncludes(site.period_en, trimmed) ||
-      textIncludes(site.major_types_zh, trimmed) ||
-      textIncludes(site.minor_types_zh, trimmed) ||
+      textIncludes(site.level1_types_zh, trimmed) ||
+      textIncludes(site.level2_types_zh, trimmed) ||
+      textIncludes(site.level3_types_zh, trimmed) ||
+      textIncludes(site.level4_types_zh, trimmed) ||
+      textIncludes(site.level5_types_zh, trimmed) ||
       textIncludes(site.inscriptions, trimmed) ||
       textIncludes(site.states_zh, trimmed) ||
       textIncludes(site.mints_zh, trimmed) ||
@@ -309,8 +436,11 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
 
     return [...zhTerms].some(
       (term) =>
-        splitCsv(site.major_types_zh).includes(term) ||
-        splitCsv(site.minor_types_zh).includes(term) ||
+        splitCsv(site.level1_types_zh).includes(term) ||
+        splitCsv(site.level2_types_zh).includes(term) ||
+        splitCsv(site.level3_types_zh).includes(term) ||
+        splitCsv(site.level4_types_zh).includes(term) ||
+        splitCsv(site.level5_types_zh).includes(term) ||
         splitCsv(site.inscriptions).includes(term) ||
         splitCsv(site.states_zh).includes(term) ||
         splitCsv(site.mints_zh).includes(term)
@@ -318,15 +448,43 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
   })
 }
 
-export async function getCoinTypes(): Promise<CoinType[]> {
-  return fetchAllPages<CoinType>((from, to) =>
+export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
+  const rows = await fetchAllPages<CoinIssueEmbed>((from, to) =>
+    supabase.from('coin_issues').select(COIN_ISSUE_FIELDS).order('coin_type_code').range(from, to)
+  )
+  return rows.map(flattenCoinIssue)
+}
+
+export async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {
+  return fetchAllPages<CoinTypeHierarchyRow>((from, to) =>
     supabase
-      .from('coin_types')
-      .select('*')
-      .order('major_type_zh')
-      .order('minor_type_zh')
-      .order('inscription')
-      .order('coin_type_code')
+      .from('coin_type_hierarchy')
+      .select(
+        'id, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en'
+      )
+      .order('level2_zh')
+      .range(from, to)
+  )
+}
+
+export type MintRow = {
+  id: string
+  name_zh: string
+  name_en: string
+  precision_level: number | null
+  latitude: number | null
+  longitude: number | null
+  description_zh: string | null
+  description_en: string | null
+  citation: string | null
+}
+
+export async function getMints(): Promise<MintRow[]> {
+  return fetchAllPages<MintRow>((from, to) =>
+    supabase
+      .from('mints')
+      .select('id, name_zh, name_en, precision_level, latitude, longitude, description_zh, description_en, citation')
+      .order('name_zh')
       .range(from, to)
   )
 }
@@ -374,7 +532,7 @@ export type MintFindspotsData = {
   sites: MapSite[]
   typeOptions: MintTypeOption[]
   siteTypeKeys: Record<string, string[]>
-  /** Every inscription catalogued for this mint in coin_types, regardless of
+  /** Every inscription catalogued for this mint in coin_issues, regardless of
    * whether a find has been recorded for it yet. */
   inscriptions: string[]
   /** Total coin quantity across all finds attributed to this mint. */
@@ -418,19 +576,50 @@ function buildTypeLabel(coin: {
   return coin.coin_type_code
 }
 
-/** Returns mint-issued coin findspots based on finds+coin_types in current DB. */
+/** Returns mint-issued coin findspots based on finds+coin_issues in current DB.
+ * `mintZh` is resolved to a live `mints.id` (via known name variants) before
+ * querying — coin_issues links to mints by id, not by text. */
 export async function getMintFindspotsData(mintZh: string): Promise<MintFindspotsData> {
   if (!mintZh) return EMPTY_MINT_FINDSPOTS_DATA
 
-  const { data: mintedCoinTypes, error: coinError } = await supabase
-    .from('coin_types')
-    .select('coin_type_code, major_type_zh, minor_type_zh, inscription, mint_zh')
-    .eq('mint_zh', mintZh)
+  const variants = getMintNameVariants(mintZh)
+  const { data: mintRows, error: mintError } = await supabase.from('mints').select('id').in('name_zh', variants)
+
+  if (mintError) throw mintError
+  const mintIds = (mintRows ?? []).map((row) => row.id)
+  if (mintIds.length === 0) return EMPTY_MINT_FINDSPOTS_DATA
+
+  const { data: mintedIssueRows, error: coinError } = await supabase
+    .from('coin_issues')
+    .select(
+      'coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+    )
+    .in('mint_id', mintIds)
 
   if (coinError) throw coinError
-  if (!mintedCoinTypes || mintedCoinTypes.length === 0) {
+  if (!mintedIssueRows || mintedIssueRows.length === 0) {
     return EMPTY_MINT_FINDSPOTS_DATA
   }
+
+  const mintedCoinTypes = (
+    mintedIssueRows as Array<{
+      coin_type_code: string
+      mint_id: string | null
+      inscriptions:
+        | { inscription_zh: string; inscription_en: string | null }
+        | { inscription_zh: string; inscription_en: string | null }[]
+        | null
+      coin_type_hierarchy: CoinTypeHierarchyEmbed
+    }>
+  ).map((row) => {
+    const { major_zh, minor_zh } = deriveMajorMinor(row.coin_type_hierarchy)
+    return {
+      coin_type_code: row.coin_type_code,
+      major_type_zh: major_zh,
+      minor_type_zh: minor_zh,
+      inscription: one(row.inscriptions)?.inscription_zh ?? null,
+    }
+  })
 
   // Full catalogue of inscriptions attributed to this mint — independent of
   // whether any find has been recorded yet, so this stays complete even for

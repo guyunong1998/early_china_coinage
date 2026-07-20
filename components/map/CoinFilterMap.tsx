@@ -113,7 +113,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
         const cityEn = toEnglishName(site.city_zh, site.city_en)
         const countyZh = site.county_zh ?? '—'
         const countyEn = toEnglishName(site.county_zh, site.county_en)
-        const typeBilingual = formatCoinTypeBilingual(site.major_types_zh)
+        const typeBilingual = formatCoinTypeBilingual(site.level2_types_zh)
 
         const marker = L.marker([site.lat, site.lng], { icon })
           .addTo(map)
