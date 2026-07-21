@@ -1,25 +1,22 @@
-import { HeatmapPanel } from '@/components/heatmap/HeatmapPanel'
-import { getAnsPointedSpadeMintStats, getAnsSquareSpadeMintStats } from '@/lib/ans-spade-data'
+import { AnsMintTownVisualization } from '@/components/visualizations/MapVisualization'
+import { getAnsSpecimens } from '@/lib/ans-museum-data'
+import { getCoinIssues, getCoinTypeHierarchy } from '@/lib/queries'
 
 export const metadata = {
   title: 'Museum Collections | Early Chinese Coin Finds',
-  description:
-    'Distribution of spade coins by mint town from the ANS pointed-foot / square-foot catalogues.',
+  description: 'Mint-town distribution of ANS museum specimens, searchable by accession number.',
 }
 
 export default async function MuseumCollectionsPage() {
-  const [ansPointed, ansSquare] = await Promise.all([
-    Promise.resolve(getAnsPointedSpadeMintStats()),
-    Promise.resolve(getAnsSquareSpadeMintStats()),
+  const [specimens, coinIssues, hierarchyRows] = await Promise.all([
+    getAnsSpecimens(),
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
   ])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-2">
-        <h1 className="font-serif text-3xl font-semibold text-brand">Museum Collections</h1>
-      </div>
-
-      <HeatmapPanel ansPointed={ansPointed} ansSquare={ansSquare} />
+    <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
+      <AnsMintTownVisualization specimens={specimens} coinIssues={coinIssues} hierarchyRows={hierarchyRows} />
     </div>
   )
 }

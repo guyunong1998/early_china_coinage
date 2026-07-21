@@ -33,17 +33,12 @@
    ============================================================================ */
 :root {
   /* Geist/Spectral only cover Latin glyphs, so the browser's per-character
-     font fallback drops any Chinese character straight through to LXGW
-     WenKai TC (loaded via lxgw-wenkai-tc-webfont in app/layout.tsx) — no
-     lang-tagging or component changes needed for bilingual text to pick it
-     up automatically. */
-  --font-sans: var(--font-geist-sans), "LXGW WenKai TC", sans-serif;  /* body text */
-  --font-serif: var(--font-spectral), "LXGW WenKai TC", serif;   /* headings (the `font-serif` utility) */
-}
-.lxgw-wenkai-tc-regular {
-  font-family: "LXGW WenKai TC", cursive;
-  font-weight: 400;
-  font-style: normal;
+     font fallback drops any Chinese character straight through to the
+     `sans-serif`/`serif` generic at the end of each stack — the OS's own
+     default CJK font (e.g. PingFang SC, Microsoft YaHei, Noto Sans CJK),
+     no custom webfont loaded. */
+  --font-sans: var(--font-geist-sans), sans-serif;  /* body text */
+  --font-serif: var(--font-spectral), serif;   /* headings (the `font-serif` utility) */
 }
 
 

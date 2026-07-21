@@ -2,8 +2,11 @@ import type { HeatmapFind } from '@/lib/types'
 
 /** Find-spots map: filtering by coin type or by mint. */
 export type FilterMode = 'type' | 'mint'
-/** Find-spots map: individual colored points, or a blended density mass. */
-export type ViewMode = 'points' | 'density'
+/** Find-spots map: individual colored points, a blended density mass, or —
+ * "by mint" filter mode only — Compare, which colors by which selected mint
+ * a point belongs to instead of match ratio (see ComparePoint in
+ * components/map/MapVisCanvas.tsx). */
+export type ViewMode = 'points' | 'density' | 'compare'
 
 export type ContextHeatState =
   | { kind: 'absent' }

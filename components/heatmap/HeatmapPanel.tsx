@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * Standalone museum-collections page's full section: the mint production
+ * Standalone old-ans-spades page's full section: the mint production
  * heatmap map (PointedSpadeHeatmap, a pure map — this component supplies its
- * own caption text below it) for the ANS catalogue, a "Coins by mint" table,
- * and a "Data sources" card.
+ * own caption text below it) for the legacy ANS catalogue, a "Coins by mint"
+ * table, and a "Data sources" card.
  *
- * Used by: app/museum-collections/page.tsx only. Kept intentionally separate
+ * Used by: app/old-ans-spades/page.tsx only. Kept intentionally separate
  * from (and untouched by) the map visualizations page's Quantity tab, which
  * reuses PointedSpadeHeatmap directly without the table/sources — see
  * components/visualizations/QuantityVisualization.tsx.

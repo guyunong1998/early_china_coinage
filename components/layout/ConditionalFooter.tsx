@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { SiteFooter } from '@/components/layout/SiteFooter'
 
-const FULL_VIEWPORT_PATHS = ['/visualizations/mint-town', '/visualizations/find-site']
+const FULL_VIEWPORT_PATHS = ['/visualizations/mint-town', '/visualizations/find-site', '/museum-collections']
 
 /** Full-viewport pages (map visualization tabs backed by FindSpotsMap) omit
  * the site footer so the canvas can fill the screen. */

@@ -154,19 +154,6 @@
   border-color: var(--map-dot-nodata-border);
 }
 
-/* MapVisCanvas.tsx: the extra "filtered mint town" marker shown when Find
-   Site's mint filter (or Mint Town's inscription filter) resolves to a mint
-   with known coordinates. Deliberately not a `.map-dot` — a large square,
-   brand-filled with a higher-opacity white border, so it reads as a
-   distinct "this is the mint itself" marker rather than one more heatmap
-   point. Fully static, so no inline styles are needed at all. */
-.map-mint-highlight {
-  width: 30px;
-  height: 30px;
-  background: var(--brand);
-  border: 3px solid rgba(255, 255, 255, 0.85);
-}
-
 .loc_precision_map {
   pointer-events: none;
   position: absolute;

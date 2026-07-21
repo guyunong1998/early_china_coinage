@@ -135,7 +135,7 @@ function splitSourceCodes(raw: string | null | undefined): string[] {
  * many Shanxi/Hebei/Shaanxi sites vanishing from the map. This pages
  * through with `.range()` until a short (or empty) page signals the end.
  */
-async function fetchAllPages<T>(
+export async function fetchAllPages<T>(
   fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
   pageSize = 1000
 ): Promise<T[]> {

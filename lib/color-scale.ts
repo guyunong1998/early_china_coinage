@@ -28,6 +28,25 @@ export const SINGLE_FIND_COLOR = '#7b3fa0'
 // Legacy alias kept for older heatmap UI bits.
 export const ONE_OF_ONE_COLOR = SINGLE_FIND_COLOR
 
+/**
+ * Fixed-order categorical palette (the dataviz skill's validated default —
+ * CVD-safe adjacent pairs, checked with the palette validator) for
+ * identity-marking a handful of user-picked items, not data rank. Assign by
+ * position in selection order (first pick -> slot 0, etc), never reassigned
+ * when the selection changes shape. Used by the Museum Collections search's
+ * selected-specimen pins (components/museum/AccessionNumberSearch.tsx).
+ */
+export const SELECTION_COLORS = [
+  '#2a78d6', // blue
+  '#008300', // green
+  '#e87ba4', // magenta
+  '#eda100', // yellow
+  '#1baf7a', // aqua
+  '#eb6834', // orange
+  '#4a3aa7', // violet
+  '#e34948', // red
+]
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t
 }

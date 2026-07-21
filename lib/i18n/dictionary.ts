@@ -1,6 +1,10 @@
 export type Lang = 'en' | 'zh'
 
 export const DICTIONARY = {
+  // ── shared multiselect UI (MultiSelectSearch, AccessionNumberSearch) ────
+  'ui.selectedCount': { en: '{count} selected', zh: '已选 {count} 项' },
+  'ui.clear': { en: 'Clear', zh: '清除' },
+
   // ── header / nav ──────────────────────────────────────────────────────
   'nav.about': { en: 'About', zh: '关于' },
   'nav.search': { en: 'Search', zh: '搜索' },
@@ -269,6 +273,27 @@ export const DICTIONARY = {
     en: 'Circle size and intensity reflect the number of coins recorded in the database for each mint town. Only mints with mapped coordinates are shown.',
     zh: '圆圈大小与深浅反映数据库中各铸地记录的钱币数量。仅显示已定位坐标的铸地。',
   },
+  'visualizations.mintHeatmapCaption.ans': {
+    en: 'Circle size and intensity reflect the number of ANS museum specimens recorded for each mint town. Only mints with mapped coordinates are shown.',
+    zh: '圆圈大小与深浅反映 ANS 博物馆藏品中各铸地记录的标本数量。仅显示已定位坐标的铸地。',
+  },
+
+  // ── museum collections page ──────────────────────────────────────────────
+  'museum.search.hint': {
+    en: 'Search ANS museum specimens by accession number. Each result links to its record in the ANS Online Collection.',
+    zh: '按藏品编号搜索 ANS 博物馆标本。每条结果链接至其在 ANS 在线藏品库中的记录。',
+  },
+  'museum.search.placeholder': { en: 'Enter accession number, e.g. 1937.146.16801…', zh: '输入藏品编号，如 1937.146.16801…' },
+  'museum.search.noResults': { en: 'No specimens found for “{query}”.', zh: '未找到编号包含“{query}”的标本。' },
+  'museum.search.empty': { en: 'No specimens available yet.', zh: '暂无标本数据。' },
+  'museum.search.truncated': {
+    en: 'Showing {shown} of {total} — refine your search to narrow further.',
+    zh: '显示 {shown} / {total} 条 — 请输入更多关键词以缩小范围。',
+  },
+  'museum.search.unmapped': { en: 'no mapped mint', zh: '暂无铸地坐标' },
+  'museum.search.reverseLabel': { en: 'Reverse:', zh: '背文：' },
+  'museum.search.mintLabel': { en: 'Mint:', zh: '铸地：' },
+  'museum.search.stateLabel': { en: 'State:', zh: '诸侯国：' },
   'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
   'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
   'visualizations.stats.specimens': { en: '{count} specimens', zh: '{count} 件标本' },
@@ -297,10 +322,25 @@ export const DICTIONARY = {
   'map.filter.byMint': { en: 'Mint', zh: '按铸地' },
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
+  'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
+  'map.filter.mintOrModeHint': {
+    en: 'With multiple mints selected, Points and Density use OR: a site is highlighted if it has coins from any of the selected mints.',
+    zh: '选择多个铸地时，「点状」与「密度色块」视图采用「或」逻辑：只要出土单位含有任一所选铸地的钱币即会高亮。',
+  },
+  'map.filter.mintCompareHint': {
+    en: 'Compare colors each selected mint separately — a site with coins from more than one selected mint shows as multiple points, one per mint.',
+    zh: '「对比」视图按所选铸地分别着色——若某遗址同时含有多个所选铸地的钱币，将显示为多个点，每个铸地一个点。',
+  },
+  'map.filter.compareSizeHint': {
+    en: 'Point size reflects that mint’s own coin quantity at the site, independent of color. A match with unrecorded quantity counts as 1.',
+    zh: '点的大小反映该铸地在该遗址的钱币数量，与颜色无关。若数量未记录则按 1 计算。',
+  },
   'map.view.points': { en: 'Points', zh: '点状' },
   'map.view.density': { en: 'Density mass', zh: '密度色块' },
+  'map.view.compare': { en: 'Compare', zh: '对比' },
   'map.view.label': { en: 'Display', zh: '显示' },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
+  'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
   'map.legend.densityHint': {
     en: 'Brighter / redder where matching sites cluster; weighted by share.',
     zh: '匹配遗址越集中、占比越高，颜色越亮越红。',

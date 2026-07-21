@@ -5,7 +5,7 @@
  * sized/shaded by coin (or ANS specimen) count. No caption, no wrapper —
  * just the map.
  *
- * Used by: components/heatmap/HeatmapPanel.tsx (app/museum-collections/page.tsx),
+ * Used by: components/heatmap/HeatmapPanel.tsx (app/old-ans-spades/page.tsx),
  * which renders its own caption text below it. The map visualizations page's
  * Mint Town tab (components/visualizations/MapVisualization.tsx) has its own
  * copy of this same circle-marker logic folded into components/map/MapVisCanvas.tsx,

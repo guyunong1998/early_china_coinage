@@ -225,6 +225,53 @@ function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): strin
   `
 }
 
+/**
+ * One (site, mint) pair for Find Site's Compare view — a site with coins
+ * from N selected mints contributes N of these, one per mint, each its own
+ * identity color (see lib/color-scale.ts's SELECTION_COLORS) instead of the
+ * usual match-ratio color. Plain round dots (dot()), not PinPoint's teardrop
+ * — Compare recolors the ordinary site markers, it doesn't add new pins.
+ */
+export type ComparePoint = {
+  /** Stable identity for reconciling markers across renders. */
+  key: string
+  /** Groups points that share a site, for the small stacking offset that
+   * keeps same-site points visually distinct instead of exactly overlapping
+   * (they share a lat/lng by definition). */
+  siteCode: string
+  lat: number
+  lng: number
+  color: string
+  /** This mint's coin quantity at this site — drives marker size, same
+   * siteSizeByQuantity() scale as every other point on this map. */
+  qty: number
+  siteLabel: string
+  mintLabel: string
+  href: string
+}
+
+function buildComparePopupHtml(point: ComparePoint, t: TFunction): string {
+  return `
+    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+      <strong>${point.siteLabel}</strong><br/>
+      <strong>Mint / 铸地：</strong>${point.mintLabel}<br/>
+      <strong>Coins:</strong> ${point.qty}<br/>
+      <a href="${point.href}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>
+    </div>
+  `
+}
+
+/** Small fixed pixel offset (not a lat/lng jitter, so it stays the same
+ * size at every zoom level) so markers that share an exact coordinate fan
+ * out around it instead of exactly overlapping — used both for Compare's
+ * same-site points and for Museum Collections' selection pins when several
+ * selected specimens share a mint. */
+function stackOffset(index: number, total: number, radius: number): [number, number] {
+  if (total <= 1) return [0, 0]
+  const angle = (2 * Math.PI * index) / total
+  return [Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius)]
+}
+
 /** One mint town, aggregated regardless of the active filter (coordinates +
  * "typical information" — always the mint's full totals/inscriptions, not
  * just what currently matches). */
@@ -237,23 +284,6 @@ export type MintPoint = {
   totalQty: number
   inscriptions: string[]
   modern_location_en: string | null
-}
-
-// The "filtered mint" highlight marker: a large square, brand-filled with a
-// higher-opacity white border, visually distinct from the circular heatmap
-// dots so the specific mint being filtered to stands out from the crowd of
-// match-ratio points. Fully static (no continuous/computed values), so it's
-// defined entirely in app/maps.css rather than inline like dot().
-const MINT_HIGHLIGHT_SIZE = 30
-
-function buildHighlightMintPopupHtml(mint: HighlightMint): string {
-  return `
-    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
-      <strong>Mint town / 铸币地：</strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}<br/>
-      ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
-      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
-    </div>
-  `
 }
 
 function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
@@ -272,7 +302,11 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
 }
 
 /** Recomputes a marker's icon/opacity/z-index/popup from its current heat
- * state — the one piece of restyle logic shared by both sites and mints. */
+ * state — the one piece of restyle logic shared by both sites and mints.
+ * `hidden` is Compare view's escape hatch: the ordinary per-site markers
+ * still exist (built once in the init effect) but sit fully invisible while
+ * Compare's own marker set (ComparePoint, reconciled separately below) is
+ * what's actually shown. */
 function applyHeatMarkerStyle(
   L: typeof import('leaflet'),
   marker: Marker,
@@ -282,8 +316,15 @@ function applyHeatMarkerStyle(
   sizeRange: { min: number; max: number },
   pointOpacity: number,
   inDensity: boolean,
-  popupHtml: string
+  popupHtml: string,
+  hidden = false
 ) {
+  if (hidden) {
+    marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
+    marker.setOpacity(0)
+    return
+  }
+
   const state = toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty)
   const isStaticNoData = !inDensity && state.kind === 'no-data'
   const color = inDensity
@@ -325,13 +366,45 @@ function applyHeatMarkerStyle(
   marker.setPopupContent(popupHtml)
 }
 
-export type HighlightMint = {
-  mint_zh: string
-  mint_en: string | null
-  mint_code: string | null
-  modern_location_en: string | null
+/** A user-selected point — a specimen picked in the Museum Collections
+ * search, or a mint picked in Find Site's "by mint" multiselect — rendered
+ * as its own dropped pin on top of the regular circle markers. One per
+ * selection, each in its own fixed identity color (see lib/color-scale.ts's
+ * SELECTION_COLORS), fully opaque regardless of the heatmap opacity setting
+ * so a selection always reads clearly. Replaces the old single-mint
+ * "highlight" square marker, which only ever supported one selection at a
+ * time. */
+export type PinPoint = {
+  /** Stable identity for reconciling markers across renders — doesn't need
+   * to match anything else on the map. */
+  key: string
   lat: number
   lng: number
+  color: string
+  label: string
+  href?: string
+  /** Open `href` in a new tab (external links) instead of same-tab nav
+   * (internal links, e.g. a mint's own /mints/[code] page). */
+  hrefExternal?: boolean
+}
+
+const PIN_WIDTH = 22
+const PIN_HEIGHT = 30
+
+// A classic teardrop map pin, fully opaque (solid `fill`, no CSS opacity) —
+// unlike dot()'s color, which is deliberately alpha-blended for the
+// heatmap's match-ratio reading, a selection pin should never look "faded."
+function dropPinHtml(color: string): string {
+  return `<svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.45))"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.9 17.1 0 11 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4" fill="white"/></svg>`
+}
+
+function buildPinPopupHtml(pin: PinPoint): string {
+  const linkAttrs = pin.hrefExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+  const arrow = pin.hrefExternal ? ' ↗' : ' →'
+  const label = pin.href
+    ? `<a href="${pin.href}"${linkAttrs} style="color:#006d71;font-weight:600">${pin.label}${arrow}</a>`
+    : `<strong>${pin.label}</strong>`
+  return `<div style="font-family:sans-serif;font-size:13px;line-height:1.5">${label}</div>`
 }
 
 type SitesCanvasProps = {
@@ -342,9 +415,11 @@ type SitesCanvasProps = {
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
   filterActive: boolean
-  /** Extra distinct point for the mint the active filter resolves to (Find
-   * Site's "by mint" filter mode), when it has known coordinates. */
-  highlightMint?: HighlightMint | null
+  /** User-selected points (Find Site's "by mint" multiselect) — see PinPoint. */
+  pins?: PinPoint[]
+  /** Compare view's per-(site, mint) points — see ComparePoint. Only
+   * meaningful (and only supplied) when viewMode === 'compare'. */
+  comparePoints?: ComparePoint[]
   /** Full layer-switcher + river-mode controls (desktop only regardless).
    * Default true — the two dedicated Map Visualizations pages want this;
    * anywhere else this canvas gets embedded (e.g. the /mints overview map)
@@ -360,9 +435,8 @@ type MintsCanvasProps = {
   mintStates: Map<string, SiteHeatState> | null
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
-  /** Extra distinct point for the mint the active coin-type filter resolves
-   * to (e.g. a specific inscription), when it has known coordinates. */
-  highlightMint?: HighlightMint | null
+  /** User-selected points (Museum Collections search) — see PinPoint. */
+  pins?: PinPoint[]
   /** See SitesCanvasProps.fullControls. */
   fullControls?: boolean
   height?: string
@@ -376,7 +450,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
-  const highlightMarkerRef = useRef<Marker | null>(null)
+  const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
+  const compareMarkersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
 
   // Kind-specific fields, pulled out of the discriminated union once so effect
@@ -386,7 +461,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const modeForSites = props.kind === 'sites' ? props.mode : null
   const filterActiveForSites = props.kind === 'sites' ? props.filterActive : null
   const sitesForInit = props.kind === 'sites' ? props.sites : null
-  const highlightMint = props.highlightMint ?? null
+  const pins = props.pins ?? []
+  const comparePoints = props.kind === 'sites' ? (props.comparePoints ?? []) : []
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -403,6 +479,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       await import('leaflet.heat')
 
       const inDensity = viewMode === 'density'
+      const inCompare = viewMode === 'compare'
       const sizeRange = dotSizeRange()
       const pointOpacity = readHeatmapOpacity()
 
@@ -423,7 +500,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             sizeRange,
             pointOpacity,
             inDensity,
-            buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t)
+            buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t),
+            inCompare
           )
         })
       } else {
@@ -447,31 +525,98 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       }
 
-      // Extra highlight point for the mint the active filter resolves to
-      // (Find Site's "by mint" mode, or Mint Town's inscription filter) —
-      // shared by both kinds, shown on top with its popup open by default.
-      if (highlightMint) {
-        const popupHtml = buildHighlightMintPopupHtml(highlightMint)
-        if (!highlightMarkerRef.current) {
-          highlightMarkerRef.current = L.marker([highlightMint.lat, highlightMint.lng], {
-            icon: L.divIcon({
-              className: '',
-              html: '<div class="map-mint-highlight"></div>',
-              iconSize: [MINT_HIGHLIGHT_SIZE, MINT_HIGHLIGHT_SIZE],
-              iconAnchor: [MINT_HIGHLIGHT_SIZE / 2, MINT_HIGHLIGHT_SIZE / 2],
-            }),
-            zIndexOffset: 1000,
+      // User-selected pins (Museum Collections search, Find Site's "by
+      // mint" multiselect) — reconciled by key so an in-place color/position
+      // update doesn't flicker a marker. Grouped by exact coordinate first:
+      // several selected specimens can share a mint town (Museum
+      // Collections), and without an offset their pins would sit exactly on
+      // top of each other with only the topmost one visible/clickable.
+      const nextPinKeys = new Set(pins.map((p) => p.key))
+      pinMarkersRef.current.forEach((marker, key) => {
+        if (nextPinKeys.has(key)) return
+        map.removeLayer(marker)
+        pinMarkersRef.current.delete(key)
+      })
+      const pinGroups = new Map<string, PinPoint[]>()
+      pins.forEach((pin) => {
+        const groupKey = `${pin.lat.toFixed(5)},${pin.lng.toFixed(5)}`
+        if (!pinGroups.has(groupKey)) pinGroups.set(groupKey, [])
+        pinGroups.get(groupKey)!.push(pin)
+      })
+      let pinZIndex = 0
+      pinGroups.forEach((group) => {
+        group.forEach((pin, i) => {
+          const [offsetX, offsetY] = stackOffset(i, group.length, 12)
+          const icon = L.divIcon({
+            className: '',
+            html: dropPinHtml(pin.color),
+            iconSize: [PIN_WIDTH, PIN_HEIGHT],
+            iconAnchor: [PIN_WIDTH / 2 + offsetX, PIN_HEIGHT + offsetY],
+            popupAnchor: [0, -PIN_HEIGHT],
           })
-            .addTo(map)
-            .bindPopup(popupHtml)
-        } else {
-          highlightMarkerRef.current.setLatLng([highlightMint.lat, highlightMint.lng])
-          highlightMarkerRef.current.setPopupContent(popupHtml)
-        }
-        highlightMarkerRef.current.openPopup()
-      } else if (highlightMarkerRef.current) {
-        map.removeLayer(highlightMarkerRef.current)
-        highlightMarkerRef.current = null
+          const existing = pinMarkersRef.current.get(pin.key)
+          if (existing) {
+            existing.setLatLng([pin.lat, pin.lng])
+            existing.setIcon(icon)
+            existing.setZIndexOffset(2000 + pinZIndex)
+            existing.setPopupContent(buildPinPopupHtml(pin))
+          } else {
+            const marker = L.marker([pin.lat, pin.lng], { icon, zIndexOffset: 2000 + pinZIndex })
+              .addTo(map)
+              .bindPopup(buildPinPopupHtml(pin))
+            pinMarkersRef.current.set(pin.key, marker)
+          }
+          pinZIndex += 1
+        })
+      })
+
+      // Compare view's own marker set — reconciled independently of the
+      // ordinary per-site markers above (which sit hidden via `inCompare`
+      // in applyHeatMarkerStyle while this is active). Grouped by site so
+      // same-site points get the small stacking offset.
+      if (inCompare) {
+        const bySite = new Map<string, ComparePoint[]>()
+        comparePoints.forEach((point) => {
+          if (!bySite.has(point.siteCode)) bySite.set(point.siteCode, [])
+          bySite.get(point.siteCode)!.push(point)
+        })
+        const maxCompareQty = Math.max(...comparePoints.map((p) => p.qty), 1)
+
+        const nextCompareKeys = new Set(comparePoints.map((p) => p.key))
+        compareMarkersRef.current.forEach((marker, key) => {
+          if (nextCompareKeys.has(key)) return
+          map.removeLayer(marker)
+          compareMarkersRef.current.delete(key)
+        })
+
+        bySite.forEach((points) => {
+          points.forEach((point, i) => {
+            const size = siteSizeByQuantity(point.qty, maxCompareQty, sizeRange.min, sizeRange.max)
+            const [offsetX, offsetY] = stackOffset(i, points.length, 9)
+            const icon = L.divIcon({
+              className: '',
+              // Same alpha as the ordinary ratio-colored points (pointOpacity)
+              // — only the dropped pin (dropPinHtml) is meant to be fully
+              // opaque; Compare's points should look like normal points.
+              html: dot(hexToRgba(point.color, pointOpacity), size),
+              iconSize: [size, size],
+              iconAnchor: [size / 2 + offsetX, size / 2 + offsetY],
+            })
+            const popupHtml = buildComparePopupHtml(point, t)
+            const existing = compareMarkersRef.current.get(point.key)
+            if (existing) {
+              existing.setLatLng([point.lat, point.lng])
+              existing.setIcon(icon)
+              existing.setPopupContent(popupHtml)
+            } else {
+              const marker = L.marker([point.lat, point.lng], { icon }).addTo(map).bindPopup(popupHtml)
+              compareMarkersRef.current.set(point.key, marker)
+            }
+          })
+        })
+      } else if (compareMarkersRef.current.size > 0) {
+        compareMarkersRef.current.forEach((marker) => map.removeLayer(marker))
+        compareMarkersRef.current.clear()
       }
 
       try {
@@ -502,7 +647,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statesForRestyle, sitesForRestyle, modeForSites, highlightMint, t, viewMode, densityLatLngs])
+  }, [statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,
@@ -666,13 +811,16 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
     init()
     const pointMarkers = pointMarkersRef.current
+    const pinMarkers = pinMarkersRef.current
+    const compareMarkers = compareMarkersRef.current
     return () => {
       cancelled = true
       heatLayerRef.current = null
-      highlightMarkerRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
       pointMarkers.clear()
+      pinMarkers.clear()
+      compareMarkers.clear()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sitesForInit])
