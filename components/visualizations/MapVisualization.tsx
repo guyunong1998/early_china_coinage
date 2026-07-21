@@ -43,23 +43,28 @@ import {
   computeSiteMintQuantities,
   formatMintOptionLabel,
   getMatchingCoinIssueIdsByMints,
-  type MintFilterOption,
 } from '@/lib/mint-filter'
 import { getMintByNameZh } from '@/lib/mint-towns'
 import {
   ansCollectionUrl,
   computeAnsMintStats,
+  computeAnsMintTypeQuantities,
   computeMintStatsFromFinds,
-  getMatchingAnsSpecimens,
+  getMatchingAnsSpecimensMulti,
   toMintPoints,
   type AnsSpecimen,
   type HeatmapSource,
 } from '@/lib/pointed-spade-data'
 import {
+  computeMintTypeQuantities,
+  computeSiteTypeQuantities,
+  describeTypologySelection,
   emptyTypologySelection,
-  getMatchingCoinIssueIds,
+  getMatchingCoinIssueIdsMulti,
   hasTypologyFilter,
+  typologySelectionKey,
   type TypologyFilterSelection,
+  type TypologySelectionEntry,
 } from '@/lib/typology-filter'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MapSite } from '@/lib/types'
 
@@ -161,36 +166,239 @@ function DensityLegend() {
   )
 }
 
-/** Compare view's legend — one swatch per selected mint, same identity
- * colors (by stable slot, not array position) as its chip in the multiselect
- * list and its points on the map. */
+/** Compare view's legend — one swatch per selected group (mint, or coin
+ * type), same identity colors (by stable slot, not array position) as each
+ * group's chip in its multiselect control and its points on the map.
+ * Generic over what's being compared so every Compare view (Find Site by
+ * mint/by type, the database Mint Town tab, Museum Collections' Mint Town
+ * view) shares this one legend. */
 function CompareLegend({
-  mintFilters,
-  mintOptions,
-  mintColorByValue,
+  titleKey,
+  entries,
+  colorByValue,
 }: {
-  mintFilters: string[]
-  mintOptions: MintFilterOption[]
-  mintColorByValue: Map<string, string>
+  titleKey: DictionaryKey
+  entries: { key: string; label: string }[]
+  colorByValue: Map<string, string>
 }) {
   return (
     <>
       <span className="font-semibold uppercase tracking-wide text-gray-500">
-        <T k="map.legend.byMint" />
+        <T k={titleKey} />
       </span>
-      {mintFilters.map((mintId) => {
-        const opt = mintOptions.find((m) => m.mint_id === mintId)
-        return (
-          <span key={mintId} className="flex items-center gap-1">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ background: mintColorByValue.get(mintId) }}
-            />
-            {opt?.mint_zh ?? mintId}
-          </span>
-        )
-      })}
+      {entries.map((entry) => (
+        <span key={entry.key} className="flex items-center gap-1">
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ background: colorByValue.get(entry.key) }}
+          />
+          {entry.label}
+        </span>
+      ))}
     </>
+  )
+}
+
+/**
+ * Multiselect state for coin-type filtering (Find Site's "by type" mode, the
+ * database Mint Town tab, Museum Collections' Mint Town view) — layered over
+ * TypologyFilterBar's single-selection "staging" picker (a cascading
+ * dropdown, not a flat searchable list) since there's no single click that
+ * picks "a coin type": the user builds up one level1..level5 + inscription
+ * combination in `staged`.
+ *
+ * `staged` itself is live: it filters the map immediately as it's built, the
+ * same way the old single-select filter did, with no separate "confirm"
+ * step. `addAnother()` locks the current `staged` in as a committed pick
+ * (its own chip, its own permanent color slot) and resets `staged` to empty
+ * so a second, independent pick can be built — that's the only thing "add"
+ * is for. `entries` (used for matching/Compare) is therefore the committed
+ * list plus `staged` itself, deduped so re-adding an already-committed
+ * combination doesn't double it up.
+ *
+ * Colors are stable the same way useSelectionColors' are: a committed pick
+ * claims the lowest free slot and keeps it until removed, so removing one
+ * pick never shifts another's color. `staged` gets the same guarantee even
+ * before it's committed — its slot is reserved the moment it first becomes
+ * non-empty and held fixed while it's edited, so a sibling pick being
+ * added/removed elsewhere never changes the color of the pick still being
+ * built.
+ */
+function useTypologyMultiSelect(coinIssues: CoinIssueDisplay[]) {
+  const [staged, setStagedRaw] = useState<TypologyFilterSelection>(emptyTypologySelection())
+  const [order, setOrder] = useState<string[]>([])
+  const [slotById, setSlotById] = useState<Map<string, number>>(new Map())
+  const [selByKey, setSelByKey] = useState<Map<string, TypologyFilterSelection>>(new Map())
+  const [labelByKey, setLabelByKey] = useState<Map<string, string>>(new Map())
+  // The staged pick's own color slot — reserved the moment it first becomes
+  // non-empty and held fixed while it's built up (or while sibling committed
+  // picks are added/removed around it), so its color never jumps mid-edit.
+  // Freed (back to null) when staged is cleared, whether by committing it
+  // (addAnother) or by emptying the picker back out.
+  const [stagedSlot, setStagedSlot] = useState<number | null>(null)
+
+  function nextFreeSlot(used: Set<number>): number {
+    let slot = 0
+    while (used.has(slot)) slot++
+    return slot
+  }
+
+  function setStaged(sel: TypologyFilterSelection) {
+    setStagedRaw(sel)
+    if (hasTypologyFilter(sel)) {
+      setStagedSlot((prev) => (prev !== null ? prev : nextFreeSlot(new Set(slotById.values()))))
+    } else {
+      setStagedSlot(null)
+    }
+  }
+
+  const committedEntries = useMemo<TypologySelectionEntry[]>(
+    () =>
+      order.map((key) => ({
+        key,
+        sel: selByKey.get(key) ?? emptyTypologySelection(),
+        label: labelByKey.get(key) ?? key,
+      })),
+    [order, selByKey, labelByKey]
+  )
+
+  const stagedKey = useMemo(() => (hasTypologyFilter(staged) ? typologySelectionKey(staged) : null), [staged])
+
+  const colorByValue = useMemo(() => {
+    const map = new Map<string, string>()
+    order.forEach((key) => map.set(key, SELECTION_COLORS[(slotById.get(key) ?? 0) % SELECTION_COLORS.length]))
+    if (stagedKey && stagedSlot !== null && !map.has(stagedKey)) {
+      map.set(stagedKey, SELECTION_COLORS[stagedSlot % SELECTION_COLORS.length])
+    }
+    return map
+  }, [order, slotById, stagedKey, stagedSlot])
+
+  const entries = useMemo<TypologySelectionEntry[]>(() => {
+    if (!stagedKey || order.includes(stagedKey)) return committedEntries
+    return [...committedEntries, { key: stagedKey, sel: staged, label: describeTypologySelection(staged, coinIssues) }]
+  }, [committedEntries, stagedKey, order, staged, coinIssues])
+
+  function addAnother() {
+    if (!stagedKey || stagedSlot === null) return
+    if (!order.includes(stagedKey)) {
+      setOrder((prev) => [...prev, stagedKey])
+      setSlotById((prev) => new Map(prev).set(stagedKey, stagedSlot))
+      setSelByKey((prev) => new Map(prev).set(stagedKey, staged))
+      setLabelByKey((prev) => new Map(prev).set(stagedKey, describeTypologySelection(staged, coinIssues)))
+    }
+    setStaged(emptyTypologySelection())
+  }
+
+  function remove(key: string) {
+    setOrder((prev) => prev.filter((k) => k !== key))
+    setSlotById((prev) => {
+      const next = new Map(prev)
+      next.delete(key)
+      return next
+    })
+    setSelByKey((prev) => {
+      const next = new Map(prev)
+      next.delete(key)
+      return next
+    })
+    setLabelByKey((prev) => {
+      const next = new Map(prev)
+      next.delete(key)
+      return next
+    })
+  }
+
+  function clear() {
+    setOrder([])
+    setSlotById(new Map())
+    setSelByKey(new Map())
+    setLabelByKey(new Map())
+    setStaged(emptyTypologySelection())
+  }
+
+  return { staged, setStaged, entries, committedEntries, colorByValue, addAnother, remove, clear }
+}
+
+/** The coin-type multiselect control itself: TypologyFilterBar as a live
+ * staging picker (filters the map as it's built, no confirm step) plus an
+ * "Add another" button to lock the current pick in and start a second one,
+ * and a chip list of locked-in picks (each with its identity color and a
+ * remove button) — the type equivalent of MultiSelectSearch's flat
+ * searchable list. */
+function TypologyMultiSelect({
+  staged,
+  onStagedChange,
+  committedEntries,
+  colorByValue,
+  onAddAnother,
+  onRemove,
+  onClear,
+  hierarchyRows,
+  coinIssues,
+}: {
+  staged: TypologyFilterSelection
+  onStagedChange: (sel: TypologyFilterSelection) => void
+  committedEntries: TypologySelectionEntry[]
+  colorByValue: Map<string, string>
+  onAddAnother: () => void
+  onRemove: (key: string) => void
+  onClear: () => void
+  hierarchyRows: CoinTypeHierarchyRow[]
+  coinIssues: CoinIssueDisplay[]
+}) {
+  const { t } = useLanguage()
+  const canAddAnother = hasTypologyFilter(staged) && !committedEntries.some((e) => e.key === typologySelectionKey(staged))
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <TypologyFilterBar
+          sel={staged}
+          onChange={onStagedChange}
+          showInscriptionList
+          hierarchyRows={hierarchyRows}
+          coinIssues={coinIssues}
+          compact
+        />
+        <button
+          type="button"
+          onClick={onAddAnother}
+          disabled={!canAddAnother}
+          className="rounded border border-brand/30 bg-brand-light px-2.5 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand-light disabled:hover:text-brand"
+        >
+          <T k="map.filter.addSelection" />
+        </button>
+      </div>
+
+      {committedEntries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-gray-500">{t('ui.selectedCount', { count: committedEntries.length })}</span>
+          {committedEntries.map((entry) => (
+            <span
+              key={entry.key}
+              className="flex items-center gap-1 rounded-full border border-brand/20 bg-white px-2 py-0.5 text-xs"
+            >
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: colorByValue.get(entry.key) }}
+              />
+              {entry.label}
+              <button
+                type="button"
+                onClick={() => onRemove(entry.key)}
+                aria-label={t('ui.clear')}
+                className="text-gray-400 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <button type="button" onClick={onClear} className="text-xs font-semibold text-brand hover:underline">
+            <T k="ui.clear" />
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -244,7 +452,16 @@ export function FindSpotsVisualization({
   const { t } = useLanguage()
   const [mode, setMode] = useState<FilterMode>('type')
   const [viewMode, setViewMode] = useState<ViewMode>('points')
-  const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
+  const {
+    staged: stagedType,
+    setStaged: setStagedType,
+    entries: typeEntries,
+    committedEntries: typeCommittedEntries,
+    colorByValue: typeColorByValue,
+    addAnother: addAnotherTypeEntry,
+    remove: removeTypeEntry,
+    clear: clearTypeEntries,
+  } = useTypologyMultiSelect(coinIssues)
   // Order of selection (not of `mintOptions`) so each pick keeps its color
   // slot — and pin color — as later picks are added/removed around it.
   const { selected: mintFilters, colorByValue: mintColorByValue, toggle: toggleMintFilter, clear: clearMintFilters } =
@@ -265,12 +482,12 @@ export function FindSpotsVisualization({
 
   const mintFilterSet = useMemo(() => new Set(mintFilters), [mintFilters])
 
-  const filterActive = mode === 'type' ? hasTypologyFilter(sel) : mintFilters.length > 0
+  const filterActive = mode === 'type' ? typeEntries.length > 0 : mintFilters.length > 0
 
   const matchedIds = useMemo(() => {
     if (mode === 'mint') return getMatchingCoinIssueIdsByMints(coinIssues, mintFilters)
-    return getMatchingCoinIssueIds(coinIssues, hierarchyRows, sel)
-  }, [mode, coinIssues, hierarchyRows, mintFilters, sel])
+    return getMatchingCoinIssueIdsMulti(coinIssues, hierarchyRows, typeEntries)
+  }, [mode, coinIssues, hierarchyRows, mintFilters, typeEntries])
 
   const siteStates = useMemo(
     () =>
@@ -322,45 +539,89 @@ export function FindSpotsVisualization({
     })
   }, [mode, mintFilters, mintOptions, mintColorByValue])
 
-  // Compare view: one point per (site, mint) that has a nonzero quantity
-  // for that mint, colored by the mint's identity color — unlike
-  // points/density (which OR the selection into one match-ratio per site),
-  // a site with coins from two selected mints shows up twice here.
+  // Compare view: one point per (site, mint) or (site, type) that has a
+  // nonzero matching quantity, colored by that group's identity color —
+  // unlike points/density (which OR the selection into one match-ratio per
+  // site), a site matching two selected groups shows up twice here.
   const siteMintQuantities = useMemo(() => {
     if (mode !== 'mint' || viewMode !== 'compare') return new Map<string, Map<string, number>>()
     return computeSiteMintQuantities(finds, coinIssues, mintFilters)
   }, [mode, viewMode, finds, coinIssues, mintFilters])
 
+  const siteTypeQuantities = useMemo(() => {
+    if (mode !== 'type' || viewMode !== 'compare') return new Map<string, Map<string, number>>()
+    return computeSiteTypeQuantities(finds, coinIssues, hierarchyRows, typeEntries)
+  }, [mode, viewMode, finds, coinIssues, hierarchyRows, typeEntries])
+
   const comparePoints = useMemo<ComparePoint[]>(() => {
-    if (mode !== 'mint' || viewMode !== 'compare') return []
+    if (viewMode !== 'compare') return []
     const sitesByCode = new Map(sites.map((s) => [s.site_code, s]))
     const points: ComparePoint[] = []
-    mintFilters.forEach((mintId) => {
-      const opt = mintOptions.find((m) => m.mint_id === mintId)
-      const color = mintColorByValue.get(mintId) ?? SELECTION_COLORS[0]
-      siteMintQuantities.forEach((byMint, siteCode) => {
-        const qty = byMint.get(mintId)
-        if (!qty) return
-        const site = sitesByCode.get(siteCode)
-        if (site?.lat == null || site?.lng == null) return
-        points.push({
-          key: `${siteCode}::${mintId}`,
-          siteCode,
-          lat: site.lat,
-          lng: site.lng,
-          color,
-          qty,
-          siteLabel: site.site_name_zh ?? siteCode,
-          mintLabel: opt ? formatMintOptionLabel(opt) : mintId,
-          href: `/sites/${siteCode}`,
+
+    if (mode === 'mint') {
+      mintFilters.forEach((mintId) => {
+        const opt = mintOptions.find((m) => m.mint_id === mintId)
+        const color = mintColorByValue.get(mintId) ?? SELECTION_COLORS[0]
+        siteMintQuantities.forEach((byMint, siteCode) => {
+          const qty = byMint.get(mintId)
+          if (!qty) return
+          const site = sitesByCode.get(siteCode)
+          if (site?.lat == null || site?.lng == null) return
+          points.push({
+            key: `${siteCode}::${mintId}`,
+            groupKey: siteCode,
+            lat: site.lat,
+            lng: site.lng,
+            color,
+            qty,
+            locationLabel: site.site_name_zh ?? siteCode,
+            groupLabel: opt ? formatMintOptionLabel(opt) : mintId,
+            groupKindLabel: t('map.compare.mintKindLabel'),
+            href: `/sites/${siteCode}`,
+          })
         })
       })
-    })
+    } else {
+      typeEntries.forEach((entry) => {
+        const color = typeColorByValue.get(entry.key) ?? SELECTION_COLORS[0]
+        siteTypeQuantities.forEach((byEntry, siteCode) => {
+          const qty = byEntry.get(entry.key)
+          if (!qty) return
+          const site = sitesByCode.get(siteCode)
+          if (site?.lat == null || site?.lng == null) return
+          points.push({
+            key: `${siteCode}::${entry.key}`,
+            groupKey: siteCode,
+            lat: site.lat,
+            lng: site.lng,
+            color,
+            qty,
+            locationLabel: site.site_name_zh ?? siteCode,
+            groupLabel: entry.label,
+            groupKindLabel: t('map.compare.typeKindLabel'),
+            href: `/sites/${siteCode}`,
+          })
+        })
+      })
+    }
+
     return points
-  }, [mode, viewMode, mintFilters, mintOptions, mintColorByValue, siteMintQuantities, sites])
+  }, [
+    mode,
+    viewMode,
+    mintFilters,
+    mintOptions,
+    mintColorByValue,
+    siteMintQuantities,
+    typeEntries,
+    typeColorByValue,
+    siteTypeQuantities,
+    sites,
+    t,
+  ])
 
   function clearFilters() {
-    setSel(emptyTypologySelection())
+    clearTypeEntries()
     clearMintFilters()
   }
 
@@ -412,10 +673,6 @@ export function FindSpotsVisualization({
               onChange={(m) => {
                 setMode(m)
                 clearFilters()
-                // Compare only exists under "by mint" — leaving it stranded
-                // in Compare with no mint filter control visible would just
-                // show an empty map.
-                if (m !== 'mint' && viewMode === 'compare') setViewMode('points')
               }}
               options={[
                 { value: 'type' as const, label: <T k="map.filter.byType" /> },
@@ -424,11 +681,15 @@ export function FindSpotsVisualization({
             />
           </div>
 
-          <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare={mode === 'mint'} />
+          <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
           <p className="text-sm leading-snug text-gray-700">
             {mode === 'type' ? (
-              <T k={filterActive ? 'map.currentView.typeActive' : 'map.currentView.typeNone'} />
+              typeEntries.length === 0 ? (
+                <T k="map.currentView.typeNone" />
+              ) : (
+                <T k={viewMode === 'compare' ? 'map.currentView.typeActiveCompare' : 'map.currentView.typeActiveOr'} />
+              )
             ) : mintFilters.length === 0 ? (
               <T k="map.currentView.mintNone" />
             ) : (
@@ -438,13 +699,16 @@ export function FindSpotsVisualization({
           <MapExplanation viewMode={viewMode} />
 
           {mode === 'type' && (
-            <TypologyFilterBar
-              sel={sel}
-              onChange={setSel}
-              showInscriptionList
+            <TypologyMultiSelect
+              staged={stagedType}
+              onStagedChange={setStagedType}
+              committedEntries={typeCommittedEntries}
+              colorByValue={typeColorByValue}
+              onAddAnother={addAnotherTypeEntry}
+              onRemove={removeTypeEntry}
+              onClear={clearTypeEntries}
               hierarchyRows={hierarchyRows}
               coinIssues={coinIssues}
-              compact
             />
           )}
 
@@ -498,9 +762,19 @@ export function FindSpotsVisualization({
 
       {(filterActive || viewMode === 'density' || viewMode === 'compare') && (
         <div className="heatmap_legend">
-          {viewMode === 'compare' && (
-            <CompareLegend mintFilters={mintFilters} mintOptions={mintOptions} mintColorByValue={mintColorByValue} />
-          )}
+          {viewMode === 'compare' &&
+            (mode === 'mint' ? (
+              <CompareLegend
+                titleKey="map.legend.byMint"
+                entries={mintFilters.map((id) => ({
+                  key: id,
+                  label: mintOptions.find((m) => m.mint_id === id)?.mint_zh ?? id,
+                }))}
+                colorByValue={mintColorByValue}
+              />
+            ) : (
+              <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
+            ))}
           {filterActive && viewMode === 'points' && (
             <>
               <span className="font-semibold uppercase tracking-wide text-gray-500">
@@ -556,18 +830,28 @@ export function MintTownVisualization({
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
 }) {
+  const { t } = useLanguage()
   // Only one data source exists today (database finds) — the toggle row is
   // kept (rather than collapsed away) so a future data source is just
   // another entry in `options` below, not a UI rebuild.
   const [source, setSource] = useState<HeatmapSource>('database')
   const [viewMode, setViewMode] = useState<ViewMode>('points')
-  const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
+  const {
+    staged: stagedType,
+    setStaged: setStagedType,
+    entries: typeEntries,
+    committedEntries: typeCommittedEntries,
+    colorByValue: typeColorByValue,
+    addAnother: addAnotherTypeEntry,
+    remove: removeTypeEntry,
+    clear: clearTypeEntries,
+  } = useTypologyMultiSelect(coinIssues)
 
-  const filterActive = hasTypologyFilter(sel)
+  const filterActive = typeEntries.length > 0
 
   const matchedIds = useMemo(
-    () => getMatchingCoinIssueIds(coinIssues, hierarchyRows, sel),
-    [coinIssues, hierarchyRows, sel]
+    () => getMatchingCoinIssueIdsMulti(coinIssues, hierarchyRows, typeEntries),
+    [coinIssues, hierarchyRows, typeEntries]
   )
 
   // Every known mint town's full totals, regardless of the active filter —
@@ -642,8 +926,43 @@ export function MintTownVisualization({
     [totalStats]
   )
 
+  // Compare view: one point per (mint, type) that has a nonzero matching
+  // quantity, colored by that type's identity color — a mint matching two
+  // selected types shows up twice here.
+  const mintTypeQuantities = useMemo(() => {
+    if (viewMode !== 'compare') return new Map<string, Map<string, number>>()
+    return computeMintTypeQuantities(finds, coinIssues, hierarchyRows, typeEntries)
+  }, [viewMode, finds, coinIssues, hierarchyRows, typeEntries])
+
+  const comparePoints = useMemo<ComparePoint[]>(() => {
+    if (viewMode !== 'compare') return []
+    const points: ComparePoint[] = []
+    typeEntries.forEach((entry) => {
+      const color = typeColorByValue.get(entry.key) ?? SELECTION_COLORS[0]
+      mintTypeQuantities.forEach((byEntry, mintZh) => {
+        const qty = byEntry.get(entry.key)
+        if (!qty) return
+        const mint = mintPoints.find((m) => m.mint_zh === mintZh)
+        if (!mint) return
+        points.push({
+          key: `${mintZh}::${entry.key}`,
+          groupKey: mintZh,
+          lat: mint.lat,
+          lng: mint.lng,
+          color,
+          qty,
+          locationLabel: `${mint.mint_zh}${mint.mint_en ? ` (${mint.mint_en})` : ''}`,
+          groupLabel: entry.label,
+          groupKindLabel: t('map.compare.typeKindLabel'),
+          href: mint.mint_code ? `/mints/${mint.mint_code}` : undefined,
+        })
+      })
+    })
+    return points
+  }, [viewMode, typeEntries, typeColorByValue, mintTypeQuantities, mintPoints, t])
+
   function clearFilters() {
-    setSel(emptyTypologySelection())
+    clearTypeEntries()
   }
 
   return (
@@ -654,6 +973,7 @@ export function MintTownVisualization({
         mintStates={mintStates}
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
+        comparePoints={comparePoints}
       />
 
       <MapVisualizationOverlay>
@@ -669,10 +989,16 @@ export function MintTownVisualization({
             />
           </div>
 
-          <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
+          <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
           <p className="text-sm leading-snug text-gray-700">
-            <T k={filterActive ? 'map.currentView.mintTownDbActive' : 'map.currentView.mintTownDbNone'} />
+            {typeEntries.length === 0 ? (
+              <T k="map.currentView.mintTownDbNone" />
+            ) : (
+              <T
+                k={viewMode === 'compare' ? 'map.currentView.mintTownDbActiveCompare' : 'map.currentView.mintTownDbActiveOr'}
+              />
+            )}
           </p>
           <MapExplanation viewMode={viewMode} />
           <p className="text-sm text-gray-700">
@@ -681,13 +1007,16 @@ export function MintTownVisualization({
               vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
             />
           </p>
-          <TypologyFilterBar
-            sel={sel}
-            onChange={setSel}
-            showInscriptionList
+          <TypologyMultiSelect
+            staged={stagedType}
+            onStagedChange={setStagedType}
+            committedEntries={typeCommittedEntries}
+            colorByValue={typeColorByValue}
+            onAddAnother={addAnotherTypeEntry}
+            onRemove={removeTypeEntry}
+            onClear={clearTypeEntries}
             hierarchyRows={hierarchyRows}
             coinIssues={coinIssues}
-            compact
           />
 
           {mintPoints.length === 0 && (
@@ -718,8 +1047,11 @@ export function MintTownVisualization({
         </div>
       </MapVisualizationOverlay>
 
-      {(filterActive || viewMode === 'density') && (
+      {(filterActive || viewMode === 'density' || viewMode === 'compare') && (
         <div className="heatmap_legend">
+          {viewMode === 'compare' && (
+            <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
+          )}
           {filterActive && viewMode === 'points' && (
             <>
               <span className="font-semibold uppercase tracking-wide text-gray-500">
@@ -832,7 +1164,7 @@ function MuseumMapOverlay({
  * MintTownVisualization above (same overlay shell, view/density toggle,
  * typology filter bar, and legend) on its Mint Town tab, except every mint
  * aggregate comes from public.ans_data specimens (lib/ans-museum-data.ts)
- * instead of database finds. See computeAnsMintStats / getMatchingAnsSpecimens
+ * instead of database finds. See computeAnsMintStats / getMatchingAnsSpecimensMulti
  * in lib/pointed-spade-data.ts for how the two data sources diverge under
  * the hood while sharing this same rendering. Its Search tab
  * (AccessionNumberSearch) looks up specimens by accession number instead.
@@ -846,9 +1178,19 @@ export function AnsMintTownVisualization({
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
 }) {
+  const { t } = useLanguage()
   const [tab, setTab] = useState<MuseumTab>('mint')
   const [viewMode, setViewMode] = useState<ViewMode>('points')
-  const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
+  const {
+    staged: stagedType,
+    setStaged: setStagedType,
+    entries: typeEntries,
+    committedEntries: typeCommittedEntries,
+    colorByValue: typeColorByValue,
+    addAnother: addAnotherTypeEntry,
+    remove: removeTypeEntry,
+    clear: clearTypeEntries,
+  } = useTypologyMultiSelect(coinIssues)
   // Order of selection (not of `specimens`) so each pick keeps its color
   // slot as later picks are added/removed around it. Keyed by ans_data.id —
   // catalog_number isn't unique (some specimens share an accession number).
@@ -859,7 +1201,7 @@ export function AnsMintTownVisualization({
     clear: clearSelected,
   } = useSelectionColors()
 
-  const filterActive = hasTypologyFilter(sel)
+  const filterActive = typeEntries.length > 0
 
   const specimensById = useMemo(() => new Map(specimens.map((s) => [s.id, s])), [specimens])
 
@@ -900,8 +1242,8 @@ export function AnsMintTownVisualization({
   )
 
   const matchedSpecimens = useMemo(
-    () => getMatchingAnsSpecimens(specimens, hierarchyRows, sel),
-    [specimens, hierarchyRows, sel]
+    () => getMatchingAnsSpecimensMulti(specimens, hierarchyRows, typeEntries),
+    [specimens, hierarchyRows, typeEntries]
   )
 
   const totalStats = useMemo(() => computeAnsMintStats(specimens), [specimens])
@@ -957,8 +1299,43 @@ export function AnsMintTownVisualization({
     [totalStats]
   )
 
+  // Compare view: one point per (mint, type) that has a nonzero matching
+  // quantity, colored by that type's identity color — a mint matching two
+  // selected types shows up twice here.
+  const mintTypeQuantities = useMemo(() => {
+    if (viewMode !== 'compare') return new Map<string, Map<string, number>>()
+    return computeAnsMintTypeQuantities(specimens, hierarchyRows, typeEntries)
+  }, [viewMode, specimens, hierarchyRows, typeEntries])
+
+  const comparePoints = useMemo<ComparePoint[]>(() => {
+    if (viewMode !== 'compare') return []
+    const points: ComparePoint[] = []
+    typeEntries.forEach((entry) => {
+      const color = typeColorByValue.get(entry.key) ?? SELECTION_COLORS[0]
+      mintTypeQuantities.forEach((byEntry, mintZh) => {
+        const qty = byEntry.get(entry.key)
+        if (!qty) return
+        const mint = mintPoints.find((m) => m.mint_zh === mintZh)
+        if (!mint) return
+        points.push({
+          key: `${mintZh}::${entry.key}`,
+          groupKey: mintZh,
+          lat: mint.lat,
+          lng: mint.lng,
+          color,
+          qty,
+          locationLabel: `${mint.mint_zh}${mint.mint_en ? ` (${mint.mint_en})` : ''}`,
+          groupLabel: entry.label,
+          groupKindLabel: t('map.compare.typeKindLabel'),
+          href: mint.mint_code ? `/mints/${mint.mint_code}` : undefined,
+        })
+      })
+    })
+    return points
+  }, [viewMode, typeEntries, typeColorByValue, mintTypeQuantities, mintPoints, t])
+
   function clearFilters() {
-    setSel(emptyTypologySelection())
+    clearTypeEntries()
   }
 
   return (
@@ -970,6 +1347,7 @@ export function AnsMintTownVisualization({
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
         pins={pins}
+        comparePoints={comparePoints}
       />
 
       <MuseumMapOverlay tab={tab} onTabChange={setTab}>
@@ -983,10 +1361,20 @@ export function AnsMintTownVisualization({
           />
         ) : (
           <div className="space-y-2.5">
-            <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
+            <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
             <p className="text-sm leading-snug text-gray-700">
-              <T k={filterActive ? 'map.currentView.mintTownAnsActive' : 'map.currentView.mintTownAnsNone'} />
+              {typeEntries.length === 0 ? (
+                <T k="map.currentView.mintTownAnsNone" />
+              ) : (
+                <T
+                  k={
+                    viewMode === 'compare'
+                      ? 'map.currentView.mintTownAnsActiveCompare'
+                      : 'map.currentView.mintTownAnsActiveOr'
+                  }
+                />
+              )}
             </p>
             <MapExplanation viewMode={viewMode} />
             <p className="text-sm text-gray-700">
@@ -995,13 +1383,16 @@ export function AnsMintTownVisualization({
                 vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
               />
             </p>
-            <TypologyFilterBar
-              sel={sel}
-              onChange={setSel}
-              showInscriptionList
+            <TypologyMultiSelect
+              staged={stagedType}
+              onStagedChange={setStagedType}
+              committedEntries={typeCommittedEntries}
+              colorByValue={typeColorByValue}
+              onAddAnother={addAnotherTypeEntry}
+              onRemove={removeTypeEntry}
+              onClear={clearTypeEntries}
               hierarchyRows={hierarchyRows}
               coinIssues={coinIssues}
-              compact
             />
 
             {mintPoints.length === 0 && (
@@ -1033,8 +1424,11 @@ export function AnsMintTownVisualization({
         )}
       </MuseumMapOverlay>
 
-      {tab === 'mint' && (filterActive || viewMode === 'density') && (
+      {tab === 'mint' && (filterActive || viewMode === 'density' || viewMode === 'compare') && (
         <div className="heatmap_legend">
+          {viewMode === 'compare' && (
+            <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
+          )}
           {filterActive && viewMode === 'points' && (
             <>
               <span className="font-semibold uppercase tracking-wide text-gray-500">

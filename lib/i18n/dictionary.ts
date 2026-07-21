@@ -299,6 +299,7 @@ export const DICTIONARY = {
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
   'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
+  'map.filter.addSelection': { en: 'Add another', zh: '再添加一项' },
 
   // ── map explanation paragraph 2: one per view mode, shared by every map ──
   'map.explain.points': {
@@ -310,15 +311,22 @@ export const DICTIONARY = {
     zh: '在密度视图中，各点的热力权重计算方式为：未筛选 — 按总数量缩放（对数）；完全匹配（含仅一枚即匹配）— 权重为满值；部分匹配 — 权重等于匹配比例（设有下限以保持可见）；存在但数量未计 — 固定的中等权重；完全无记录 — 不计入密度图。',
   },
   'map.explain.compare': {
-    en: 'Compare colors each selected mint separately — a location with coins from more than one selected mint shows as multiple points, one per mint. Point size reflects that mint’s own coin quantity there, independent of color; a match with unrecorded quantity counts as 1.',
-    zh: '「对比」视图按所选铸地分别着色——若某处同时含有多个所选铸地的钱币，将显示为多个点，每个铸地一个点。点的大小反映该铸地在该处的钱币数量，与颜色无关；若数量未记录则按 1 计算。',
+    en: 'Compare colors each selection separately — a location matching more than one selection shows as multiple points, one per selection. Point size reflects that selection’s own coin quantity there, independent of color; a match with unrecorded quantity counts as 1.',
+    zh: '「对比」视图按每项所选内容分别着色——若某处同时匹配多项所选内容，将显示为多个点，每项一个点。点的大小反映该项所选内容在该处的钱币数量，与颜色无关；若数量未记录则按 1 计算。',
   },
 
   // ── current filter/view paragraph 1: one per map + filter-state combo ───
-  'map.currentView.typeNone': { en: 'Showing all find sites, unfiltered.', zh: '显示全部出土遗址，未筛选。' },
-  'map.currentView.typeActive': {
-    en: 'Showing find sites filtered by the selected coin type.',
-    zh: '显示按所选币种筛选的出土遗址。',
+  'map.currentView.typeNone': {
+    en: 'Showing all find sites — select one or more coin types below to filter.',
+    zh: '显示全部出土遗址——请在下方选择一个或多个币种进行筛选。',
+  },
+  'map.currentView.typeActiveOr': {
+    en: 'Showing find sites with coins matching any of the selected types.',
+    zh: '显示含有任一所选币种钱币的出土遗址。',
+  },
+  'map.currentView.typeActiveCompare': {
+    en: 'Comparing the selected coin types across find sites.',
+    zh: '对比已选币种在各出土遗址的分布。',
   },
   'map.currentView.mintNone': {
     en: 'Showing all find sites — select one or more mints below to filter.',
@@ -333,20 +341,28 @@ export const DICTIONARY = {
     zh: '对比已选铸地在各出土遗址的分布。',
   },
   'map.currentView.mintTownDbNone': {
-    en: 'Showing all mint towns from the database, unfiltered.',
-    zh: '显示数据库中全部铸地，未筛选。',
+    en: 'Showing all mint towns from the database — select one or more coin types below to filter.',
+    zh: '显示数据库中全部铸地——请在下方选择一个或多个币种进行筛选。',
   },
-  'map.currentView.mintTownDbActive': {
-    en: 'Showing mint towns from the database filtered by the selected coin type.',
-    zh: '显示按所选币种筛选的数据库铸地。',
+  'map.currentView.mintTownDbActiveOr': {
+    en: 'Showing mint towns from the database with coins matching any of the selected types.',
+    zh: '显示含有任一所选币种钱币的数据库铸地。',
+  },
+  'map.currentView.mintTownDbActiveCompare': {
+    en: 'Comparing the selected coin types across mint towns from the database.',
+    zh: '对比已选币种在数据库各铸地的分布。',
   },
   'map.currentView.mintTownAnsNone': {
-    en: 'Showing all mint towns from the ANS museum specimens, unfiltered.',
-    zh: '显示 ANS 博物馆标本中全部铸地，未筛选。',
+    en: 'Showing all mint towns from the ANS museum specimens — select one or more coin types below to filter.',
+    zh: '显示 ANS 博物馆标本中全部铸地——请在下方选择一个或多个币种进行筛选。',
   },
-  'map.currentView.mintTownAnsActive': {
-    en: 'Showing mint towns from the ANS museum specimens filtered by the selected coin type.',
-    zh: '显示按所选币种筛选的 ANS 博物馆标本铸地。',
+  'map.currentView.mintTownAnsActiveOr': {
+    en: 'Showing mint towns from the ANS museum specimens with coins matching any of the selected types.',
+    zh: '显示含有任一所选币种钱币的 ANS 博物馆标本铸地。',
+  },
+  'map.currentView.mintTownAnsActiveCompare': {
+    en: 'Comparing the selected coin types across mint towns from the ANS museum specimens.',
+    zh: '对比已选币种在 ANS 博物馆标本各铸地的分布。',
   },
 
   'map.view.points': { en: 'Points', zh: '点状' },
@@ -355,6 +371,9 @@ export const DICTIONARY = {
   'map.view.label': { en: 'Display', zh: '显示' },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
   'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
+  'map.legend.byType': { en: 'By type:', zh: '按类型：' },
+  'map.compare.mintKindLabel': { en: 'Mint: ', zh: '铸地：' },
+  'map.compare.typeKindLabel': { en: 'Type: ', zh: '类型：' },
   'map.legend.densityHint': {
     en: 'Brighter / redder where matching sites cluster; weighted by share.',
     zh: '匹配遗址越集中、占比越高，颜色越亮越红。',

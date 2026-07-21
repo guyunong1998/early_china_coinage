@@ -226,37 +226,52 @@ function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): strin
 }
 
 /**
- * One (site, mint) pair for Find Site's Compare view — a site with coins
- * from N selected mints contributes N of these, one per mint, each its own
- * identity color (see lib/color-scale.ts's SELECTION_COLORS) instead of the
- * usual match-ratio color. Plain round dots (dot()), not PinPoint's teardrop
- * — Compare recolors the ordinary site markers, it doesn't add new pins.
+ * One (location, group) pair for a map's Compare view — a location (a find
+ * site, or a mint town) with matches from N selected groups (mints, or coin
+ * types) contributes N of these, one per group, each its own identity color
+ * (see lib/color-scale.ts's SELECTION_COLORS) instead of the usual
+ * match-ratio color. Plain round dots (dot()), not PinPoint's teardrop —
+ * Compare recolors the ordinary markers, it doesn't add new pins. Generic
+ * over what's being compared (mint vs. coin type) so every map's Compare
+ * view (Find Site by mint/by type, the database Mint Town tab, Museum
+ * Collections' Mint Town view) shares this one point shape.
  */
 export type ComparePoint = {
   /** Stable identity for reconciling markers across renders. */
   key: string
-  /** Groups points that share a site, for the small stacking offset that
-   * keeps same-site points visually distinct instead of exactly overlapping
-   * (they share a lat/lng by definition). */
-  siteCode: string
+  /** Groups points that share a location, for the small stacking offset
+   * that keeps same-location points visually distinct instead of exactly
+   * overlapping (they share a lat/lng by definition) — a site_code for
+   * Find Site, a mint's name_zh for the Mint Town-shaped maps. */
+  groupKey: string
   lat: number
   lng: number
   color: string
-  /** This mint's coin quantity at this site — drives marker size, same
-   * siteSizeByQuantity() scale as every other point on this map. */
+  /** This group's own coin quantity at this location — drives marker size,
+   * same siteSizeByQuantity() scale as every other point on this map. */
   qty: number
-  siteLabel: string
-  mintLabel: string
-  href: string
+  /** The location's own name (site name, or mint town name). */
+  locationLabel: string
+  /** The compared group's own name (a mint's name, or a coin type's
+   * label). */
+  groupLabel: string
+  /** Short bilingual prefix identifying what kind of group this is (e.g.
+   * "Mint / 铸地：" or "Type / 类型："), so the popup reads correctly
+   * regardless of what's being compared. */
+  groupKindLabel: string
+  href?: string
 }
 
 function buildComparePopupHtml(point: ComparePoint, t: TFunction): string {
+  const link = point.href
+    ? `<a href="${point.href}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>`
+    : ''
   return `
     <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
-      <strong>${point.siteLabel}</strong><br/>
-      <strong>Mint / 铸地：</strong>${point.mintLabel}<br/>
+      <strong>${point.locationLabel}</strong><br/>
+      <strong>${point.groupKindLabel}</strong>${point.groupLabel}<br/>
       <strong>Coins:</strong> ${point.qty}<br/>
-      <a href="${point.href}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>
+      ${link}
     </div>
   `
 }
@@ -437,6 +452,9 @@ type MintsCanvasProps = {
   densityLatLngs: [number, number, number][]
   /** User-selected points (Museum Collections search) — see PinPoint. */
   pins?: PinPoint[]
+  /** Compare view's per-(mint, group) points — see ComparePoint. Only
+   * meaningful (and only supplied) when viewMode === 'compare'. */
+  comparePoints?: ComparePoint[]
   /** See SitesCanvasProps.fullControls. */
   fullControls?: boolean
   height?: string
@@ -462,7 +480,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const filterActiveForSites = props.kind === 'sites' ? props.filterActive : null
   const sitesForInit = props.kind === 'sites' ? props.sites : null
   const pins = props.pins ?? []
-  const comparePoints = props.kind === 'sites' ? (props.comparePoints ?? []) : []
+  const comparePoints = props.comparePoints ?? []
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -520,7 +538,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             sizeRange,
             pointOpacity,
             inDensity,
-            buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t)
+            buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
+            inCompare
           )
         })
       }
@@ -572,13 +591,13 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       // Compare view's own marker set — reconciled independently of the
       // ordinary per-site markers above (which sit hidden via `inCompare`
-      // in applyHeatMarkerStyle while this is active). Grouped by site so
-      // same-site points get the small stacking offset.
+      // in applyHeatMarkerStyle while this is active). Grouped by location
+      // so same-location points get the small stacking offset.
       if (inCompare) {
-        const bySite = new Map<string, ComparePoint[]>()
+        const byLocation = new Map<string, ComparePoint[]>()
         comparePoints.forEach((point) => {
-          if (!bySite.has(point.siteCode)) bySite.set(point.siteCode, [])
-          bySite.get(point.siteCode)!.push(point)
+          if (!byLocation.has(point.groupKey)) byLocation.set(point.groupKey, [])
+          byLocation.get(point.groupKey)!.push(point)
         })
         const maxCompareQty = Math.max(...comparePoints.map((p) => p.qty), 1)
 
@@ -589,7 +608,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           compareMarkersRef.current.delete(key)
         })
 
-        bySite.forEach((points) => {
+        byLocation.forEach((points) => {
           points.forEach((point, i) => {
             const size = siteSizeByQuantity(point.qty, maxCompareQty, sizeRange.min, sizeRange.max)
             const [offsetX, offsetY] = stackOffset(i, points.length, 9)

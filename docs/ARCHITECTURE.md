@@ -15,7 +15,7 @@ How this project is built, how a request turns into a rendered page, where data 
 | Database | **Supabase** (managed Postgres) | The one remote datastore, queried via `@supabase/supabase-js` |
 | Maps | **Leaflet** + `leaflet.heat` + `leaflet.markercluster` | Every interactive map on the site |
 | Hosting | **Vercel** | Zero-config Next.js deployment (no `vercel.json` needed) |
-| Misc | `pinyin-pro` (runtime), `xlsx` (build-time scripts only) | See §9 |
+| Misc | `pinyin-pro` (runtime EN-name fallback, also used by one build-time script) | See §9 |
 
 There is no separate backend service. "Backend" here means: React Server Components that call Supabase directly at render time, plus a handful of one-off Node scripts (`scripts/*.js`, `scripts/*.sql`) that are run manually to regenerate static data or reconcile database tables — never invoked by the running app.
 
@@ -69,11 +69,8 @@ Data that either never changes, is small enough to just ship, or is derived once
 | What | Where | Source |
 |---|---|---|
 | Mint town static dossiers (coordinates, descriptions, images, citations) | `lib/mint-towns.ts` + `lib/mint-dossiers.ts` (`MINT_TOWNS` / `MINT_DOSSIERS`) | Hand-transcribed from `铸币城邑考证61.docx` |
-| Coin typology tree (inscription → mint mapping used by the legacy ANS matcher) | `lib/typology-data.ts` (`TYPOLOGY`, auto-generated, "do not edit manually") | `scripts/gen-typology.js` reads `Typology.xlsx` |
-| Legacy ANS pointed/square-foot spade catalogue | `public/data/ans-pointed-spade.json`, `ans-square-spade.json` | `scripts/build-ans-*-spade-json.js`; powers `/old-ans-spades` only (see §5) |
 | River overlays for the map base layers | `public/data/rivers-major.geojson`, `rivers-minor.geojson` | `scripts/clip-rivers-to-china.js`, clipped from Natural Earth 1:10m data |
 | Mint-town photos, coin specimen photography | `public/images/mints/`, `public/images/type_imgs/` | Static files, matched by filename prefix at request time (`lib/coin-images.ts`) |
-| Mint town list (alternate source, used by `/mints`) | Google Sheets, via `lib/sheets.ts` | Published-to-web CSV, refetched hourly (ISR); falls back to `MINT_TOWNS` on error |
 
 Map **tiles** and **city/county boundary polygons** are the one runtime "external" dependency that isn't Supabase: base tiles come from OpenStreetMap and Esri ArcGIS (`lib/map-layers.ts`), and precise city/county boundary outlines are fetched live from Nominatim (`lib/city-boundaries.ts`), cached in-memory per session.
 
@@ -89,7 +86,6 @@ Grouped by job rather than alphabetically:
 - `supabase.ts` — the client instance (only place `createClient` is called)
 - `queries.ts` — nearly every Supabase query in the app; also owns `fetchAllPages`, the flatten-a-joined-row helpers (e.g. `flattenCoinIssue`), and derived aggregate queries like `getMintFindspotsData`
 - `ans-museum-data.ts` — the one `ans_data` query (kept separate from `queries.ts` since it's a different table family, feeding Museum Collections specifically)
-- `sheets.ts` — Google Sheets CSV fetch for `/mints`
 
 **Types**
 - `types.ts` — the DB-shaped types (`MapSite`, `Site`, `Context`, `CoinIssueDisplay`, `Find`, `Source`, `HeatmapFind`, …), i.e. what `queries.ts` returns
@@ -97,13 +93,11 @@ Grouped by job rather than alphabetically:
 **Static reference data**
 - `mint-towns.ts` / `mint-dossiers.ts` — `MINT_TOWNS` and lookups (`getMintByNameZh`, `resolveMintNameZh` for name-alias handling)
 - `mint-directory.ts` — merges a live `mints` DB row with its matching static dossier (DB wins per-field where it has data)
-- `typology-data.ts` — the generated typology tree
 - `coin-images.ts` — filename-prefix matching for specimen photos
 
 **Domain logic / aggregation** (the "how do these rows turn into map points" layer)
-- `pointed-spade-data.ts` — mint-town aggregation from database `finds` (`computeMintStatsFromFinds`), from ANS specimens (`computeAnsMintStats`), and the shared `AnsSpecimen` type + `toMintPoints()` reshaper
-- `ans-spade-data.ts` — the **legacy** ANS aggregation path (inscription-text → mint guessing via `TYPOLOGY`), used only by `/old-ans-spades`
-- `mint-filter.ts` — Find Site's "filter by mint" support: option list building (with per-mint find-site counts), matching `coin_type_code`s to selected mints, and `computeSiteMintQuantities` for Compare view
+- `pointed-spade-data.ts` — mint-town aggregation from database `finds` (`computeMintStatsFromFinds`), from ANS specimens (`computeAnsMintStats`/`computeAnsMintTypeQuantities`), and the shared `AnsSpecimen` type + `toMintPoints()` reshaper
+- `mint-filter.ts` — Find Site's "filter by mint" support: option list building (with per-mint find-site counts), matching selected mints against `coin_issues_id`, and `computeSiteMintQuantities` for Compare view
 - `typology-filter.ts` — the coin-type hierarchy filter: matching logic (`coinMatchesTypologyFilter`) plus the level-by-level dropdown option builders used by `TypologyFilterBar`
 - `context-heatmap.ts` — the core "how matched is this site" math: per-context → per-site heat-state aggregation, shared by every points/density map
 - `coin-type-catalog.ts` — builds the `/coin-types` browsing tree + counts
@@ -125,7 +119,7 @@ Grouped by job rather than alphabetically:
 
 ### The "pure map" pattern
 
-Most single-purpose maps (`components/map/CoinMap.tsx`, `CoinFilterMap.tsx`, `HoardMintOriginsMap.tsx`, `MintIssueDistributionMapCanvas.tsx`, `SinglePointMap.tsx`, `PointedSpadeHeatmap.tsx`) follow the same shape: a `'use client'` component that owns a Leaflet instance in a `useRef`, takes already-computed data as props, and renders markers/popups — **no filter state, no caption, no page chrome**. The page (or a thin owning component) fetches data, computes what to show, and wraps the pure map with whatever UI it needs. This keeps each map trivially reusable: `CoinMapSection.tsx`, for instance, is just a thin default-props wrapper around `CoinMap.tsx`, used by both `/search` and `/sites/[site_code]`.
+Most single-purpose maps (`components/map/CoinMap.tsx`, `CoinFilterMap.tsx`, `HoardMintOriginsMap.tsx`, `MintIssueDistributionMapCanvas.tsx`, `SinglePointMap.tsx`) follow the same shape: a `'use client'` component that owns a Leaflet instance in a `useRef`, takes already-computed data as props, and renders markers/popups — **no filter state, no caption, no page chrome**. The page (or a thin owning component) fetches data, computes what to show, and wraps the pure map with whatever UI it needs. This keeps each map trivially reusable: `CoinMapSection.tsx`, for instance, is just a thin default-props wrapper around `CoinMap.tsx`, used by both `/search` and `/sites/[site_code]`.
 
 ### The shared engine: `MapVisCanvas.tsx`
 
@@ -167,7 +161,6 @@ Both feed the same downstream mechanism: a `selectedOrder: string[]` + a stable 
 - `components/search/*` — `/search`'s filter sidebar, result cards, sort control
 - `components/home/*` — homepage hero banner + nav cards
 - `components/layout/*` — header, mobile nav, footer (`ConditionalFooter` hides the footer on full-bleed map pages)
-- `components/heatmap/HeatmapPanel.tsx` — the legacy `/old-ans-spades` page's full section (map + table + sources card); the historical ancestor of Museum Collections, kept around unmerged
 - `components/ui/*` — small generic primitives (`DataCard`, `Pagination`, `Tabs`, `CopyButton`, …)
 
 ---
@@ -206,8 +199,7 @@ Tailwind CSS 4, configured CSS-first (no `tailwind.config.js` — `@import "tail
 | `leaflet.heat` | Density-view heat layers (`MapVisCanvas`'s Density mode, the homepage's always-on density overlay) |
 | `leaflet.markercluster` | Marker clustering on `CoinMap.tsx` (search results / site-detail maps, which can have many nearby points) |
 | `@supabase/supabase-js` | The Postgres client (`lib/supabase.ts`) |
-| `pinyin-pro` | Runtime fallback: generates a romanized English name from Chinese when no curated translation exists (`lib/name-translation.ts`) |
-| `xlsx` | **Dev-only** — `scripts/gen-typology.js` and the ANS spade-catalogue build scripts read `.xlsx` source files at data-generation time; never imported by app code, never shipped to the browser |
+| `pinyin-pro` | Runtime fallback: generates a romanized English name from Chinese when no curated translation exists (`lib/name-translation.ts`); also used dev-only by `scripts/gen-technical-terms.js` |
 
 No charting/dataviz library is used — the pie chart on site pages (`components/site/CoinTypePieChart.tsx`) is hand-rolled SVG, and every "chart-like" visualization on this site is actually the Leaflet map itself (points/density/compare), styled per the project's own `dataviz`-skill-validated color rules (see `lib/color-scale.ts`'s `SELECTION_COLORS` comment).
 
@@ -217,9 +209,7 @@ No charting/dataviz library is used — the pie chart on site pages (`components
 
 These never run automatically — they're one-off or occasional maintenance steps:
 
-- `scripts/gen-typology.js` — `Typology.xlsx` → `lib/typology-data.ts`
 - `scripts/gen-technical-terms.js` — glossary generation
-- `scripts/build-ans-pointed-spade-json.js` / `build-ans-square-spade-json.js` — source spreadsheets → `public/data/ans-*.json`
 - `scripts/clip-rivers-to-china.js` — Natural Earth river data → the two river GeoJSON files
 - `scripts/reconcile-ans-data.sql` — rebuilds `public.ans_data` from `public.ans_data_upload` in Supabase (run by hand in the SQL editor)
 - `scripts/append-new-coin-issues.sql` — promotes unresolved `ans_data` rows into new `coin_issues` records

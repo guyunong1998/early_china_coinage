@@ -1,12 +1,12 @@
 import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
-import { coinMatchesTypologyFilter, hasTypologyFilter, type TypologyFilterSelection } from '@/lib/typology-filter'
+import { coinMatchesTypologyFilter, type TypologySelectionEntry } from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
-/** Which dataset a mint production heatmap is showing. */
-export type HeatmapSource = 'database' | 'ans'
-/** Which ANS spade catalogue a heatmap is showing, when source is 'ans'. */
-export type AnsSpadeKind = 'pointed' | 'square'
+/** Which dataset a mint production heatmap is showing — only 'database'
+ * exists today, but the type (and the toggle row using it) is kept so a
+ * future second source is just another entry, not a UI rebuild. */
+export type HeatmapSource = 'database'
 
 export type PointedSpadeMintStat = {
   mint_zh: string
@@ -122,9 +122,8 @@ export function toMintPoints(stats: PointedSpadeMintStat[]): MintPoint[] {
  * One row per specimen in the reconciled `public.ans_data` table (see
  * scripts/reconcile-ans-data.sql) — mint/state/hierarchy/inscription are
  * already resolved per specimen there (mint_id, hierarchy_id, inscription_id
- * FKs), unlike the older ANS spade catalogue (lib/ans-spade-data.ts, backed
- * by public/data/ans-*.json) which guesses a mint town from inscription text
- * via the typology file. Fetched by lib/ans-museum-data.ts.
+ * FKs), rather than guessed from inscription text. Fetched by
+ * lib/ans-museum-data.ts.
  */
 export type AnsSpecimen = {
   /** ans_data.id (a uuid) — the only field guaranteed unique per row.
@@ -209,23 +208,53 @@ export function computeAnsMintStats(
   return { mapped, unmapped }
 }
 
-/** Narrows ans_data specimens to the active typology filter, reusing the
- * exact same match rule as the database-backed Mint Town tab
- * (coinMatchesTypologyFilter) since ans_data.hierarchy_id/inscription_id
+/** Narrows ans_data specimens to the active (multiselect, OR/ANY) typology
+ * filter, reusing the exact same match rule as the database-backed Mint Town
+ * tab (coinMatchesTypologyFilter) since ans_data.hierarchy_id/inscription_id
  * live in the same id space as coin_issues.coin_type_hierarchy_id/
- * inscription_id. Returns null when no filter is active (caller then knows
- * to treat every mint as "no-filter" rather than "zero matches"). */
-export function getMatchingAnsSpecimens(
+ * inscription_id. For the Points/Density display in Museum Collections' Mint
+ * Town view. Returns null when `entries` is empty (no filter active). */
+export function getMatchingAnsSpecimensMulti(
   specimens: AnsSpecimen[],
   hierarchyRows: CoinTypeHierarchyRow[],
-  sel: TypologyFilterSelection
+  entries: TypologySelectionEntry[]
 ): AnsSpecimen[] | null {
-  if (!hasTypologyFilter(sel)) return null
+  if (entries.length === 0) return null
   return specimens.filter((s) =>
-    coinMatchesTypologyFilter(
-      { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
-      hierarchyRows,
-      sel
+    entries.some((entry) =>
+      coinMatchesTypologyFilter(
+        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
+        hierarchyRows,
+        entry.sel
+      )
     )
   )
+}
+
+/** Per-mint, per-selection-entry specimen counts for Compare mode — outer
+ * key is the resolved mint zh name, inner key is entry.key. The ans_data
+ * equivalent of computeMintTypeQuantities in typology-filter.ts, used by
+ * Museum Collections' Mint Town Compare view. */
+export function computeAnsMintTypeQuantities(
+  specimens: AnsSpecimen[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  entries: TypologySelectionEntry[]
+): Map<string, Map<string, number>> {
+  const result = new Map<string, Map<string, number>>()
+  specimens.forEach((s) => {
+    if (!s.mint_zh) return
+    const mintZh = resolveMintNameZh(s.mint_zh)
+    entries.forEach((entry) => {
+      const matches = coinMatchesTypologyFilter(
+        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
+        hierarchyRows,
+        entry.sel
+      )
+      if (!matches) return
+      if (!result.has(mintZh)) result.set(mintZh, new Map())
+      const byMint = result.get(mintZh)!
+      byMint.set(entry.key, (byMint.get(entry.key) ?? 0) + 1)
+    })
+  })
+  return result
 }

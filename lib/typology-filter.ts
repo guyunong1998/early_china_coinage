@@ -1,5 +1,6 @@
-import type { CoinIssueDisplay, CoinTypeHierarchyRow } from '@/lib/types'
+import { resolveMintNameZh } from '@/lib/mint-towns'
 import { splitCsv } from '@/lib/format'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
 /**
  * Selection through the live coin_type_hierarchy tree. level1 is a real,
@@ -26,6 +27,43 @@ export function emptyTypologySelection(): TypologyFilterSelection {
 
 export function hasTypologyFilter(sel: TypologyFilterSelection): boolean {
   return !!sel.level1 || !!sel.inscriptionId
+}
+
+/**
+ * One confirmed pick in a multiselect coin-type filter (Find Site's "by
+ * type" mode, the database Mint Town tab, Museum Collections' Mint Town
+ * view) — the hierarchical picker (TypologyFilterBar) only ever stages one
+ * `TypologyFilterSelection` at a time, so these accumulate as the user adds
+ * picks, each keeping its own identity color and chip.
+ */
+export type TypologySelectionEntry = {
+  /** Stable identity for color-slot tracking, React keys, and dedup —
+   * `typologySelectionKey(sel)`. */
+  key: string
+  sel: TypologyFilterSelection
+  /** Human-readable label for the chip/legend, e.g. "布币 › 平首布" or an
+   * inscription's own zh text — see describeTypologySelection. */
+  label: string
+}
+
+/** Canonical string form of a selection, stable across renders — used both
+ * as the color-slot id and to dedupe against picks already in the list.
+ * Joined with '|' (not '') since level labels are free-text zh strings
+ * that could otherwise collide across level boundaries. */
+export function typologySelectionKey(sel: TypologyFilterSelection): string {
+  return [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5, sel.inscriptionId].join('|')
+}
+
+/** Human-readable label for a staged selection: its level path (if any),
+ * plus its inscription's zh text (if any) — whichever parts are set. */
+export function describeTypologySelection(sel: TypologyFilterSelection, coinIssues: CoinIssueDisplay[]): string {
+  const path = [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5].filter(Boolean)
+  let label = path.join(' › ')
+  if (sel.inscriptionId) {
+    const inscription = coinIssues.find((c) => c.inscription_id === sel.inscriptionId)?.inscription
+    if (inscription) label = label ? `${label} · ${inscription}` : inscription
+  }
+  return label
 }
 
 const LEVEL_KEYS: Array<keyof Pick<TypologyFilterSelection, 'level1' | 'level2' | 'level3' | 'level4' | 'level5'>> = [
@@ -243,4 +281,93 @@ export function getInscriptionOptions(
     })
   })
   return [...seen.values()].sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
+}
+
+/** Coin_issues.id values matching ANY entry (OR logic, for Points/Density
+ * multiselect), or null when `entries` is empty (no filter active). */
+export function getMatchingCoinIssueIdsMulti(
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  entries: TypologySelectionEntry[]
+): Set<string> | null {
+  if (entries.length === 0) return null
+  const result = new Set<string>()
+  coinIssues.forEach((c) => {
+    if (entries.some((entry) => coinMatchesTypologyFilter(c, hierarchyRows, entry.sel))) result.add(c.id)
+  })
+  return result
+}
+
+function matchedIdsPerEntry(
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  entries: TypologySelectionEntry[]
+): Map<string, Set<string>> {
+  const result = new Map<string, Set<string>>()
+  entries.forEach((entry) => {
+    result.set(entry.key, getMatchingCoinIssueIds(coinIssues, hierarchyRows, entry.sel) ?? new Set())
+  })
+  return result
+}
+
+function findQuantity(find: HeatmapFind): number {
+  if (find.quantity_total != null) return find.quantity_total
+  if (find.quantity_estimated != null) return find.quantity_estimated
+  if (find.quantity_min != null) return find.quantity_min
+  return find.presence ? 1 : 0
+}
+
+/** Per-site, per-selection-entry coin quantities for Compare mode — outer
+ * key is site_code, inner key is entry.key. Used by Find Site's "by type"
+ * Compare view (one point per site per matching entry). */
+export function computeSiteTypeQuantities(
+  finds: HeatmapFind[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  entries: TypologySelectionEntry[]
+): Map<string, Map<string, number>> {
+  const idsByEntry = matchedIdsPerEntry(coinIssues, hierarchyRows, entries)
+  const result = new Map<string, Map<string, number>>()
+  finds.forEach((find) => {
+    if (!find.site_code || !find.coin_issues_id) return
+    const qty = findQuantity(find)
+    if (qty <= 0) return
+    entries.forEach((entry) => {
+      if (!idsByEntry.get(entry.key)!.has(find.coin_issues_id!)) return
+      if (!result.has(find.site_code)) result.set(find.site_code, new Map())
+      const bySite = result.get(find.site_code)!
+      bySite.set(entry.key, (bySite.get(entry.key) ?? 0) + qty)
+    })
+  })
+  return result
+}
+
+/** Per-mint, per-selection-entry coin quantities for Compare mode — outer
+ * key is the resolved mint zh name, inner key is entry.key. Used by the
+ * database Mint Town tab's "by type" Compare view. */
+export function computeMintTypeQuantities(
+  finds: HeatmapFind[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  entries: TypologySelectionEntry[]
+): Map<string, Map<string, number>> {
+  const idsByEntry = matchedIdsPerEntry(coinIssues, hierarchyRows, entries)
+  const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
+  const result = new Map<string, Map<string, number>>()
+  finds.forEach((find) => {
+    if (!find.coin_issues_id) return
+    const coinIssue = coinIssueById.get(find.coin_issues_id)
+    const mintRaw = coinIssue?.mint_zh?.trim()
+    if (!mintRaw) return
+    const mintZh = resolveMintNameZh(mintRaw)
+    const qty = findQuantity(find)
+    if (qty <= 0) return
+    entries.forEach((entry) => {
+      if (!idsByEntry.get(entry.key)!.has(find.coin_issues_id!)) return
+      if (!result.has(mintZh)) result.set(mintZh, new Map())
+      const byMint = result.get(mintZh)!
+      byMint.set(entry.key, (byMint.get(entry.key) ?? 0) + qty)
+    })
+  })
+  return result
 }
