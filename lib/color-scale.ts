@@ -1,3 +1,5 @@
+import { useCallback, useMemo, useState } from 'react'
+
 // Sequential "heat" ramp — light yellow -> orange -> red, validated with the
 // dataviz palette checker (lightness-monotone, adjacent gaps, light-end
 // contrast all pass). This is a deliberate multi-hue ramp (the classic
@@ -46,6 +48,55 @@ export const SELECTION_COLORS = [
   '#4a3aa7', // violet
   '#e34948', // red
 ]
+
+/**
+ * Multiselect state (order + identity color) for a handful of user-picked
+ * items, e.g. mint filters or map pins. Each id claims the lowest free color
+ * slot when it's added and keeps it until deselected, so removing one item
+ * never shifts the color of any other still-selected item — the slot
+ * assignment is decided in the toggle callback (an event handler), not
+ * derived from array position during render, so it can't drift when items
+ * around it come and go. Freed slots go back into the pool (lowest free slot
+ * first) so later picks keep reusing SELECTION_COLORS instead of growing
+ * past it.
+ */
+export function useSelectionColors(): {
+  selected: string[]
+  colorByValue: Map<string, string>
+  toggle: (id: string) => void
+  clear: () => void
+} {
+  const [order, setOrder] = useState<string[]>([])
+  const [slotById, setSlotById] = useState<Map<string, number>>(new Map())
+
+  const toggle = useCallback((id: string) => {
+    setOrder((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
+    setSlotById((prev) => {
+      if (prev.has(id)) {
+        const next = new Map(prev)
+        next.delete(id)
+        return next
+      }
+      const used = new Set(prev.values())
+      let slot = 0
+      while (used.has(slot)) slot++
+      return new Map(prev).set(id, slot)
+    })
+  }, [])
+
+  const clear = useCallback(() => {
+    setOrder([])
+    setSlotById(new Map())
+  }, [])
+
+  const colorByValue = useMemo(() => {
+    const map = new Map<string, string>()
+    order.forEach((id) => map.set(id, SELECTION_COLORS[(slotById.get(id) ?? 0) % SELECTION_COLORS.length]))
+    return map
+  }, [order, slotById])
+
+  return { selected: order, colorByValue, toggle, clear }
+}
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t

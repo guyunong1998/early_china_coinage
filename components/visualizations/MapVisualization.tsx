@@ -33,6 +33,7 @@ import {
   SELECTION_COLORS,
   SINGLE_FIND_COLOR,
   hexToRgba,
+  useSelectionColors,
 } from '@/lib/color-scale'
 import { computeSiteHeatStates } from '@/lib/context-heatmap'
 import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
@@ -122,19 +123,17 @@ function ViewModeRow({
   )
 }
 
-/** How size (and, in Density view, heat weight) is calculated — shown in the
- * filter panel itself (distinct from DensityLegend's terse one-liner in the
- * floating bottom legend), same text for both tabs since the underlying
- * calculation (siteSizeByQuantity / heatIntensity) is shared. Compare gets
- * its own variant: quantity there is per selected mint at that site, not
- * the site's grand total. */
-function SizeCalcHint({ viewMode }: { viewMode: ViewMode }) {
-  const key =
-    viewMode === 'density'
-      ? 'map.filter.densityHint'
-      : viewMode === 'compare'
-        ? 'map.filter.compareSizeHint'
-        : 'map.filter.sizeHint'
+/**
+ * Paragraph 2 of every map's explanation: how to read the current view mode
+ * (color + size mechanics), identical wording wherever that view mode
+ * appears — Find Site, the database Mint Town tab, and Museum Collections'
+ * Mint Town tab all render the exact same points/density/compare text here,
+ * distinct from DensityLegend's terse one-liner in the floating bottom
+ * legend. Paragraph 1 (what's currently filtered) lives beside this at each
+ * call site, since its wording is specific to that map.
+ */
+function MapExplanation({ viewMode }: { viewMode: ViewMode }) {
+  const key = viewMode === 'density' ? 'map.explain.density' : viewMode === 'compare' ? 'map.explain.compare' : 'map.explain.points'
   return (
     <p className="text-xs leading-snug text-gray-500">
       <T k={key} />
@@ -163,20 +162,29 @@ function DensityLegend() {
 }
 
 /** Compare view's legend — one swatch per selected mint, same identity
- * colors as its chip in the multiselect list and its points on the map. */
-function CompareLegend({ mintFilters, mintOptions }: { mintFilters: string[]; mintOptions: MintFilterOption[] }) {
+ * colors (by stable slot, not array position) as its chip in the multiselect
+ * list and its points on the map. */
+function CompareLegend({
+  mintFilters,
+  mintOptions,
+  mintColorByValue,
+}: {
+  mintFilters: string[]
+  mintOptions: MintFilterOption[]
+  mintColorByValue: Map<string, string>
+}) {
   return (
     <>
       <span className="font-semibold uppercase tracking-wide text-gray-500">
         <T k="map.legend.byMint" />
       </span>
-      {mintFilters.map((mintId, i) => {
+      {mintFilters.map((mintId) => {
         const opt = mintOptions.find((m) => m.mint_id === mintId)
         return (
           <span key={mintId} className="flex items-center gap-1">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ background: SELECTION_COLORS[i % SELECTION_COLORS.length] }}
+              style={{ background: mintColorByValue.get(mintId) }}
             />
             {opt?.mint_zh ?? mintId}
           </span>
@@ -239,7 +247,8 @@ export function FindSpotsVisualization({
   const [sel, setSel] = useState<TypologyFilterSelection>(emptyTypologySelection())
   // Order of selection (not of `mintOptions`) so each pick keeps its color
   // slot — and pin color — as later picks are added/removed around it.
-  const [mintFilters, setMintFilters] = useState<string[]>([])
+  const { selected: mintFilters, colorByValue: mintColorByValue, toggle: toggleMintFilter, clear: clearMintFilters } =
+    useSelectionColors()
 
   const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds), [coinIssues, finds])
   const mintSelectOptions = useMemo(
@@ -255,19 +264,6 @@ export function FindSpotsVisualization({
   )
 
   const mintFilterSet = useMemo(() => new Set(mintFilters), [mintFilters])
-  const mintColorByValue = useMemo(() => {
-    const map = new Map<string, string>()
-    mintFilters.forEach((id, i) => map.set(id, SELECTION_COLORS[i % SELECTION_COLORS.length]))
-    return map
-  }, [mintFilters])
-
-  function toggleMintFilter(mintId: string) {
-    setMintFilters((prev) => (prev.includes(mintId) ? prev.filter((id) => id !== mintId) : [...prev, mintId]))
-  }
-
-  function clearMintFilters() {
-    setMintFilters([])
-  }
 
   const filterActive = mode === 'type' ? hasTypologyFilter(sel) : mintFilters.length > 0
 
@@ -309,7 +305,7 @@ export function FindSpotsVisualization({
   // list), when we know where it is.
   const pins = useMemo<PinPoint[]>(() => {
     if (mode !== 'mint') return []
-    return mintFilters.flatMap((mintId, i) => {
+    return mintFilters.flatMap((mintId) => {
       const opt = mintOptions.find((m) => m.mint_id === mintId)
       const town = opt?.mint_zh ? getMintByNameZh(opt.mint_zh) : undefined
       if (town?.lat == null || town?.lng == null) return []
@@ -318,13 +314,13 @@ export function FindSpotsVisualization({
           key: mintId,
           lat: town.lat,
           lng: town.lng,
-          color: SELECTION_COLORS[i % SELECTION_COLORS.length],
+          color: mintColorByValue.get(mintId) ?? SELECTION_COLORS[0],
           label: `${town.name_zh}${town.name_en ? ` (${town.name_en})` : ''}`,
           href: town.mint_code ? `/mints/${town.mint_code}` : undefined,
         },
       ]
     })
-  }, [mode, mintFilters, mintOptions])
+  }, [mode, mintFilters, mintOptions, mintColorByValue])
 
   // Compare view: one point per (site, mint) that has a nonzero quantity
   // for that mint, colored by the mint's identity color — unlike
@@ -339,9 +335,9 @@ export function FindSpotsVisualization({
     if (mode !== 'mint' || viewMode !== 'compare') return []
     const sitesByCode = new Map(sites.map((s) => [s.site_code, s]))
     const points: ComparePoint[] = []
-    mintFilters.forEach((mintId, i) => {
+    mintFilters.forEach((mintId) => {
       const opt = mintOptions.find((m) => m.mint_id === mintId)
-      const color = SELECTION_COLORS[i % SELECTION_COLORS.length]
+      const color = mintColorByValue.get(mintId) ?? SELECTION_COLORS[0]
       siteMintQuantities.forEach((byMint, siteCode) => {
         const qty = byMint.get(mintId)
         if (!qty) return
@@ -361,11 +357,11 @@ export function FindSpotsVisualization({
       })
     })
     return points
-  }, [mode, viewMode, mintFilters, mintOptions, siteMintQuantities, sites])
+  }, [mode, viewMode, mintFilters, mintOptions, mintColorByValue, siteMintQuantities, sites])
 
   function clearFilters() {
     setSel(emptyTypologySelection())
-    setMintFilters([])
+    clearMintFilters()
   }
 
   const precisionButtons = PRECISION_TABS.map((tab) => {
@@ -431,14 +427,15 @@ export function FindSpotsVisualization({
           <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare={mode === 'mint'} />
 
           <p className="text-sm leading-snug text-gray-700">
-            <T k="map.filter.hint" />
+            {mode === 'type' ? (
+              <T k={filterActive ? 'map.currentView.typeActive' : 'map.currentView.typeNone'} />
+            ) : mintFilters.length === 0 ? (
+              <T k="map.currentView.mintNone" />
+            ) : (
+              <T k={viewMode === 'compare' ? 'map.currentView.mintActiveCompare' : 'map.currentView.mintActiveOr'} />
+            )}
           </p>
-          {mode === 'mint' && (
-            <p className="text-sm leading-snug text-gray-700">
-              <T k={viewMode === 'compare' ? 'map.filter.mintCompareHint' : 'map.filter.mintOrModeHint'} />
-            </p>
-          )}
-          <SizeCalcHint viewMode={viewMode} />
+          <MapExplanation viewMode={viewMode} />
 
           {mode === 'type' && (
             <TypologyFilterBar
@@ -501,7 +498,9 @@ export function FindSpotsVisualization({
 
       {(filterActive || viewMode === 'density' || viewMode === 'compare') && (
         <div className="heatmap_legend">
-          {viewMode === 'compare' && <CompareLegend mintFilters={mintFilters} mintOptions={mintOptions} />}
+          {viewMode === 'compare' && (
+            <CompareLegend mintFilters={mintFilters} mintOptions={mintOptions} mintColorByValue={mintColorByValue} />
+          )}
           {filterActive && viewMode === 'points' && (
             <>
               <span className="font-semibold uppercase tracking-wide text-gray-500">
@@ -673,13 +672,9 @@ export function MintTownVisualization({
           <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
 
           <p className="text-sm leading-snug text-gray-700">
-            <T k="visualizations.mintHeatmapCaption.database" />
+            <T k={filterActive ? 'map.currentView.mintTownDbActive' : 'map.currentView.mintTownDbNone'} />
           </p>
-
-          <p className="text-sm leading-snug text-gray-700">
-            <T k="map.filter.hintMintTown" />
-          </p>
-          <SizeCalcHint viewMode={viewMode} />
+          <MapExplanation viewMode={viewMode} />
           <p className="text-sm text-gray-700">
             <T
               k="visualizations.mintsPlotted"
@@ -857,7 +852,12 @@ export function AnsMintTownVisualization({
   // Order of selection (not of `specimens`) so each pick keeps its color
   // slot as later picks are added/removed around it. Keyed by ans_data.id —
   // catalog_number isn't unique (some specimens share an accession number).
-  const [selectedOrder, setSelectedOrder] = useState<string[]>([])
+  const {
+    selected: selectedOrder,
+    colorByValue: selectedColorById,
+    toggle: toggleSelected,
+    clear: clearSelected,
+  } = useSelectionColors()
 
   const filterActive = hasTypologyFilter(sel)
 
@@ -866,24 +866,16 @@ export function AnsMintTownVisualization({
   const selectedSpecimens = useMemo(
     () =>
       selectedOrder
-        .map((id, i) => {
+        .map((id) => {
           const specimen = specimensById.get(id)
           if (!specimen) return null
-          return { specimen, color: SELECTION_COLORS[i % SELECTION_COLORS.length] }
+          return { specimen, color: selectedColorById.get(id) ?? SELECTION_COLORS[0] }
         })
         .filter((entry): entry is { specimen: AnsSpecimen; color: string } => entry !== null),
-    [selectedOrder, specimensById]
+    [selectedOrder, specimensById, selectedColorById]
   )
 
   const selectedKeys = useMemo(() => new Set(selectedOrder), [selectedOrder])
-
-  function toggleSelected(id: string) {
-    setSelectedOrder((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
-  }
-
-  function clearSelected() {
-    setSelectedOrder([])
-  }
 
   // One dropped pin per selected specimen with known mint coordinates —
   // several selections can share a mint town (or even a catalog_number), so
@@ -994,13 +986,9 @@ export function AnsMintTownVisualization({
             <ViewModeRow viewMode={viewMode} onChange={setViewMode} />
 
             <p className="text-sm leading-snug text-gray-700">
-              <T k="visualizations.mintHeatmapCaption.ans" />
+              <T k={filterActive ? 'map.currentView.mintTownAnsActive' : 'map.currentView.mintTownAnsNone'} />
             </p>
-
-            <p className="text-sm leading-snug text-gray-700">
-              <T k="map.filter.hintMintTown" />
-            </p>
-            <SizeCalcHint viewMode={viewMode} />
+            <MapExplanation viewMode={viewMode} />
             <p className="text-sm text-gray-700">
               <T
                 k="visualizations.mintsPlotted"

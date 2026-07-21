@@ -269,14 +269,6 @@ export const DICTIONARY = {
     en: '{plotted} of {total} mint towns plotted (the rest have no coordinates yet).',
     zh: '已标注 {plotted} / {total} 个铸地（其余暂无坐标）。',
   },
-  'visualizations.mintHeatmapCaption.database': {
-    en: 'Circle size and intensity reflect the number of coins recorded in the database for each mint town. Only mints with mapped coordinates are shown.',
-    zh: '圆圈大小与深浅反映数据库中各铸地记录的钱币数量。仅显示已定位坐标的铸地。',
-  },
-  'visualizations.mintHeatmapCaption.ans': {
-    en: 'Circle size and intensity reflect the number of ANS museum specimens recorded for each mint town. Only mints with mapped coordinates are shown.',
-    zh: '圆圈大小与深浅反映 ANS 博物馆藏品中各铸地记录的标本数量。仅显示已定位坐标的铸地。',
-  },
 
   // ── museum collections page ──────────────────────────────────────────────
   'museum.search.hint': {
@@ -301,40 +293,62 @@ export const DICTIONARY = {
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
-  'map.filter.hint': {
-    en: 'Visualize find sites by coin type or mint. Each point is colored according to the percentage amount of the specified type or mint within the find site.' ,
-    zh: '按币种或铸地筛选。按出土单位着色：单位内全为所选=红；混合单位按数量占比（越高越红）；有所选但无法计量=灰半透明；不含所选=浅灰。',
-  },
-  'map.filter.hintMintTown': {
-    en: 'Filter mint towns by coin type. Each point is colored according to the percentage of matching coins at that mint town.',
-    zh: '按币种筛选铸地。每个点的颜色反映该铸地符合条件的钱币比例。',
-  },
-  'map.filter.sizeHint': {
-    en: 'Point size reflects the total coin quantity there, independent of color. When there is a match of unrecorded quantity, that point is sized as if it were 20% of the total.',
-    zh: '点的大小反映该处钱币总数量（对数缩放），与颜色无关。若存在符合条件的钱币但未记录具体数量，则按总数量的 20% 计算大小。',
-  },
-  'map.filter.densityHint': {
-    en: 'In Density view, each point’s heat weight is: no filter — scales with total coin quantity; type fully matches (including a single coin that matches) — full weight; partial match — weight equals the matched percentage (with a small floor so it stays visible); present but quantity uncounted — a fixed moderate weight; no record of the type at all — excluded from the heatmap entirely.',
-    zh: '在密度视图中，各点的热力权重计算方式为：未筛选 — 按钱币总数量缩放（对数）；完全匹配所选类型（含仅一枚钱币即匹配）— 权重为满值；部分匹配 — 权重等于匹配比例（设有下限以保持可见）；存在但数量未计 — 固定的中等权重；完全无该类型记录 — 不计入密度图。',
-  },
   'map.filter.modeLabel': { en: 'Filter by', zh: '筛选方式' },
   'map.filter.byType': { en: 'Coin Type', zh: '按币种' },
   'map.filter.byMint': { en: 'Mint', zh: '按铸地' },
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
   'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
-  'map.filter.mintOrModeHint': {
-    en: 'With multiple mints selected, Points and Density use OR: a site is highlighted if it has coins from any of the selected mints.',
-    zh: '选择多个铸地时，「点状」与「密度色块」视图采用「或」逻辑：只要出土单位含有任一所选铸地的钱币即会高亮。',
+
+  // ── map explanation paragraph 2: one per view mode, shared by every map ──
+  'map.explain.points': {
+    en: 'Point color reflects what share of items there match the active filter — gray means none, red means all, with in-between shades scaled proportionally. Point size reflects total quantity there (log scale), independent of color; a match with unrecorded quantity is sized as a 20% placeholder.',
+    zh: '点的颜色反映该处符合当前筛选条件的比例——灰色表示无、红色表示全部，中间按比例过渡。点的大小反映该处的总数量（对数缩放），与颜色无关；若匹配存在但未记录具体数量，则按总量的 20% 计算大小。',
   },
-  'map.filter.mintCompareHint': {
-    en: 'Compare colors each selected mint separately — a site with coins from more than one selected mint shows as multiple points, one per mint.',
-    zh: '「对比」视图按所选铸地分别着色——若某遗址同时含有多个所选铸地的钱币，将显示为多个点，每个铸地一个点。',
+  'map.explain.density': {
+    en: 'In Density view, each point’s heat weight is: no filter — scales with total quantity; fully matches (including a single item that matches) — full weight; partial match — weight equals the matched percentage (with a small floor so it stays visible); present but quantity uncounted — a fixed moderate weight; no record at all — excluded from the heatmap entirely.',
+    zh: '在密度视图中，各点的热力权重计算方式为：未筛选 — 按总数量缩放（对数）；完全匹配（含仅一枚即匹配）— 权重为满值；部分匹配 — 权重等于匹配比例（设有下限以保持可见）；存在但数量未计 — 固定的中等权重；完全无记录 — 不计入密度图。',
   },
-  'map.filter.compareSizeHint': {
-    en: 'Point size reflects that mint’s own coin quantity at the site, independent of color. A match with unrecorded quantity counts as 1.',
-    zh: '点的大小反映该铸地在该遗址的钱币数量，与颜色无关。若数量未记录则按 1 计算。',
+  'map.explain.compare': {
+    en: 'Compare colors each selected mint separately — a location with coins from more than one selected mint shows as multiple points, one per mint. Point size reflects that mint’s own coin quantity there, independent of color; a match with unrecorded quantity counts as 1.',
+    zh: '「对比」视图按所选铸地分别着色——若某处同时含有多个所选铸地的钱币，将显示为多个点，每个铸地一个点。点的大小反映该铸地在该处的钱币数量，与颜色无关；若数量未记录则按 1 计算。',
   },
+
+  // ── current filter/view paragraph 1: one per map + filter-state combo ───
+  'map.currentView.typeNone': { en: 'Showing all find sites, unfiltered.', zh: '显示全部出土遗址，未筛选。' },
+  'map.currentView.typeActive': {
+    en: 'Showing find sites filtered by the selected coin type.',
+    zh: '显示按所选币种筛选的出土遗址。',
+  },
+  'map.currentView.mintNone': {
+    en: 'Showing all find sites — select one or more mints below to filter.',
+    zh: '显示全部出土遗址——请在下方选择一个或多个铸地进行筛选。',
+  },
+  'map.currentView.mintActiveOr': {
+    en: 'Showing find sites with coins from any of the selected mints.',
+    zh: '显示含有任一所选铸地钱币的出土遗址。',
+  },
+  'map.currentView.mintActiveCompare': {
+    en: 'Comparing the selected mints across find sites.',
+    zh: '对比已选铸地在各出土遗址的分布。',
+  },
+  'map.currentView.mintTownDbNone': {
+    en: 'Showing all mint towns from the database, unfiltered.',
+    zh: '显示数据库中全部铸地，未筛选。',
+  },
+  'map.currentView.mintTownDbActive': {
+    en: 'Showing mint towns from the database filtered by the selected coin type.',
+    zh: '显示按所选币种筛选的数据库铸地。',
+  },
+  'map.currentView.mintTownAnsNone': {
+    en: 'Showing all mint towns from the ANS museum specimens, unfiltered.',
+    zh: '显示 ANS 博物馆标本中全部铸地，未筛选。',
+  },
+  'map.currentView.mintTownAnsActive': {
+    en: 'Showing mint towns from the ANS museum specimens filtered by the selected coin type.',
+    zh: '显示按所选币种筛选的 ANS 博物馆标本铸地。',
+  },
+
   'map.view.points': { en: 'Points', zh: '点状' },
   'map.view.density': { en: 'Density mass', zh: '密度色块' },
   'map.view.compare': { en: 'Compare', zh: '对比' },
