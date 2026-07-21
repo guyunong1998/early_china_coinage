@@ -42,7 +42,7 @@ import {
   buildMintFilterOptions,
   computeSiteMintQuantities,
   formatMintOptionLabel,
-  getMatchingCoinTypeCodesByMints,
+  getMatchingCoinIssueIdsByMints,
   type MintFilterOption,
 } from '@/lib/mint-filter'
 import { getMintByNameZh } from '@/lib/mint-towns'
@@ -57,7 +57,7 @@ import {
 } from '@/lib/pointed-spade-data'
 import {
   emptyTypologySelection,
-  getMatchingCoinTypeCodes,
+  getMatchingCoinIssueIds,
   hasTypologyFilter,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
@@ -267,9 +267,9 @@ export function FindSpotsVisualization({
 
   const filterActive = mode === 'type' ? hasTypologyFilter(sel) : mintFilters.length > 0
 
-  const matchedCodes = useMemo(() => {
-    if (mode === 'mint') return getMatchingCoinTypeCodesByMints(coinIssues, mintFilters)
-    return getMatchingCoinTypeCodes(coinIssues, hierarchyRows, sel)
+  const matchedIds = useMemo(() => {
+    if (mode === 'mint') return getMatchingCoinIssueIdsByMints(coinIssues, mintFilters)
+    return getMatchingCoinIssueIds(coinIssues, hierarchyRows, sel)
   }, [mode, coinIssues, hierarchyRows, mintFilters, sel])
 
   const siteStates = useMemo(
@@ -277,9 +277,9 @@ export function FindSpotsVisualization({
       computeSiteHeatStates(
         sites.map((s) => s.site_code),
         finds,
-        matchedCodes
+        matchedIds
       ),
-    [sites, finds, matchedCodes]
+    [sites, finds, matchedIds]
   )
 
   const foundInSummary = useMemo(() => {
@@ -565,8 +565,8 @@ export function MintTownVisualization({
 
   const filterActive = hasTypologyFilter(sel)
 
-  const matchedCodes = useMemo(
-    () => getMatchingCoinTypeCodes(coinIssues, hierarchyRows, sel),
+  const matchedIds = useMemo(
+    () => getMatchingCoinIssueIds(coinIssues, hierarchyRows, sel),
     [coinIssues, hierarchyRows, sel]
   )
 
@@ -577,8 +577,8 @@ export function MintTownVisualization({
   // The same aggregation narrowed to the active filter, used only to read
   // off each mint's matched coin count.
   const matchedStats = useMemo(
-    () => computeMintStatsFromFinds(finds, coinIssues, matchedCodes),
-    [finds, coinIssues, matchedCodes]
+    () => computeMintStatsFromFinds(finds, coinIssues, matchedIds),
+    [finds, coinIssues, matchedIds]
   )
 
   const mintPoints = useMemo(() => toMintPoints(totalStats.mapped), [totalStats])
@@ -588,7 +588,7 @@ export function MintTownVisualization({
   // concept as Find Site's per-site heat state, just aggregated over the
   // whole mint instead of per find-context.
   const mintStates = useMemo(() => {
-    if (!matchedCodes) return null
+    if (!matchedIds) return null
     const matchedByMint = new Map(matchedStats.mapped.map((m) => [m.mint_zh, m.coinCount]))
     const states = new Map<string, SiteHeatState>()
     totalStats.mapped.forEach((mint) => {
@@ -615,7 +615,7 @@ export function MintTownVisualization({
       })
     })
     return states
-  }, [matchedCodes, matchedStats, totalStats])
+  }, [matchedIds, matchedStats, totalStats])
 
   const densityLatLngs = useMemo(() => {
     const points: [number, number, number][] = []

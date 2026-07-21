@@ -103,16 +103,16 @@ export function coinMatchesTypologyFilter(
   return true
 }
 
-/** Returns matching coin_type_codes, or null when no typology filter is active. */
-export function getMatchingCoinTypeCodes(
+/** Returns matching coin_issues.id values (match against HeatmapFind.
+ * coin_issues_id, never coin_type_code), or null when no typology filter is
+ * active. */
+export function getMatchingCoinIssueIds(
   coinIssues: CoinIssueDisplay[],
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): Set<string> | null {
   if (!hasTypologyFilter(sel)) return null
-  return new Set(
-    coinIssues.filter((c) => coinMatchesTypologyFilter(c, hierarchyRows, sel)).map((c) => c.coin_type_code)
-  )
+  return new Set(coinIssues.filter((c) => coinMatchesTypologyFilter(c, hierarchyRows, sel)).map((c) => c.id))
 }
 
 type SiteLevelFields = {

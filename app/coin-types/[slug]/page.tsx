@@ -64,17 +64,17 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
 
   const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum)
 
-  const hierarchyIdByCode = new Map(coinIssues.map((c) => [c.coin_type_code, c.coin_type_hierarchy_id]))
-  const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByCode)
+  const hierarchyIdByIssueId = new Map(coinIssues.map((c) => [c.id, c.coin_type_hierarchy_id]))
+  const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByIssueId)
 
   const matchedIds = new Set(node.matchedHierarchyIds)
   const matchedCoinIssues = coinIssues
     .filter((c) => c.coin_type_hierarchy_id && matchedIds.has(c.coin_type_hierarchy_id))
     .sort((a, b) => a.coin_type_code.localeCompare(b.coin_type_code))
-  const matchedCodes = new Set(matchedCoinIssues.map((c) => c.coin_type_code))
+  const matchedIssueIds = new Set(matchedCoinIssues.map((c) => c.id))
   const matchedSiteCodes = new Set<string>()
   finds.forEach((f) => {
-    if (f.coin_type_code && matchedCodes.has(f.coin_type_code) && f.site_code) {
+    if (f.coin_issues_id && matchedIssueIds.has(f.coin_issues_id) && f.site_code) {
       matchedSiteCodes.add(f.site_code)
     }
   })
@@ -213,7 +213,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                 </thead>
                 <tbody>
                   {matchedCoinIssues.map((issue) => (
-                    <tr key={issue.coin_type_code} className="border-b border-gray-50 align-top">
+                    <tr key={issue.id} className="border-b border-gray-50 align-top">
                       <td className="py-2 pr-4 font-mono text-xs">{issue.coin_type_code}</td>
                       <td className="py-2 pr-4 text-gray-600">
                         {issue.minor_type_zh ?? issue.major_type_zh ?? '—'}

@@ -57,22 +57,6 @@ export type Context = {
   note_en: string | null
 }
 
-export type CoinType = {
-  coin_type_code: string
-  major_type_zh: string | null
-  major_type_en: string | null
-  minor_type_zh: string | null
-  minor_type_en: string | null
-  inscription: string | null
-  inscription_en: string | null
-  mint_zh: string | null
-  mint_en: string | null
-  state_zh: string | null
-  state_en: string | null
-  description_zh: string | null
-  description_en: string | null
-}
-
 export type CoinTypeHierarchyRow = {
   id: string
   level1_zh: string | null
@@ -93,8 +77,15 @@ export type CoinTypeHierarchyRow = {
  * coin_type_hierarchy — same shape as the old CoinType (for display call
  * sites that only read text) plus the FK ids (for matching call sites,
  * see lib/typology-filter.ts and lib/mint-filter.ts).
+ *
+ * `id` is the real join key — every match/lookup against `finds` should key
+ * off this (via finds.coin_issues_id), never off `coin_type_code`. That's a
+ * business/catalog code kept for display only (e.g. the "Code" column on
+ * the coin-types detail page); `finds.coin_type_code` itself was renamed to
+ * `deprecated_coin_type_code` and no longer exists under that name.
  */
 export type CoinIssueDisplay = {
+  id: string
   coin_type_code: string
   major_type_zh: string | null
   major_type_en: string | null
@@ -118,7 +109,6 @@ export type Find = {
   id: string
   find_code: string
   context_code: string
-  coin_type_code: string | null
   source_code: string | null
   presence: boolean | null
   quantity_total: number | null
@@ -154,7 +144,9 @@ export type DatabaseStats = {
 }
 
 export type HeatmapFind = {
-  coin_type_code: string | null
+  /** finds.coin_issues_id — the real FK to coin_issues.id. Match against
+   * CoinIssueDisplay.id, never coin_type_code. */
+  coin_issues_id: string | null
   quantity_total: number | null
   quantity_min: number | null
   quantity_estimated: number | null

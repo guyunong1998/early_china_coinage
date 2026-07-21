@@ -72,6 +72,7 @@ function deriveMajorMinor(cthRaw: CoinTypeHierarchyEmbed) {
  * for `.from('finds').select('*, coin_issues(...)')`. Each joined relation
  * may come back as an object or a single-element array (see `one` above). */
 type CoinIssueEmbed = {
+  id: string
   coin_type_code: string
   description_zh: string | null
   description_en: string | null
@@ -89,7 +90,7 @@ type CoinIssueEmbed = {
 }
 
 const COIN_ISSUE_FIELDS =
-  'coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+  'id, coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
 
 /** Flattens a joined coin_issues row into the same flat zh/en text shape the
  * old coin_types table provided, plus the FK ids for match-logic callers
@@ -100,6 +101,7 @@ function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
   const state = one(row.states)
   const inscription = one(row.inscriptions)
   return {
+    id: row.id,
     coin_type_code: row.coin_type_code,
     major_type_zh: major_zh,
     major_type_en: major_en,
@@ -490,8 +492,12 @@ export async function getMints(): Promise<MintRow[]> {
 }
 
 export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
+  // coin_issues_id lives directly on `finds` (the real FK to coin_issues.id)
+  // -- no embed needed to read it, and nothing here should ever touch
+  // coin_type_code, which finds.* no longer carries under that name at all
+  // (renamed to deprecated_coin_type_code).
   const rows = await fetchAllPages<{
-    coin_issues: { coin_type_code: string } | { coin_type_code: string }[] | null
+    coin_issues_id: string | null
     context_code: string | null
     quantity_total: number | null
     quantity_min: number | null
@@ -502,7 +508,7 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
     supabase
       .from('finds')
       .select(
-        'coin_issues(coin_type_code), context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
+        'coin_issues_id, context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
       )
       .order('find_code')
       .range(from, to)
@@ -510,9 +516,8 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
 
   return rows.map((row) => {
     const context = Array.isArray(row.contexts) ? row.contexts[0] : row.contexts
-    const coinIssue = one(row.coin_issues)
     return {
-      coin_type_code: coinIssue?.coin_type_code ?? null,
+      coin_issues_id: row.coin_issues_id,
       context_code: row.context_code,
       quantity_total: row.quantity_total,
       quantity_min: row.quantity_min,

@@ -1,10 +1,10 @@
 import { getMintByNameZh } from '@/lib/mint-towns'
 import type { CoinIssueDisplay, HeatmapFind } from '@/lib/types'
 
-/** coin_type_code -> mint_id, the join every mint aggregation here needs
- * since `finds` only carries coin_type_code, not mint_id directly. */
-function buildMintIdByCode(coinIssues: CoinIssueDisplay[]): Map<string, string> {
-  return new Map(coinIssues.filter((c) => c.mint_id).map((c) => [c.coin_type_code, c.mint_id as string]))
+/** coin_issues.id -> mint_id, the join every mint aggregation here needs
+ * since `finds` only carries coin_issues_id, not mint_id directly. */
+function buildMintIdByIssueId(coinIssues: CoinIssueDisplay[]): Map<string, string> {
+  return new Map(coinIssues.filter((c) => c.mint_id).map((c) => [c.id, c.mint_id as string]))
 }
 
 function findQuantity(find: HeatmapFind): number {
@@ -66,11 +66,11 @@ export function buildMintFilterOptions(coinIssues: CoinIssueDisplay[], finds: He
     })
   })
 
-  const mintIdByCode = buildMintIdByCode(coinIssues)
+  const mintIdByIssueId = buildMintIdByIssueId(coinIssues)
   const siteCodesByMint = new Map<string, Set<string>>()
   finds.forEach((find) => {
-    if (!find.coin_type_code || !find.site_code) return
-    const mintId = mintIdByCode.get(find.coin_type_code)
+    if (!find.coin_issues_id || !find.site_code) return
+    const mintId = mintIdByIssueId.get(find.coin_issues_id)
     if (!mintId) return
     if (!siteCodesByMint.has(mintId)) siteCodesByMint.set(mintId, new Set())
     siteCodesByMint.get(mintId)!.add(find.site_code)
@@ -99,15 +99,15 @@ export function formatMintOptionLabel(opt: MintFilterOption): string {
   return `${opt.mint_zh}${en}${state} (${opt.siteCount})`
 }
 
-/** Returns matching coin_type_codes for any of the given mints (union), or
- * null when no mint is selected. */
-export function getMatchingCoinTypeCodesByMints(
+/** Returns matching coin_issues.id values for any of the given mints
+ * (union), or null when no mint is selected. */
+export function getMatchingCoinIssueIdsByMints(
   coinIssues: CoinIssueDisplay[],
   mintIds: string[]
 ): Set<string> | null {
   if (mintIds.length === 0) return null
   const idSet = new Set(mintIds)
-  return new Set(coinIssues.filter((c) => c.mint_id && idSet.has(c.mint_id)).map((c) => c.coin_type_code))
+  return new Set(coinIssues.filter((c) => c.mint_id && idSet.has(c.mint_id)).map((c) => c.id))
 }
 
 /**
@@ -124,12 +124,12 @@ export function computeSiteMintQuantities(
   mintIds: string[]
 ): Map<string, Map<string, number>> {
   const mintIdSet = new Set(mintIds)
-  const mintIdByCode = buildMintIdByCode(coinIssues)
+  const mintIdByIssueId = buildMintIdByIssueId(coinIssues)
   const result = new Map<string, Map<string, number>>()
 
   finds.forEach((find) => {
-    if (!find.site_code || !find.coin_type_code) return
-    const mintId = mintIdByCode.get(find.coin_type_code)
+    if (!find.site_code || !find.coin_issues_id) return
+    const mintId = mintIdByIssueId.get(find.coin_issues_id)
     if (!mintId || !mintIdSet.has(mintId)) return
     const qty = findQuantity(find)
     if (qty <= 0) return

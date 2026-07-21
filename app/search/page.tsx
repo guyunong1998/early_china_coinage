@@ -193,9 +193,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
   // Simplified per-site pie data (major coin type only, no inscription
   // breakdown) for the visible page — cheap since it's just an in-memory
   // group-by over the already-fetched finds, scoped to the 20 visible sites.
-  const majorTypeByCode = new Map<string, { zh: string; en: string | null }>()
+  const majorTypeByIssueId = new Map<string, { zh: string; en: string | null }>()
   coinIssues.forEach((c) => {
-    if (c.major_type_zh) majorTypeByCode.set(c.coin_type_code, { zh: c.major_type_zh, en: c.major_type_en })
+    if (c.major_type_zh) majorTypeByIssueId.set(c.id, { zh: c.major_type_zh, en: c.major_type_en })
   })
   const visibleCodes = new Set(pageResults.map((s) => s.site_code))
   const findsBySite = new Map<string, HeatmapFind[]>()
@@ -212,7 +212,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     finds.forEach((f) => {
       const qty = f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? (f.presence ? 1 : null)
       if (qty == null || qty <= 0) return
-      const info = f.coin_type_code ? majorTypeByCode.get(f.coin_type_code) : undefined
+      const info = f.coin_issues_id ? majorTypeByIssueId.get(f.coin_issues_id) : undefined
       const label = info?.zh ?? '未知'
       const existing = totals.get(label)
       if (existing) existing.value += qty

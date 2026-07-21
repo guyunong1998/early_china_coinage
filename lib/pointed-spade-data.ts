@@ -1,7 +1,7 @@
 import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
 import { coinMatchesTypologyFilter, hasTypologyFilter, type TypologyFilterSelection } from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
-import type { CoinType, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
 /** Which dataset a mint production heatmap is showing. */
 export type HeatmapSource = 'database' | 'ans'
@@ -32,18 +32,18 @@ function findQuantity(find: HeatmapFind): number {
 
 /**
  * Aggregates database finds by mint town, optionally narrowed to a set of
- * matching coin_type_codes (from typology-filter.ts's getMatchingCoinTypeCodes
- * — same matching used by the find-site map). Every known mint town is
- * registered up front so the map keeps its full network at zero count rather
- * than dropping mints the active filter doesn't match; only mints with known
- * coordinates go in `mapped`.
+ * matching coin_issues.id values (from typology-filter.ts's
+ * getMatchingCoinIssueIds — same matching used by the find-site map). Every
+ * known mint town is registered up front so the map keeps its full network
+ * at zero count rather than dropping mints the active filter doesn't match;
+ * only mints with known coordinates go in `mapped`.
  */
 export function computeMintStatsFromFinds(
   finds: HeatmapFind[],
-  coinTypes: CoinType[],
-  matchedCodes: Set<string> | null
+  coinIssues: CoinIssueDisplay[],
+  matchedIds: Set<string> | null
 ): { mapped: PointedSpadeMintStat[]; unmapped: PointedSpadeMintStat[] } {
-  const coinTypeByCode = new Map(coinTypes.map((c) => [c.coin_type_code, c]))
+  const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
   const groups = new Map<
     string,
     { findCount: number; coinCount: number; inscriptions: Set<string>; siteCodes: Set<string> }
@@ -54,23 +54,23 @@ export function computeMintStatsFromFinds(
   })
 
   finds.forEach((find) => {
-    const code = find.coin_type_code
-    if (!code) return
-    const coinType = coinTypeByCode.get(code)
-    const mintRaw = coinType?.mint_zh?.trim()
+    const issueId = find.coin_issues_id
+    if (!issueId) return
+    const coinIssue = coinIssueById.get(issueId)
+    const mintRaw = coinIssue?.mint_zh?.trim()
     if (!mintRaw) return
     const mintZh = resolveMintNameZh(mintRaw)
 
     if (!groups.has(mintZh)) {
       groups.set(mintZh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
     }
-    if (matchedCodes && !matchedCodes.has(code)) return
+    if (matchedIds && !matchedIds.has(issueId)) return
 
     const group = groups.get(mintZh)!
     group.findCount += 1
     group.coinCount += findQuantity(find)
     if (find.site_code) group.siteCodes.add(find.site_code)
-    const insc = coinType!.inscription?.trim()
+    const insc = coinIssue!.inscription?.trim()
     if (insc) group.inscriptions.add(insc)
   })
 

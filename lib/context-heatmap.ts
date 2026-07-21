@@ -28,14 +28,16 @@ function coalesceQuantity(find: HeatmapFind): number | null {
   return null
 }
 
-/** Heat state for one archaeological context under the selected coin-type set. */
+/** Heat state for one archaeological context under the selected coin-issue set.
+ * `matchedIds` are coin_issues.id values (see HeatmapFind.coin_issues_id) —
+ * never coin_type_code, which finds no longer carries. */
 export function computeContextHeatState(
   finds: HeatmapFind[],
-  matchedCodes: Set<string>
+  matchedIds: Set<string>
 ): ContextHeatState {
   if (finds.length === 0) return { kind: 'absent' }
 
-  const matched = finds.filter((f) => f.coin_type_code && matchedCodes.has(f.coin_type_code))
+  const matched = finds.filter((f) => f.coin_issues_id && matchedIds.has(f.coin_issues_id))
   if (matched.length === 0) return { kind: 'absent' }
 
   // Entire context is the selected type → solid red
@@ -51,7 +53,7 @@ export function computeContextHeatState(
     if (qty == null) return
     totalQuantified += 1
     totalQty += qty
-    if (find.coin_type_code && matchedCodes.has(find.coin_type_code)) {
+    if (find.coin_issues_id && matchedIds.has(find.coin_issues_id)) {
       matchedQuantified += 1
       matchedQty += qty
     }
@@ -158,9 +160,9 @@ export function groupFindsBySiteContext(finds: HeatmapFind[]): Map<string, Map<s
 export function computeSiteHeatStates(
   siteCodes: string[],
   finds: HeatmapFind[],
-  matchedCodes: Set<string> | null
+  matchedIds: Set<string> | null
 ): Map<string, SiteHeatState> | null {
-  if (!matchedCodes) return null
+  if (!matchedIds) return null
 
   const bySite = groupFindsBySiteContext(finds)
   const result = new Map<string, SiteHeatState>()
@@ -172,7 +174,7 @@ export function computeSiteHeatStates(
       return
     }
     const contextStates = [...contexts.values()].map((ctxFinds) =>
-      computeContextHeatState(ctxFinds, matchedCodes)
+      computeContextHeatState(ctxFinds, matchedIds)
     )
     result.set(siteCode, aggregateSiteHeatState(contextStates))
   })

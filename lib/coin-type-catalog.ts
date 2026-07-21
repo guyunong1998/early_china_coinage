@@ -208,14 +208,14 @@ export type CoinTypeCounts = { coinCount: number; siteCount: number }
 export function computeCoinTypeCounts(
   matchedHierarchyIds: string[],
   finds: HeatmapFind[],
-  hierarchyIdByCode: Map<string, string | null>
+  hierarchyIdByIssueId: Map<string, string | null>
 ): CoinTypeCounts {
   const idSet = new Set(matchedHierarchyIds)
   let coinCount = 0
   const sites = new Set<string>()
   finds.forEach((f) => {
-    if (!f.coin_type_code) return
-    const hierarchyId = hierarchyIdByCode.get(f.coin_type_code)
+    if (!f.coin_issues_id) return
+    const hierarchyId = hierarchyIdByIssueId.get(f.coin_issues_id)
     if (!hierarchyId || !idSet.has(hierarchyId)) return
     coinCount += f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? 0
     if (f.site_code) sites.add(f.site_code)
@@ -223,7 +223,7 @@ export function computeCoinTypeCounts(
   return { coinCount, siteCount: sites.size }
 }
 
-/** Counts for every node at once — one pass building a coin_type_code →
+/** Counts for every node at once — one pass building a coin_issues.id →
  * coin_type_hierarchy_id lookup, then one pass over `finds` per node (a
  * hundred-some nodes × a few thousand finds is trivial server-side work,
  * no need for a fancier single-pass algorithm). */
@@ -232,10 +232,10 @@ export function computeAllCoinTypeCounts(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[]
 ): Record<string, CoinTypeCounts> {
-  const hierarchyIdByCode = new Map(coinIssues.map((c) => [c.coin_type_code, c.coin_type_hierarchy_id]))
+  const hierarchyIdByIssueId = new Map(coinIssues.map((c) => [c.id, c.coin_type_hierarchy_id]))
   const result: Record<string, CoinTypeCounts> = {}
   nodes.forEach((node) => {
-    result[node.slug] = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByCode)
+    result[node.slug] = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByIssueId)
   })
   return result
 }
