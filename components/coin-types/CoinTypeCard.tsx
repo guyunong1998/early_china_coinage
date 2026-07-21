@@ -62,9 +62,13 @@ export function CoinTypeCard({
         </p>
       )}
 
-      {node.parents.length > 0 && (
+      {/* parents is root-first, so [0] is always the level1 (钱币/钱范)
+          ancestor — a grouping concept, not a browsable type, so it's
+          excluded here the same way it's excluded from the card grid itself
+          (app/coin-types/page.tsx filters level1 nodes out of cardNodes). */}
+      {node.parents.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-1">
-          {node.parents.map((p) => (
+          {node.parents.slice(1).map((p) => (
             <span
               key={p.slug}
               className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"

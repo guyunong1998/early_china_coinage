@@ -101,7 +101,7 @@ function ViewModeRow({ viewMode, onChange }: { viewMode: ViewMode; onChange: (v:
  * calculation (siteSizeByQuantity / heatIntensity) is shared. */
 function SizeCalcHint({ viewMode }: { viewMode: ViewMode }) {
   return (
-    <p className="text-sm leading-snug text-gray-700">
+    <p className="text-xs leading-snug text-gray-500">
       <T k={viewMode === 'density' ? 'map.filter.densityHint' : 'map.filter.sizeHint'} />
     </p>
   )

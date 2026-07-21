@@ -45,7 +45,7 @@ export function buildMintDirectory(dbMints: MintRow[]): MintDirectoryEntry[] {
 
   const entries = dbMints.map((row): MintDirectoryEntry => {
     const town = getMintByNameZh(row.name_zh)
-    const mint_code = town?.mint_code ?? uniqueSlug(slugify(row.name_en), used)
+    const mint_code = town?.mint_code ?? uniqueSlug(slugify(row.name_en ?? row.id), used)
     if (!town) used.add(mint_code)
 
     return {

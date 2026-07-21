@@ -88,3 +88,26 @@ export function TypologyTree({ nodes, currentSlug }: { nodes: CoinTypeNode[]; cu
     </div>
   )
 }
+
+/**
+ * The whole typology forest — both level1 roots (钱币 "Coin" and 钱范 "Mould")
+ * with every descendant — for the coin-types index page, where (unlike the
+ * detail page's single-branch TypologyTree) there's no one current node to
+ * scope down to. Both roots start expanded so their level2 categories are
+ * visible on load; everything deeper starts collapsed, same as the
+ * single-branch view, so this doesn't dump hundreds of rows on first paint.
+ */
+export function FullTypologyTree({ nodes }: { nodes: CoinTypeNode[] }) {
+  const roots = nodes
+    .filter((n) => n.level === 'level1')
+    .sort((a, b) => a.label_zh.localeCompare(b.label_zh, 'zh-CN'))
+  const expandedSlugs = new Set(roots.map((r) => r.slug))
+
+  return (
+    <div className="text-base">
+      {roots.map((root) => (
+        <TreeNode key={root.slug} nodes={nodes} node={root} currentSlug="" expandedSlugs={expandedSlugs} />
+      ))}
+    </div>
+  )
+}

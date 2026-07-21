@@ -66,7 +66,11 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
     <div className="map-vis-overlay ">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <div className="flex flex-wrap gap-1.5">
+          <span className="shrink-0 text-sm font-semibold text-gray-700">
+            <T k="visualizations.viewByLabel" />
+          </span>
+
+          <div className={`flex-wrap gap-1.5 ${open ? 'flex' : 'hidden'} lg:flex`}>
             {VISUALIZATION_TABS.map((tab) => {
               const isActive = tab === active
               return (
@@ -104,7 +108,7 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
           </button>
         </div>
 
-        <p className="px-2.5 pb-2 text-sm text-gray-700 sm:px-3">
+        <p className={`px-2.5 pb-2 text-sm text-gray-700 sm:px-3 ${open ? 'block' : 'hidden'} lg:block`}>
           <T k={active.briefKey} />
         </p>
 

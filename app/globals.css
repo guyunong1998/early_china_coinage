@@ -151,18 +151,13 @@ a {
    ============================================================================ */
 .panel {
   background: var(--paper);
-  border: 3px solid var(--brand);
+  border: 1px solid var(--brand);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 .panel .home-panel {
   background: var(--paper);
   border: 5px dotted var(--brand);
   /* box-shadow: var(--shadow); */
-}
-
-.panel.group:hover {
-  border: 3px solid var(--brand);
-  /* box-shadow: 0 4px 16px rgba(35, 34, 32, 0.09); */
 }
 
 /* The label bar that sits above a panel body (see DataCard.tsx) — a quiet

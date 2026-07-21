@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
+import { FullTypologyTree } from '@/components/coin-types/TypologyTree'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
@@ -45,7 +46,7 @@ export default async function CoinTypesPage() {
           Site visualization, which defaults to its "filter by coin type"
           mode, so the destination matches this page's own subject. */}
       <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
-        <div className="flex flex-col justify-center gap-3 p-6 lg:col-span-1">
+        <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
           <h2 className="font-serif text-xl font-semibold text-brand">
             <T k="navcards.map.label" />
           </h2>
@@ -75,6 +76,19 @@ export default async function CoinTypesPage() {
           </div>
         </div>
       </div>
+
+      {/* Full typology hierarchy — both level1 roots (钱币 Coin, 钱范 Mould)
+          down through every descendant, so the whole classification system
+          (every one of the {cardNodes.length} types below) is browsable as
+          one tree, not just the single-branch view the detail page shows. */}
+      <section className="panel mt-8 overflow-hidden">
+        <div className="panel-header px-4 py-3 text-sm font-bold uppercase tracking-wide">
+          <T k="coinTypeDetail.hierarchy" />
+        </div>
+        <div className="p-5 pl-8">
+          <FullTypologyTree nodes={nodes} />
+        </div>
+      </section>
 
       {/* Searchable list */}
       <div className="mt-8">

@@ -46,7 +46,7 @@ export default async function MintsPage() {
       {/* Overview map — same left-third title/link + right-two-thirds map
           card the home page uses for its own map section. */}
       <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
-        <div className="flex flex-col justify-center gap-3 p-6 lg:col-span-1">
+        <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
           <h2 className="font-serif text-xl font-semibold text-brand">
             <T k="navcards.map.label" />
           </h2>

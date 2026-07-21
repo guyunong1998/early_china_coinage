@@ -243,6 +243,7 @@ export const DICTIONARY = {
   'siteTabs.noSources': { en: 'No bibliographic sources linked yet.', zh: '暂无关联文献。' },
 
   // ── map visualizations page ──────────────────────────────────────────────
+  'visualizations.viewByLabel': { en: 'View by', zh: '浏览方式' },
   'visualizations.tabs.mintTown': { en: 'Mint Town', zh: '铸地' },
   'visualizations.tabs.findSite': { en: 'Find Site', zh: '出土遗址' },
   'visualizations.mintTown.brief': {
@@ -378,6 +379,7 @@ export const DICTIONARY = {
   },
   'coinTypeDetail.hierarchy': { en: 'Typology Hierarchy', zh: '类型学层级' },
   'coinTypeDetail.imagePlaceholder': { en: 'Coin image', zh: '钱币图片' },
+  'coinType.mouldTag': { en: 'M', zh: '范' },
 
   // ── home map filter panel (CoinFilterMap) ────────────────────────────
   'home.mapSection.title': { en: 'View More Map Visualizations', zh: '查看更多地图可视化' },
