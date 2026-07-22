@@ -329,7 +329,9 @@ export default async function SitePage({ params }: PageProps) {
             {mintOrigins.unmatched.length > 0 && (
               <p className="mt-3 text-xs text-gray-500">
                 Mint location not yet mapped for:{' '}
-                {mintOrigins.unmatched.map((m) => m.mint_zh).join('、')}
+                {mintOrigins.unmatched
+                  .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
+                  .join('、')}
               </p>
             )}
           </DataCard>

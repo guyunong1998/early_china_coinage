@@ -16,7 +16,7 @@
  * the filter state and render the overlay controls + legend around it.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { TFunction } from '@/lib/i18n/LanguageContext'
@@ -471,6 +471,15 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
   const compareMarkersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
+  // Flips true once the init effect's async `import('leaflet')` has actually
+  // created `mapRef.current` — the restyle effect below bails out if the map
+  // doesn't exist yet, which it never does on the very first run (init's map
+  // creation is itself async, so it hasn't necessarily resolved before this
+  // effect's first pass). Without this, a canvas that mounts with non-default
+  // props already set (e.g. a deep-linked Compare view) would render its
+  // markers with the init effect's hardcoded placeholder style and never get
+  // restyled, since nothing else would trigger the restyle effect again.
+  const [mapReady, setMapReady] = useState(false)
 
   // Kind-specific fields, pulled out of the discriminated union once so effect
   // dependency arrays below stay simple, statically-checkable expressions.
@@ -666,7 +675,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs])
+  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,
@@ -688,8 +697,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { osm, satellite, satelliteLabels } = buildBaseLayers(L)
-      osm.addTo(map)
+      const { osm, cyclosm, satellite, satelliteLabels } = buildBaseLayers(L)
+      cyclosm.addTo(map)
 
       // Full layer-switcher + river-mode controls are reserved for the
       // dedicated Map Visualizations pages (fullControls, default true),
@@ -702,7 +711,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         satelliteLabels.addTo(map)
         addStaticMajorRivers(L, map)
       } else {
-        addLayerControl(L, map, osm, satellite, satelliteLabels, {
+        addLayerControl(L, map, cyclosm, osm, satellite, satelliteLabels, {
           collapsed: true,
           position: 'bottomright',
         })
@@ -826,6 +835,11 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       if (cancelled) return
       if (bounds.length > 0) map.fitBounds(bounds, { padding: [30, 30] })
+      // Markers exist with their placeholder style now (see the comment on
+      // `mapReady` above) — flip it so the restyle effect runs once more,
+      // this time finding a real map, and applies whatever style current
+      // props actually call for.
+      setMapReady(true)
     }
 
     init()
@@ -834,6 +848,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     const compareMarkers = compareMarkersRef.current
     return () => {
       cancelled = true
+      setMapReady(false)
       heatLayerRef.current = null
       mapRef.current?.remove()
       mapRef.current = null

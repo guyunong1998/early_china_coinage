@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { MintListClient } from '@/components/mints/MintListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
-import { buildMintDirectory } from '@/lib/mint-directory'
+import { buildMintDirectory, buildMintTypeLabels } from '@/lib/mint-directory'
 import { computeMintStatsFromFinds, toMintPoints } from '@/lib/pointed-spade-data'
 import { getCoinIssues, getFindsForHeatmap, getMints } from '@/lib/queries'
 
@@ -30,6 +30,11 @@ export default async function MintsPage() {
   ;[...mapped, ...unmapped].forEach((stat) => {
     statsByMint[stat.mint_zh] = { coinCount: stat.coinCount, siteCount: stat.siteCount }
   })
+
+  // Bilingual coin-type tags per mint, computed live from coin_issues —
+  // replaces the static dossier's English-only MintTown.coin_types wherever
+  // live data exists (see buildMintTypeLabels' doc comment).
+  const typesByMint = Object.fromEntries(buildMintTypeLabels(coinIssues))
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -77,7 +82,7 @@ export default async function MintsPage() {
 
       {/* Searchable list */}
       <div className="mt-8">
-        <MintListClient all={mints} statsByMint={statsByMint} />
+        <MintListClient all={mints} statsByMint={statsByMint} typesByMint={typesByMint} />
       </div>
     </div>
   )

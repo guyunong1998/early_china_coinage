@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { MintTypeLabel } from '@/lib/mint-directory'
 import type { MintTown } from '@/lib/mint-towns'
 import { stateTagColor } from '@/lib/state-colors'
 
@@ -11,31 +12,45 @@ type MintStats = { coinCount: number; siteCount: number }
 
 /** Searches the list actually being displayed (`all`), not the static
  * MINT_TOWNS dossier list — `all` may include DB-only mints with no
- * dossier entry, which would otherwise be unsearchable. */
-function filterMints(mints: MintTown[], query: string): MintTown[] {
+ * dossier entry, which would otherwise be unsearchable. Matches against
+ * whichever coin-type labels are actually shown on the card: the live
+ * bilingual ones from `typesByMint` where available, else the static
+ * dossier's English-only `coin_types`. */
+function filterMints(mints: MintTown[], typesByMint: Record<string, MintTypeLabel[]>, query: string): MintTown[] {
   const q = query.trim().toLowerCase()
   if (!q) return mints
-  return mints.filter(
-    (m) =>
+  return mints.filter((m) => {
+    const liveTypes = typesByMint[m.name_zh]
+    const typeMatch =
+      liveTypes && liveTypes.length > 0
+        ? liveTypes.some((t) => t.zh.includes(q) || (t.en ?? '').toLowerCase().includes(q))
+        : m.coin_types.some((t) => t.toLowerCase().includes(q))
+    return (
       m.name_en.toLowerCase().includes(q) ||
       m.name_zh.includes(q) ||
       m.state_en.toLowerCase().includes(q) ||
       m.state_zh.includes(q) ||
       m.modern_location_en.toLowerCase().includes(q) ||
-      m.coin_types.some((t) => t.toLowerCase().includes(q))
-  )
+      typeMatch
+    )
+  })
 }
 
 export function MintListClient({
   all,
   statsByMint = {},
+  typesByMint = {},
 }: {
   all: MintTown[]
   statsByMint?: Record<string, MintStats>
+  /** Bilingual coin-type labels per mint, computed live from coin_issues
+   * (lib/mint-directory.ts's buildMintTypeLabels) — preferred over the
+   * static, English-only `MintTown.coin_types` wherever available. */
+  typesByMint?: Record<string, MintTypeLabel[]>
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [query, setQuery] = useState('')
-  const results = query ? filterMints(all, query) : all
+  const results = query ? filterMints(all, typesByMint, query) : all
 
   return (
     <div>
@@ -60,6 +75,7 @@ export function MintListClient({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((mint) => {
             const stats = statsByMint[mint.name_zh]
+            const liveTypes = typesByMint[mint.name_zh]
             return (
               <Link
                 key={mint.mint_code}
@@ -73,7 +89,7 @@ export function MintListClient({
                   <span
                     className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(mint.state_en)}`}
                   >
-                    {mint.state_zh}
+                    {lang === 'zh' ? mint.state_zh : mint.state_en}
                   </span>
                 </div>
 
@@ -88,14 +104,23 @@ export function MintListClient({
                 )}
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {mint.coin_types.map((type) => (
-                    <span
-                      key={type}
-                      className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
-                    >
-                      {type}
-                    </span>
-                  ))}
+                  {liveTypes && liveTypes.length > 0
+                    ? liveTypes.map((type) => (
+                        <span
+                          key={type.zh}
+                          className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+                        >
+                          {lang === 'zh' || !type.en ? type.zh : type.en}
+                        </span>
+                      ))
+                    : mint.coin_types.map((type) => (
+                        <span
+                          key={type}
+                          className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+                        >
+                          {type}
+                        </span>
+                      ))}
                   {mint.description_en.length <= 60 && (
                     <span className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-400">
                       <T k="mintList.inPreparation" />

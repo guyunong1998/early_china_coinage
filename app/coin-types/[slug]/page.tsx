@@ -62,7 +62,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   const node = getCoinTypeNodeBySlug(nodes, slug)
   if (!node) notFound()
 
-  const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum)
+  const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum, node.slug)
 
   const hierarchyIdByIssueId = new Map(coinIssues.map((c) => [c.id, c.coin_type_hierarchy_id]))
   const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByIssueId)
@@ -121,7 +121,11 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             />
             <DetailRow
               labelKey="coinTypeDetail.row.states"
-              value={node.states.length > 0 ? node.states.map((s) => s.state_zh).join('、') : '—'}
+              value={
+                node.states.length > 0
+                  ? node.states.map((s) => `${s.state_zh} (${s.state_en})`).join('、')
+                  : '—'
+              }
             />
             <DetailRow
               labelKey="mintDetail.row.coinsAndSites"
@@ -212,28 +216,42 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {matchedCoinIssues.map((issue) => (
-                    <tr key={issue.id} className="border-b border-gray-50 align-top">
-                      <td className="py-2 pr-4 font-mono text-xs">{issue.coin_type_code}</td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {issue.minor_type_zh ?? issue.major_type_zh ?? '—'}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {issue.inscription ?? '—'}
-                        {issue.inscription_en && issue.inscription_en !== issue.inscription && (
-                          <span className="ml-1 text-xs italic text-gray-400">({issue.inscription_en})</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-600">{issue.state_zh ?? '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {issue.mint_zh ?? '—'}
-                        {issue.mint_en && <span className="ml-1 text-xs italic text-gray-400">({issue.mint_en})</span>}
-                      </td>
-                      <td className="py-2 text-gray-600">
-                        {issue.description_zh ?? issue.description_en ?? '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {matchedCoinIssues.map((issue) => {
+                    const typeZh = issue.minor_type_zh ?? issue.major_type_zh
+                    const typeEn = issue.minor_type_zh ? issue.minor_type_en : issue.major_type_en
+                    return (
+                      <tr key={issue.id} className="border-b border-gray-50 align-top">
+                        <td className="py-2 pr-4 font-mono text-xs">{issue.coin_type_code}</td>
+                        <td className="py-2 pr-4 text-gray-600">
+                          {typeZh ?? '—'}
+                          {typeEn && <span className="ml-1 text-xs italic text-gray-400">({typeEn})</span>}
+                        </td>
+                        <td className="py-2 pr-4">
+                          {issue.inscription ?? '—'}
+                          {issue.inscription_en && issue.inscription_en !== issue.inscription && (
+                            <span className="ml-1 text-xs italic text-gray-400">({issue.inscription_en})</span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-gray-600">
+                          {issue.state_zh ?? '—'}
+                          {issue.state_en && <span className="ml-1 text-xs italic text-gray-400">({issue.state_en})</span>}
+                        </td>
+                        <td className="py-2 pr-4 text-gray-600">
+                          {issue.mint_zh ?? '—'}
+                          {issue.mint_en && <span className="ml-1 text-xs italic text-gray-400">({issue.mint_en})</span>}
+                        </td>
+                        <td className="py-2 text-gray-600">
+                          {issue.description_zh && <div>{issue.description_zh}</div>}
+                          {issue.description_en && (
+                            <div className={issue.description_zh ? 'italic text-gray-400' : undefined}>
+                              {issue.description_en}
+                            </div>
+                          )}
+                          {!issue.description_zh && !issue.description_en && '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -275,7 +293,10 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                           <span className="ml-1.5 text-xs italic text-gray-400">{site.site_name_en}</span>
                         )}
                       </td>
-                      <td className="py-2 pr-4 text-gray-600">{site.province_zh ?? '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">
+                        {site.province_zh ?? '—'}
+                        {site.province_en && <span className="ml-1 text-xs italic text-gray-400">({site.province_en})</span>}
+                      </td>
                       <td className="py-2 tabular-nums">{site.total_quantity_for_map ?? 0}</td>
                     </tr>
                   ))}

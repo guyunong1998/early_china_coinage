@@ -34,6 +34,7 @@ export default async function MintDetailPage({ params }: PageProps) {
     typeOptions: [],
     siteTypeKeys: {},
     inscriptions: [],
+    typeLabels: [],
     totalCoinCount: 0,
     siteCount: 0,
   }))
@@ -121,14 +122,20 @@ export default async function MintDetailPage({ params }: PageProps) {
               <DetailRow
                 labelKey="mintDetail.row.coinTypes"
                 value={
-                  mint.coin_types.length > 0
-                    ? mint.coin_types.join(', ')
-                    : '—'
+                  distribution.typeLabels.length > 0
+                    ? distribution.typeLabels.map((t) => (t.en ? `${t.zh} (${t.en})` : t.zh)).join('、')
+                    : mint.coin_types.length > 0
+                      ? mint.coin_types.join(', ')
+                      : '—'
                 }
               />
               <DetailRow
                 labelKey="mintDetail.row.inscriptions"
-                value={distribution.inscriptions.length > 0 ? distribution.inscriptions.join('、') : '—'}
+                value={
+                  distribution.inscriptions.length > 0
+                    ? distribution.inscriptions.map((i) => (i.en ? `${i.zh} (${i.en})` : i.zh)).join('、')
+                    : '—'
+                }
               />
             </dl>
           </div>

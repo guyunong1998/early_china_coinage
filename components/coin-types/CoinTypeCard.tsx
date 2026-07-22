@@ -1,8 +1,11 @@
+'use client'
+
 import Image from 'next/image'
 import Link from 'next/link'
 import { T } from '@/components/i18n/T'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { stateTagColor } from '@/lib/state-colors'
 import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
 import type { CoinTypeImagePaths } from '@/lib/coin-images'
@@ -21,6 +24,7 @@ export function CoinTypeCard({
   images?: CoinTypeImagePaths
   isMould?: boolean
 }) {
+  const { lang } = useLanguage()
   const panes = [
     images?.obverseSrc ? { src: images.obverseSrc, key: 'obv' } : null,
     images?.reverseSrc ? { src: images.reverseSrc, key: 'rev' } : null,
@@ -73,7 +77,7 @@ export function CoinTypeCard({
               key={p.slug}
               className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
             >
-              {p.label_zh}
+              {lang === 'zh' ? p.label_zh : p.label_en}
             </span>
           ))}
         </div>
@@ -86,7 +90,7 @@ export function CoinTypeCard({
               key={s.state_zh}
               className={`rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(s.state_en)}`}
             >
-              {s.state_zh}
+              {lang === 'zh' ? s.state_zh : s.state_en}
             </span>
           ))}
         </div>

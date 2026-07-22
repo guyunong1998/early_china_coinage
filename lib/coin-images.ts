@@ -30,10 +30,20 @@ function findSide(accNum: string, side: 'obv' | 'rev'): string | null {
   return file ? `/images/type_imgs/${encodeURIComponent(file)}` : null
 }
 
-export function getCoinTypeImagePaths(accNum: string | null | undefined): CoinTypeImagePaths {
-  if (!accNum) return EMPTY_PATHS
-  return {
-    obverseSrc: findSide(accNum, 'obv'),
-    reverseSrc: findSide(accNum, 'rev'),
-  }
+/**
+ * `fallbackKey` covers types with no photographed specimen (no img_acc_num):
+ * a synthetic "children silhouette" composite, generated for nodes that
+ * still lack their own image, is saved under the node's own slug (see
+ * lib/coin-type-silhouette.ts) — pass `node.slug` here to pick it up.
+ */
+export function getCoinTypeImagePaths(
+  accNum: string | null | undefined,
+  fallbackKey?: string | null
+): CoinTypeImagePaths {
+  const primary: CoinTypeImagePaths = accNum
+    ? { obverseSrc: findSide(accNum, 'obv'), reverseSrc: findSide(accNum, 'rev') }
+    : EMPTY_PATHS
+  if (primary.obverseSrc || primary.reverseSrc) return primary
+  if (!fallbackKey) return primary
+  return { obverseSrc: findSide(fallbackKey, 'obv'), reverseSrc: findSide(fallbackKey, 'rev') }
 }

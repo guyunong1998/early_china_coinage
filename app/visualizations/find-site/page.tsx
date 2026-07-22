@@ -5,9 +5,15 @@ import {
   siteMatchesPrecisionFilter,
 } from '@/lib/city-boundaries'
 import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
+import {
+  decodeMintNames,
+  decodeTypologySelections,
+  parseFilterMode,
+  parseViewMode,
+} from '@/lib/visualization-deeplink'
 
 type PageProps = {
-  searchParams: Promise<{ precision?: string }>
+  searchParams: Promise<{ precision?: string; mode?: string; view?: string; mints?: string; types?: string }>
 }
 
 export const metadata = {
@@ -17,7 +23,7 @@ export const metadata = {
 }
 
 export default async function FindSiteVisualizationPage({ searchParams }: PageProps) {
-  const { precision: precisionParam } = await searchParams
+  const { precision: precisionParam, mode, view, mints, types } = await searchParams
   const currentPrecision = parsePrecisionFilter(precisionParam)
 
   const [allSites, coinIssues, hierarchyRows, finds] = await Promise.all([
@@ -39,6 +45,10 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
         finds={finds}
         currentPrecision={currentPrecision}
         precisionCounts={counts}
+        initialMode={parseFilterMode(mode)}
+        initialViewMode={parseViewMode(view)}
+        initialMintNames={decodeMintNames(mints)}
+        initialTypeSelections={decodeTypologySelections(types)}
       />
     </div>
   )

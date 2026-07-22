@@ -11,7 +11,6 @@ export const DICTIONARY = {
   'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Museum Collections', zh: '博物馆藏品' },
-  'nav.heatmap': { en: 'Heatmap', zh: '热力图' },
   'nav.coinTypes': { en: 'Coin Types', zh: '币种分布' },
 
   // ── hero banner ───────────────────────────────────────────────────────
@@ -32,23 +31,29 @@ export const DICTIONARY = {
     en: 'Explore find sites by quantity, coin type, or mint',
     zh: '按数量、币种或铸地探索出土遗址地图',
   },
-  'navcards.explore.label': { en: 'Explore', zh: '探索' },
-  'navcards.explore.desc': {
-    en: 'Mint towns and coin typology by category',
-    zh: '按类别浏览铸地与钱币类型学',
+  'navcards.mints.label': { en: 'Mints', zh: '铸地' },
+  'navcards.mints.desc': {
+    en: 'Documented mint towns, with locations and coin output',
+    zh: '已记录铸地及其位置与产量',
+  },
+  'navcards.coinTypes.label': { en: 'Coin Types', zh: '币种分类' },
+  'navcards.coinTypes.desc': {
+    en: 'The full typology tree, with find counts by category',
+    zh: '完整分类体系，附各类别出土数量',
   },
   'navcards.spadeHeatmap.label': { en: 'Museum Collections', zh: '博物馆藏品' },
   'navcards.spadeHeatmap.desc': {
-    en: 'Mint production from the ANS spade catalogue',
-    zh: 'ANS 布币目录的铸币城邑产量分布',
-  },
-  'navcards.heatmap.label': { en: 'Coin Type Heatmap', zh: '币种热力图' },
-  'navcards.heatmap.desc': {
-    en: 'See how coin types are distributed across sites',
-    zh: '查看各币种在遗址间的分布情况',
+    en: 'ANS museum specimens by mint town, searchable by accession number',
+    zh: 'ANS 博物馆藏品按铸地分布，可按藏品编号查询',
   },
   'navcards.about.label': { en: 'About', zh: '关于本站' },
   'navcards.about.desc': { en: 'About the site and about the people', zh: '关于本站与关于团队' },
+
+  // ── home demo carousel (DemoVisualizationsCarousel) ──────────────────
+  'home.demos.desc': {
+    en: 'Explore coin distributions across minting facilities and find sites.',
+    zh: '探索铸币城邑与出土遗址中的钱币分布情况。',
+  },
 
   // ── database stats bar ───────────────────────────────────────────────
   'stats.summary': {

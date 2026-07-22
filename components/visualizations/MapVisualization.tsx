@@ -223,13 +223,36 @@ function CompareLegend({
  * non-empty and held fixed while it's edited, so a sibling pick being
  * added/removed elsewhere never changes the color of the pick still being
  * built.
+ *
+ * `initialSelections` seeds already-committed picks at mount (e.g. a
+ * homepage demo link landing on this page with a filter pre-applied) — read
+ * once, like any other useState initializer; a later-changing prop doesn't
+ * re-seed already-mounted state.
  */
-function useTypologyMultiSelect(coinIssues: CoinIssueDisplay[]) {
+function buildInitialTypologyState(coinIssues: CoinIssueDisplay[], initialSelections: TypologyFilterSelection[]) {
+  const order: string[] = []
+  const slotById = new Map<string, number>()
+  const selByKey = new Map<string, TypologyFilterSelection>()
+  const labelByKey = new Map<string, string>()
+  initialSelections.forEach((sel) => {
+    if (!hasTypologyFilter(sel)) return
+    const key = typologySelectionKey(sel)
+    if (selByKey.has(key)) return
+    order.push(key)
+    slotById.set(key, order.length - 1)
+    selByKey.set(key, sel)
+    labelByKey.set(key, describeTypologySelection(sel, coinIssues))
+  })
+  return { order, slotById, selByKey, labelByKey }
+}
+
+function useTypologyMultiSelect(coinIssues: CoinIssueDisplay[], initialSelections: TypologyFilterSelection[] = []) {
   const [staged, setStagedRaw] = useState<TypologyFilterSelection>(emptyTypologySelection())
-  const [order, setOrder] = useState<string[]>([])
-  const [slotById, setSlotById] = useState<Map<string, number>>(new Map())
-  const [selByKey, setSelByKey] = useState<Map<string, TypologyFilterSelection>>(new Map())
-  const [labelByKey, setLabelByKey] = useState<Map<string, string>>(new Map())
+  const [initial] = useState(() => buildInitialTypologyState(coinIssues, initialSelections))
+  const [order, setOrder] = useState<string[]>(initial.order)
+  const [slotById, setSlotById] = useState<Map<string, number>>(initial.slotById)
+  const [selByKey, setSelByKey] = useState<Map<string, TypologyFilterSelection>>(initial.selByKey)
+  const [labelByKey, setLabelByKey] = useState<Map<string, string>>(initial.labelByKey)
   // The staged pick's own color slot — reserved the moment it first becomes
   // non-empty and held fixed while it's built up (or while sibling committed
   // picks are added/removed around it), so its color never jumps mid-edit.
@@ -438,6 +461,10 @@ export function FindSpotsVisualization({
   finds,
   currentPrecision,
   precisionCounts,
+  initialMode,
+  initialViewMode,
+  initialMintNames,
+  initialTypeSelections,
 }: {
   sites: MapSite[]
   coinIssues: CoinIssueDisplay[]
@@ -448,10 +475,17 @@ export function FindSpotsVisualization({
    * current value + counts — the links themselves render here. */
   currentPrecision: PrecisionFilter
   precisionCounts: Record<PrecisionFilter, number>
+  /** Pre-built filter state for a deep link (e.g. the homepage demo
+   * carousel) — read once at mount, same as any other useState initializer.
+   * See lib/visualization-deeplink.ts / lib/demo-visualizations.ts. */
+  initialMode?: FilterMode
+  initialViewMode?: ViewMode
+  initialMintNames?: string[]
+  initialTypeSelections?: TypologyFilterSelection[]
 }) {
   const { t } = useLanguage()
-  const [mode, setMode] = useState<FilterMode>('type')
-  const [viewMode, setViewMode] = useState<ViewMode>('points')
+  const [mode, setMode] = useState<FilterMode>(initialMode ?? 'type')
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -461,13 +495,21 @@ export function FindSpotsVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues)
+  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
+
+  const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds), [coinIssues, finds])
+  // initialMintNames (zh names, from a deep link) resolved to the mint_ids
+  // useSelectionColors actually keys by — computed once at mount, same as
+  // the initializer it feeds.
+  const [initialMintIds] = useState(() =>
+    (initialMintNames ?? [])
+      .map((name) => mintOptions.find((m) => m.mint_zh === name)?.mint_id)
+      .filter((id): id is string => !!id)
+  )
   // Order of selection (not of `mintOptions`) so each pick keeps its color
   // slot — and pin color — as later picks are added/removed around it.
   const { selected: mintFilters, colorByValue: mintColorByValue, toggle: toggleMintFilter, clear: clearMintFilters } =
-    useSelectionColors()
-
-  const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds), [coinIssues, finds])
+    useSelectionColors(initialMintIds)
   const mintSelectOptions = useMemo(
     () =>
       mintOptions.map((m) => ({
@@ -825,17 +867,23 @@ export function MintTownVisualization({
   finds,
   coinIssues,
   hierarchyRows,
+  initialViewMode,
+  initialTypeSelections,
 }: {
   finds: HeatmapFind[]
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
+  /** Pre-built filter state for a deep link — see FindSpotsVisualization's
+   * matching props. */
+  initialViewMode?: ViewMode
+  initialTypeSelections?: TypologyFilterSelection[]
 }) {
   const { t } = useLanguage()
   // Only one data source exists today (database finds) — the toggle row is
   // kept (rather than collapsed away) so a future data source is just
   // another entry in `options` below, not a UI rebuild.
   const [source, setSource] = useState<HeatmapSource>('database')
-  const [viewMode, setViewMode] = useState<ViewMode>('points')
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -845,7 +893,7 @@ export function MintTownVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues)
+  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
 
   const filterActive = typeEntries.length > 0
 
@@ -1173,14 +1221,20 @@ export function AnsMintTownVisualization({
   specimens,
   coinIssues,
   hierarchyRows,
+  initialViewMode,
+  initialTypeSelections,
 }: {
   specimens: AnsSpecimen[]
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
+  /** Pre-built filter state for a deep link — see FindSpotsVisualization's
+   * matching props. */
+  initialViewMode?: ViewMode
+  initialTypeSelections?: TypologyFilterSelection[]
 }) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<MuseumTab>('mint')
-  const [viewMode, setViewMode] = useState<ViewMode>('points')
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -1190,7 +1244,7 @@ export function AnsMintTownVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues)
+  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
   // Order of selection (not of `specimens`) so each pick keeps its color
   // slot as later picks are added/removed around it. Keyed by ans_data.id —
   // catalog_number isn't unique (some specimens share an accession number).

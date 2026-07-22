@@ -60,14 +60,20 @@ export const SELECTION_COLORS = [
  * first) so later picks keep reusing SELECTION_COLORS instead of growing
  * past it.
  */
-export function useSelectionColors(): {
+export function useSelectionColors(initial: string[] = []): {
   selected: string[]
   colorByValue: Map<string, string>
   toggle: (id: string) => void
   clear: () => void
 } {
-  const [order, setOrder] = useState<string[]>([])
-  const [slotById, setSlotById] = useState<Map<string, number>>(new Map())
+  // `initial` seeds a pre-built selection (e.g. a homepage demo link) —
+  // read only on mount, like any other useState initializer; later renders
+  // passing a different `initial` array are ignored, same as useState's own
+  // "first value wins" contract.
+  const [order, setOrder] = useState<string[]>(() => [...new Set(initial)])
+  const [slotById, setSlotById] = useState<Map<string, number>>(
+    () => new Map([...new Set(initial)].map((id, i) => [id, i]))
+  )
 
   const toggle = useCallback((id: string) => {
     setOrder((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))

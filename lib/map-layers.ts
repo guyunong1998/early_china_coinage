@@ -160,6 +160,23 @@ export function buildBaseLayers(L: LeafletNS) {
     maxZoom: 19,
   })
 
+  // The default base layer across the site — CyclOSM's cartography (warm
+  // terrain hillshading, distinct green/beige palette) reads better at a
+  // glance than plain OSM. It's a cycling-oriented style upstream (bright
+  // purple motorways, blue cycle-route overlays baked directly into the
+  // tiles), which this app has no use for, but those only actually show up
+  // at street-level zoom — this app's own content (find sites, mint towns)
+  // is never itself colored by this layer, so it's left as-is rather than
+  // fighting the raster tiles with a CSS filter. Plain OSM (`osm` above)
+  // stays picked in the layer switcher wherever one exists, for anyone who
+  // wants it back.
+  const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+    attribution:
+      'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles by <a href="https://www.cyclosm.org">CyclOSM</a> hosted by <a href="https://www.openstreetmap.fr">OpenStreetMap France</a>',
+    maxZoom: 19,
+    subdomains: 'abc',
+  })
+
   const satellite = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     {
@@ -179,7 +196,7 @@ export function buildBaseLayers(L: LeafletNS) {
     { attribution: '', maxZoom: 19, opacity: 1 }
   )
 
-  return { osm, satellite, satelliteLabels }
+  return { osm, cyclosm, satellite, satelliteLabels }
 }
 
 /**
@@ -192,6 +209,7 @@ export function buildBaseLayers(L: LeafletNS) {
 export function addLayerControl(
   L: LeafletNS,
   map: import('leaflet').Map,
+  cyclosm: import('leaflet').TileLayer,
   osm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
   satelliteLabels: import('leaflet').TileLayer,
@@ -206,7 +224,10 @@ export function addLayerControl(
 
   L.control
     .layers(
-      { 'Street map': osm, Satellite: satellite },
+      // CyclOSM (already the active base layer when this control is built —
+      // see MapVisCanvas's init effect) stays first/checked; plain OSM's
+      // "Street map" is kept one click away for anyone who wants it back.
+      { CyclOSM: cyclosm, 'Street map': osm, Satellite: satellite },
       { 'English labels': satelliteLabels },
       { collapsed: options?.collapsed ?? false, position }
     )

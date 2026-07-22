@@ -540,7 +540,11 @@ export type MintFindspotsData = {
   siteTypeKeys: Record<string, string[]>
   /** Every inscription catalogued for this mint in coin_issues, regardless of
    * whether a find has been recorded for it yet. */
-  inscriptions: string[]
+  inscriptions: { zh: string; en: string | null }[]
+  /** Distinct coin-type labels catalogued for this mint in coin_issues
+   * (deepest populated hierarchy level, minor falling back to major) —
+   * bilingual, unlike the static dossier's English-only MintTown.coin_types. */
+  typeLabels: { zh: string; en: string | null }[]
   /** Total coin quantity across all finds attributed to this mint. */
   totalCoinCount: number
   /** Distinct find sites — not the same as `sites.length`, which only
@@ -553,6 +557,7 @@ const EMPTY_MINT_FINDSPOTS_DATA: MintFindspotsData = {
   typeOptions: [],
   siteTypeKeys: {},
   inscriptions: [],
+  typeLabels: [],
   totalCoinCount: 0,
   siteCount: 0,
 }
@@ -619,25 +624,45 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
       coin_type_hierarchy: CoinTypeHierarchyEmbed
     }>
   ).map((row) => {
-    const { major_zh, minor_zh } = deriveMajorMinor(row.coin_type_hierarchy)
+    const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
     return {
       id: row.id,
       coin_type_code: row.coin_type_code,
       major_type_zh: major_zh,
+      major_type_en: major_en,
       minor_type_zh: minor_zh,
+      minor_type_en: minor_en,
       inscription: one(row.inscriptions)?.inscription_zh ?? null,
+      inscription_en: one(row.inscriptions)?.inscription_en ?? null,
     }
   })
 
   // Full catalogue of inscriptions attributed to this mint — independent of
   // whether any find has been recorded yet, so this stays complete even for
   // mints with a thin excavation record.
-  const inscriptions = [...new Set(mintedCoinTypes.map((row) => row.inscription?.trim()).filter((v): v is string => !!v))].sort(
-    (a, b) => a.localeCompare(b, 'zh-CN')
-  )
+  const inscriptionsByZh = new Map<string, string | null>()
+  mintedCoinTypes.forEach((row) => {
+    const zh = row.inscription?.trim()
+    if (zh && !inscriptionsByZh.has(zh)) inscriptionsByZh.set(zh, row.inscription_en)
+  })
+  const inscriptions = [...inscriptionsByZh.entries()]
+    .map(([zh, en]) => ({ zh, en }))
+    .sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
+
+  // Distinct coin-type labels — deepest populated level (minor, falling
+  // back to major), same fallback `buildTypeLabel`/`buildTypeKey` use below.
+  const typeLabelsByZh = new Map<string, string | null>()
+  mintedCoinTypes.forEach((row) => {
+    const zh = row.minor_type_zh ?? row.major_type_zh
+    if (!zh || typeLabelsByZh.has(zh)) return
+    typeLabelsByZh.set(zh, row.minor_type_zh ? row.minor_type_en : row.major_type_en)
+  })
+  const typeLabels = [...typeLabelsByZh.entries()]
+    .map(([zh, en]) => ({ zh, en }))
+    .sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
 
   const coinIssueIds = mintedCoinTypes.map((row) => row.id).filter(Boolean)
-  if (coinIssueIds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions }
+  if (coinIssueIds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels }
 
   const finds = await fetchAllPages<{
     find_code: string
@@ -654,7 +679,7 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
       .order('find_code')
       .range(from, to)
   )
-  if (finds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions }
+  if (finds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels }
 
   const totalCoinCount = finds.reduce(
     (sum, f) => sum + (f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? 0),
@@ -702,7 +727,7 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
   })
 
   const siteCodes = [...siteCodeSet]
-  if (siteCodes.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, totalCoinCount }
+  if (siteCodes.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels, totalCoinCount }
 
   const sites = await fetchAllPages<MapSite>((from, to) =>
     supabase
@@ -727,5 +752,5 @@ export async function getMintFindspotsData(mintZh: string): Promise<MintFindspot
     })
     .sort((a, b) => b.siteCount - a.siteCount || a.label.localeCompare(b.label, 'zh-CN'))
 
-  return { sites, typeOptions, siteTypeKeys, inscriptions, totalCoinCount, siteCount: siteCodeSet.size }
+  return { sites, typeOptions, siteTypeKeys, inscriptions, typeLabels, totalCoinCount, siteCount: siteCodeSet.size }
 }
