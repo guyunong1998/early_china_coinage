@@ -2,7 +2,10 @@
 """
 Generates a single poster-size PNG of the full coin_type_hierarchy tree
 (both the 钱币 Coin branch and the 钱范 Coin Mould branch), fully expanded,
-each node labeled with its zh name above its obverse specimen photo.
+each node labeled bilingually (zh above, en below) above its obverse
+specimen photo -- plus a JSON manifest of every node's pixel bounding box,
+so the Next.js app can render both as an interactive pan/zoom "Typology
+Viewer" (components/coin-types/TypologyViewer.tsx) with click-to-zoom.
 
 Most hierarchy nodes don't have a photographed specimen (img_acc_num is
 often null, or the file just isn't in public/images/type_imgs yet). For
@@ -17,16 +20,20 @@ are placeholders), in this priority order:
   3. the immediate parent type
   4. any sibling under the same parent
 
-Output (see OUT_DIR below):
-  - coin_type_hierarchy.png   the full diagram
-  - photo-cutouts/*.png       every real specimen photo, background removed,
-                               named by its full hierarchy path
-  - silhouettes/*.png         one gray silhouette per node that had no photo
-                               of its own, also named by its full path
+level1 nodes (钱币/钱范 themselves) are section headings only -- no photo
+makes sense for an abstract category, so they get a bilingual title line
+("钱币 · Coin" / "钱范 · Mould") and nothing else.
 
-This is a standalone visualization tool, not part of the running site --
-nothing here is imported by the Next.js app, and nothing it writes belongs
-under public/.
+Output (see --out-dir below, default the repo's public/ directory -- this
+diagram is actually served by the running app, unlike a one-off export):
+  - images/coin-type-hierarchy.png   the full diagram, white background
+  - data/coin-type-hierarchy.json    every node's zh/en label + pixel bbox
+                                      in that PNG, for TypologyViewer's
+                                      click-to-zoom and hover highlight
+
+Intermediate per-node cutouts/silhouettes are written to a throwaway temp
+directory (pass --debug-dir to inspect them instead) -- they're a build
+step, not something the app or a person needs to look at normally.
 
 Requirements: Pillow (`pip3 install pillow`) -- everything else is stdlib.
 Reads NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY from
@@ -35,18 +42,21 @@ over the Supabase REST API.
 
 Usage:
     python3 scripts/gen-coin-hierarchy-diagram.py
-    python3 scripts/gen-coin-hierarchy-diagram.py --out ~/Desktop/coin-type-hierarchy
+    python3 scripts/gen-coin-hierarchy-diagram.py --out-dir /tmp/preview --debug-dir /tmp/preview/debug
 
 Rerun this whenever public/images/type_imgs gets new specimen photos, or
 coin_type_hierarchy gains/loses rows -- everything is recomputed from
-scratch each run (nothing here is incremental).
+scratch each run (nothing here is incremental), and the two output files
+are checked into the repo like any other static asset.
 """
 
 import argparse
 import json
 import os
 import re
+import shutil
 import sys
+import tempfile
 import urllib.request
 from collections import deque
 
@@ -61,19 +71,38 @@ ENV_FILE = os.path.join(REPO_ROOT, ".env.local")
 LEVELS = ["level1_zh", "level2_zh", "level3_zh", "level4_zh", "level5_zh"]
 
 # ── layout / rendering constants -- tweak here, not inline below ──────────
-MAX_THUMB_W, MAX_THUMB_H = 130, 160
-LEAF_SPACING = 168
-LEVEL_HEIGHT = 232
+# Sized generously (vs. a print-only poster) since this now backs an
+# in-browser pan/zoom viewer -- more native pixels per thumbnail means
+# zooming in past 100% stays reasonably sharp before it visibly blurs.
+MAX_THUMB_W, MAX_THUMB_H = 190, 230
+LEAF_SPACING = 280
+LEVEL_HEIGHT = 400
 MARGIN = 90
-SECTION_GAP = 140
+SECTION_GAP = 150
 SIL_COLOR = (107, 107, 107)
 BG_THRESHOLD = 24  # background-removal color-distance cutoff, out of 255
-CUTOUT_MAX_SIDE = 600
+CUTOUT_MAX_SIDE = 700
 
-INK = (35, 32, 28)
-MUTED = (140, 134, 124)
-LINE_COLOR = (190, 184, 172)
-PAGE_BG = (250, 248, 244)
+# Vertical offsets within one node's slot: zh label, then up to 2 lines of
+# wrapped en label below it, then the thumbnail below that. Every node
+# reserves the same 2-line height regardless of whether its own en label
+# actually wraps, so thumbnail rows stay aligned across a level.
+LABEL_ZH_OFFSET = 28
+LABEL_EN_LINE_H = 21
+BOX_TOP_OFFSET = LABEL_ZH_OFFSET + LABEL_EN_LINE_H * 2
+
+# A connecting line ends at y + LINE_END_OFFSET (short, close to the row
+# above), while the label/thumbnail content itself starts lower, at
+# y + CONTENT_TOP_OFFSET -- the gap between those two is what keeps the
+# lines from cutting through the text above them.
+LINE_END_OFFSET = 14
+CONTENT_TOP_OFFSET = 40
+
+INK = (30, 28, 24)
+MUTED = (130, 124, 114)
+LINE_COLOR = (60, 60, 60)  # darker + thicker than the old (190,184,172)/2px --
+LINE_WIDTH = 3             # explicitly asked to be "more visible"
+PAGE_BG = (255, 255, 255)  # plain white, not the old off-white cream
 
 # Candidate CJK-capable fonts, first one found wins. STHeiti/Hiragino/PingFang
 # are macOS; Noto/WenQuanYi cover common Linux installs.
@@ -84,6 +113,11 @@ FONT_CANDIDATES = [
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 ]
+
+# level1_zh only ever takes these two values in practice (see isMouldNode in
+# lib/coin-type-catalog.ts) -- hardcoded rather than sourced from a column
+# since coin_type_hierarchy has no level1_en field of its own to read.
+LEVEL1_EN = {"钱币": "Coin", "钱范": "Mould"}
 
 
 # ── 0. env + Supabase fetch ────────────────────────────────────────────────
@@ -143,6 +177,7 @@ def build_tree(rows):
         nid = f"root::{v}"
         nodes[nid] = {
             "id": nid, "path": (v,), "level": 1, "label": v,
+            "label_en": LEVEL1_EN.get(v, v),
             "own_image": None, "children": [], "parent": None,
         }
         by_path[(v,)] = nid
@@ -156,8 +191,10 @@ def build_tree(rows):
             path.append(v)
         path = tuple(path)
         nid = row["id"]
+        en_key = f"level{len(path)}_en"
         nodes[nid] = {
             "id": nid, "path": path, "level": len(path), "label": path[-1],
+            "label_en": row.get(en_key) or path[-1],
             "own_image": find_obv(row.get("img_acc_num"), files),
             "children": [], "parent": None,
         }
@@ -341,11 +378,6 @@ def load_font():
     return None
 
 
-def leaf_count(nodes, nid):
-    n = nodes[nid]
-    return 1 if not n["children"] else sum(leaf_count(nodes, c) for c in n["children"])
-
-
 def max_depth(nodes, nid):
     n = nodes[nid]
     return n["level"] if not n["children"] else max(max_depth(nodes, c) for c in n["children"])
@@ -370,24 +402,44 @@ def compute_layout(nodes, root_id, x0, y0):
     return pos, counter[0] * LEAF_SPACING
 
 
-def render(nodes, resolved, node_image, out_path):
+def render(nodes, resolved, node_image, png_path, json_path):
     font_path = load_font()
     def font(size):
         return ImageFont.truetype(font_path, size) if font_path else ImageFont.load_default()
 
-    font_label, font_title = font(22), font(44)
-    font_section, font_small = font(32), font(18)
+    font_label, font_label_en = font(24), font(16)
+    font_section, font_small = font(52), font(18)
+
+    def wrap_en(draw_, text, f, max_width, max_lines=2):
+        """Greedy word-wrap to at most `max_lines` -- long compound labels
+        (e.g. "Flat-handle Solid-head Spade") would otherwise overlap their
+        neighbors at LEAF_SPACING width. Whatever's left once `max_lines-1`
+        lines are filled becomes the final line as-is, even if still too
+        wide, rather than truncating it unreadably."""
+        words = text.split(" ")
+        lines, cur, i = [], [], 0
+        while i < len(words) and len(lines) < max_lines - 1:
+            cur.append(words[i])
+            trial = " ".join(cur)
+            if len(cur) == 1 or draw_.textbbox((0, 0), trial, font=f)[2] <= max_width:
+                i += 1
+            else:
+                cur.pop()
+                lines.append(" ".join(cur))
+                cur = []
+        lines.append(" ".join(cur + words[i:]))
+        return lines[:max_lines]
 
     roots = [nid for nid, n in nodes.items() if n["level"] == 1]
     roots.sort(key=lambda r: 0 if nodes[r]["label"] == "钱币" else 1)
 
     layouts = []
-    cursor_y = MARGIN + 90
+    cursor_y = MARGIN
     for r in roots:
         depth = max_depth(nodes, r)
-        pos, width = compute_layout(nodes, r, 0, cursor_y + 60)
+        pos, width = compute_layout(nodes, r, 0, cursor_y + 100)
         layouts.append({"root": r, "pos": pos, "width": width, "top": cursor_y})
-        cursor_y += 60 + depth * LEVEL_HEIGHT + SECTION_GAP
+        cursor_y += 100 + depth * LEVEL_HEIGHT + SECTION_GAP
 
     canvas_w = max(l["width"] for l in layouts) + MARGIN * 2
     canvas_h = cursor_y + MARGIN
@@ -398,61 +450,84 @@ def render(nodes, resolved, node_image, out_path):
 
     img = Image.new("RGB", (int(canvas_w), int(canvas_h)), PAGE_BG)
     draw = ImageDraw.Draw(img)
+    manifest = []
 
     def text_center(xy, text, f, fill):
         x, y = xy
         bbox = draw.textbbox((0, 0), text, font=f)
         draw.text((x - (bbox[2] - bbox[0]) / 2, y), text, font=f, fill=fill)
-
-    text_center((canvas_w / 2, 30), "早期中国钱币 · 类型学层级图（完全展开）", font_title, INK)
-    text_center(
-        (canvas_w / 2, 82),
-        "Early Chinese Coin Type Hierarchy — fully expanded, obverse images. "
-        "Gray silhouettes = no photograph for that type (shape borrowed from a related type).",
-        font_small, MUTED,
-    )
+        return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
     for l in layouts:
         pos = l["pos"]
-        suffix = " · Coin" if nodes[l["root"]]["label"] == "钱币" else " · Coin Mould"
-        text_center((canvas_w / 2, l["top"] + 12), nodes[l["root"]]["label"] + suffix, font_section, INK)
+        root_label = f"{nodes[l['root']]['label']} · {nodes[l['root']]['label_en']}"
+        text_center((canvas_w / 2, l["top"]), root_label, font_section, INK)
 
+        xs = [x for x, _ in pos.values()]
+        manifest.append({
+            "id": l["root"], "level": 1, "labelZh": nodes[l["root"]]["label"],
+            "labelEn": nodes[l["root"]]["label_en"],
+            "bbox": [min(xs) - MAX_THUMB_W, l["top"] - 6,
+                     max(xs) + MAX_THUMB_W, l["top"] + 100 + max_depth(nodes, l["root"]) * LEVEL_HEIGHT],
+        })
+
+        # connecting lines first, so node photos paint over any overlap at
+        # the joins rather than lines drawing on top of them. Nothing is
+        # drawn from the root (钱币/钱范) down to its own immediate
+        # children -- that first link is visual noise once the root is just
+        # a section heading with no card of its own.
         for nid, (x, y) in pos.items():
             parent = nodes[nid]["parent"]
-            if parent and parent in pos:
+            if parent and parent in pos and nodes[parent]["level"] != 1:
                 px, py = pos[parent]
-                parent_bottom = py + 22 + MAX_THUMB_H + 4
-                child_top = y + 22 - 4
+                parent_bottom = py + CONTENT_TOP_OFFSET + BOX_TOP_OFFSET + MAX_THUMB_H + 6
+                child_top = y + LINE_END_OFFSET
                 mid_y = (parent_bottom + child_top) / 2
-                draw.line([(px, parent_bottom), (px, mid_y)], fill=LINE_COLOR, width=2)
-                draw.line([(px, mid_y), (x, mid_y)], fill=LINE_COLOR, width=2)
-                draw.line([(x, mid_y), (x, child_top)], fill=LINE_COLOR, width=2)
+                draw.line([(px, parent_bottom), (px, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
+                draw.line([(px, mid_y), (x, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
+                draw.line([(x, mid_y), (x, child_top)], fill=LINE_COLOR, width=LINE_WIDTH)
 
         for nid, (x, y) in pos.items():
             n = nodes[nid]
+            if n["level"] == 1:
+                continue  # section title above already covers roots -- no card, no photo
             is_own = resolved[nid][1]
-            text_center((x, y), n["label"], font_label, INK if is_own else MUTED)
+            content_y = y + CONTENT_TOP_OFFSET
+
+            text_center((x, content_y), n["label"], font_label, INK if is_own else MUTED)
+            for line_i, line in enumerate(wrap_en(draw, n["label_en"], font_label_en, LEAF_SPACING - 14)):
+                text_center((x, content_y + LABEL_ZH_OFFSET + line_i * LABEL_EN_LINE_H), line, font_label_en, MUTED)
 
             thumb = Image.open(node_image[nid]).convert("RGBA")
             scale = min(MAX_THUMB_W / thumb.width, MAX_THUMB_H / thumb.height, 1.0)
             tw, th = max(1, int(thumb.width * scale)), max(1, int(thumb.height * scale))
             thumb = thumb.resize((tw, th), Image.LANCZOS)
 
-            box_top = y + 22
-            outline = (210, 205, 195) if is_own else (222, 218, 210)
-            draw.rectangle(
-                [x - MAX_THUMB_W / 2, box_top, x + MAX_THUMB_W / 2, box_top + MAX_THUMB_H],
-                outline=outline, width=1,
-            )
+            box_top = content_y + BOX_TOP_OFFSET
+            box_left, box_right = x - MAX_THUMB_W / 2, x + MAX_THUMB_W / 2
+            box_bottom = box_top + MAX_THUMB_H
             img.paste(thumb, (int(x - tw / 2), int(box_top + (MAX_THUMB_H - th) / 2)), thumb)
+
+            pad = 10
+            manifest.append({
+                "id": nid, "level": n["level"], "labelZh": n["label"], "labelEn": n["label_en"],
+                "path": list(n["path"]), "hasOwnPhoto": is_own,
+                "bbox": [box_left - pad, content_y - LABEL_ZH_OFFSET - 4, box_right + pad, box_bottom + pad],
+            })
 
     lx, ly = MARGIN, canvas_h - 46
     draw.rectangle([lx, ly, lx + 16, ly + 16], fill=(120, 120, 120))
     draw.text((lx + 24, ly - 2), "= silhouette placeholder (borrowed shape, no photo for this exact type)",
                font=font_small, fill=MUTED)
 
-    img.save(out_path)
-    print(f"saved {out_path} ({img.size[0]}x{img.size[1]})")
+    os.makedirs(os.path.dirname(png_path), exist_ok=True)
+    img.save(png_path)
+    print(f"saved {png_path} ({img.size[0]}x{img.size[1]})")
+
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump({"width": img.size[0], "height": img.size[1], "nodes": manifest}, f, ensure_ascii=False, indent=1)
+    print(f"saved {json_path} ({len(manifest)} node entries)")
 
 
 # ── main ────────────────────────────────────────────────────────────────
@@ -460,21 +535,33 @@ def render(nodes, resolved, node_image, out_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        "--out", default=os.path.expanduser("~/Desktop/coin-type-hierarchy"),
-        help="Output directory (default: ~/Desktop/coin-type-hierarchy)",
+        "--out-dir", default=os.path.join(REPO_ROOT, "public"),
+        help="Base directory the app serves as static assets (default: the repo's public/ dir). "
+             "Writes <out-dir>/images/coin-type-hierarchy.png and <out-dir>/data/coin-type-hierarchy.json.",
+    )
+    parser.add_argument(
+        "--debug-dir", default=None,
+        help="Optional directory to keep the intermediate photo-cutouts/ and silhouettes/ in "
+             "(default: a throwaway temp directory, deleted after the run).",
     )
     args = parser.parse_args()
 
-    out_dir = os.path.expanduser(args.out)
-    cutout_dir = os.path.join(out_dir, "photo-cutouts")
-    sil_dir = os.path.join(out_dir, "silhouettes")
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = os.path.expanduser(args.out_dir)
+    png_path = os.path.join(out_dir, "images", "coin-type-hierarchy.png")
+    json_path = os.path.join(out_dir, "data", "coin-type-hierarchy.json")
+
+    debug_dir = os.path.expanduser(args.debug_dir) if args.debug_dir else tempfile.mkdtemp(prefix="coin-hierarchy-")
+    cutout_dir = os.path.join(debug_dir, "photo-cutouts")
+    sil_dir = os.path.join(debug_dir, "silhouettes")
 
     rows = fetch_hierarchy_rows()
     nodes = build_tree(rows)
     resolved = resolve_images(nodes)
     node_image = generate_images(nodes, resolved, cutout_dir, sil_dir)
-    render(nodes, resolved, node_image, os.path.join(out_dir, "coin_type_hierarchy.png"))
+    render(nodes, resolved, node_image, png_path, json_path)
+
+    if not args.debug_dir:
+        shutil.rmtree(debug_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

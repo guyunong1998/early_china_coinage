@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { T } from '@/components/i18n/T'
+import { ClickHint } from '@/components/ui/ClickHint'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
@@ -66,12 +67,9 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
     <div className="map-vis-overlay ">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <span
-            className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-            title={t('visualizations.viewByLabelHint')}
-          >
+          <ClickHint hint={t('visualizations.viewByLabelHint')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
             <T k="visualizations.viewByLabel" />
-          </span>
+          </ClickHint>
 
           <div className={`flex-wrap gap-1.5 ${open ? 'flex' : 'hidden'} lg:flex`}>
             {VISUALIZATION_TABS.map((tab) => {

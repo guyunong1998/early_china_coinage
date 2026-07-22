@@ -89,7 +89,6 @@ export const DICTIONARY = {
     en: 'This project is maintained by researchers working on early Chinese numismatics and archaeological publication.',
     zh: '本项目由从事早期中国钱币学与考古出版研究的学者维护。',
   },
-  'about.team.titlePlaceholder': { en: 'Title not yet set', zh: '职称待补充' },
   'about.team.portraitPlaceholder': { en: 'Portrait', zh: '照片' },
   'about.collab.title': { en: 'Collaborations', zh: '合作' },
   'about.collab.body': {
@@ -136,6 +135,10 @@ export const DICTIONARY = {
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
   'search.precision.label': { en: 'Location precision', zh: '定位精度' },
   'search.precision.all': { en: 'All', zh: '全部' },
+  'search.precision.allHint': {
+    en: 'Includes every find site regardless of how precisely its location is known. Many sites are only recorded to the county or city level, not an exact point — "All" shows that real imprecision, rather than hiding those sites.',
+    zh: '不论定位精度如何，包含所有出土遗址。许多遗址仅精确到区县或城市，而非具体地点——「全部」如实呈现这种定位上的不确定性，而非将这些遗址隐藏。',
+  },
   'search.precision.site': { en: 'Specified to site', zh: '精确到遗址(最具体）' },
   'search.precision.county': { en: 'Specified to county', zh: '精确到区县（不明单位）' },
   'search.precision.city': { en: 'Specified to city', zh: '精确到城市（不明县城）' },
@@ -258,8 +261,12 @@ export const DICTIONARY = {
   // ── map visualizations page ──────────────────────────────────────────────
   'visualizations.viewByLabel': { en: 'View by', zh: '浏览方式' },
   'visualizations.viewByLabelHint': {
-    en: 'Switch between the different top-level views/tabs available on this page.',
-    zh: '切换本页可用的不同顶层视图／标签。',
+    en: 'Changes what points are plotted on the map: Mint Town shows mint locations, Find Site shows individual find spots.',
+    zh: '切换地图上显示的点：铸地视图显示铸地位置，出土遗址视图显示各出土地点。',
+  },
+  'visualizations.viewByLabelHint.museum': {
+    en: 'Switch between the mint-town map view and the Search tool for looking up specimens by accession number.',
+    zh: '切换铸地地图视图与按馆藏编号查找标本的搜索工具。',
   },
   'visualizations.tabs.mintTown': { en: 'Mint Town', zh: '铸地' },
   'visualizations.tabs.findSite': { en: 'Find Site', zh: '出土遗址' },
@@ -308,8 +315,8 @@ export const DICTIONARY = {
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
   'map.filter.modeLabel': { en: 'Filter by', zh: '筛选方式' },
   'map.filter.modeLabelHint': {
-    en: 'Choose whether to filter find sites by coin type or by mint.',
-    zh: '选择按币种还是按铸地筛选出土遗址。',
+    en: 'Choose whether to filter by coin type or by mint, then pick one — each point’s color shows what percentage of its coins match, and its size shows the total quantity found there.',
+    zh: '选择按币种还是按铸地筛选，选定后地图上各点的颜色表示匹配比例，大小表示该处的钱币总数量。',
   },
   'map.filter.byType': { en: 'Coin Type', zh: '按币种' },
   'map.filter.byMint': { en: 'Mint', zh: '按铸地' },
@@ -387,8 +394,8 @@ export const DICTIONARY = {
   'map.view.compare': { en: 'Compare', zh: '对比' },
   'map.view.label': { en: 'Display', zh: '显示' },
   'map.view.labelHint': {
-    en: 'Choose how matching points are rendered: individual dots, a blended density heatmap, or side-by-side comparison.',
-    zh: '选择匹配点的显示方式：单点、混合密度热力图，或并列对比。',
+    en: 'See different representations of the data: Points shows one dot per location, Density blends them into a heatmap. Compare lets you pick multiple coin types or mints — each then renders as its own distinctly colored point, side by side.',
+    zh: '查看数据的不同呈现方式：点状显示每个地点一个点；密度色块将其混合为热力图；对比模式可选择多个币种或铸地，各自以不同颜色的点并列显示。',
   },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
   'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
@@ -468,6 +475,14 @@ export const DICTIONARY = {
   'coinTypeList.sort.finds': { en: 'Number of finds', zh: '出土记录数' },
   'coinTypeList.sort.coins': { en: 'Number of coins', zh: '钱币数量' },
   'coinTypeList.sort.issues': { en: 'Number of issues', zh: '钱币品种数' },
+  'coinTypeList.typologyViewer.title': { en: 'Typology Viewer', zh: '类型图谱' },
+  'coinTypeList.typologyViewer.hint': {
+    en: 'Scroll or pinch to zoom, drag to pan. Click any coin type to zoom into it.',
+    zh: '滚动或双指缩放，拖动可平移。点击任意币种即可放大查看。',
+  },
+  'coinTypeList.typologyViewer.zoomIn': { en: 'Zoom in', zh: '放大' },
+  'coinTypeList.typologyViewer.zoomOut': { en: 'Zoom out', zh: '缩小' },
+  'coinTypeList.typologyViewer.reset': { en: 'Reset view', zh: '重置视图' },
   'coinTypeDetail.back': { en: '← Coin Types', zh: '← 币种分布' },
   'coinTypeDetail.row.level': { en: 'Level', zh: '层级' },
   'coinTypeDetail.row.parentTypes': { en: 'Parent types', zh: '上级类型' },

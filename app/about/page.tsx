@@ -6,12 +6,17 @@ const GITHUB_URL = 'https://github.com/guyunong1998/early_china_coinage'
 
 type TeamMember = {
   name: string
-  title?: string
-  affiliation?: string
-  email?: string
+  title: string
+  affiliation: string
+  email: string
 }
 
-const TEAM_MEMBERS: TeamMember[] = [{ name: 'Yunong Gu' }, { name: 'Sophia Ling' }]
+// title/affiliation/email left blank on purpose — edit these in place once
+// they're final, rather than waiting on a placeholder string.
+const TEAM_MEMBERS: TeamMember[] = [
+  { name: 'Yunong Gu', title: '', affiliation: '', email: '' },
+  { name: 'Sophia Ling', title: '', affiliation: '', email: '' },
+]
 
 export default function AboutPage() {
   return (
@@ -53,17 +58,14 @@ export default function AboutPage() {
                   className="h-32 w-32 rounded-full"
                 />
                 <h3 className="mt-3 font-serif text-lg font-semibold text-gray-900">{member.name}</h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  {member.title ?? <T k="about.team.titlePlaceholder" />}
-                </p>
-                {member.affiliation && <p className="mt-0.5 text-sm text-gray-500">{member.affiliation}</p>}
-                {member.email && (
-                  <a
-                    href={`mailto:${member.email}`}
-                    className="mt-1.5 text-sm text-brand hover:underline"
-                  >
+                <p className="mt-1 min-h-[1.25rem] text-sm text-gray-600">{member.title}</p>
+                <p className="mt-0.5 min-h-[1.25rem] text-sm text-gray-500">{member.affiliation}</p>
+                {member.email ? (
+                  <a href={`mailto:${member.email}`} className="mt-1.5 text-sm text-brand hover:underline">
                     {member.email}
                   </a>
+                ) : (
+                  <p className="mt-1.5 min-h-[1.25rem] text-sm text-brand">&nbsp;</p>
                 )}
               </div>
             ))}

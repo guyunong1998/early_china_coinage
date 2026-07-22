@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Pagination } from '@/components/ui/Pagination'
+import { PrecisionAllHint } from '@/components/search/PrecisionAllHint'
 import { SearchFilters } from '@/components/search/SearchFilters'
 import { SearchFiltersToggle } from '@/components/search/SearchFiltersToggle'
 import { SearchResultCard } from '@/components/search/SearchResultCard'
@@ -299,17 +300,19 @@ export default async function SearchPage({ searchParams }: PageProps) {
             const active = tab.id === precision
             const href = buildHref({ precision: tab.id === 'all' ? undefined : tab.id })
             return (
-              <Link
-                key={tab.id}
-                href={href}
-                className={`rounded border px-3 py-1.5 text-sm transition ${
-                  active
-                    ? 'border-brand bg-brand text-white'
-                    : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-                }`}
-              >
-                <T k={tab.key} /> ({tab.count})
-              </Link>
+              <span key={tab.id} className="inline-flex items-center gap-1">
+                <Link
+                  href={href}
+                  className={`rounded border px-3 py-1.5 text-sm transition ${
+                    active
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
+                  }`}
+                >
+                  <T k={tab.key} /> ({tab.count})
+                </Link>
+                {tab.id === 'all' && <PrecisionAllHint />}
+              </span>
             )
           })}
         </div>

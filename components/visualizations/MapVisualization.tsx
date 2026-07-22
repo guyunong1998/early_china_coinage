@@ -22,6 +22,7 @@ import { AccessionNumberSearch } from '@/components/museum/AccessionNumberSearch
 import { MapVisualizationOverlay } from '@/components/visualizations/MapVisualizationOverlay'
 import { TypologyFilterBar } from '@/components/visualizations/TypologyFilterBar'
 import { T } from '@/components/i18n/T'
+import { ClickHint } from '@/components/ui/ClickHint'
 import { MultiSelectSearch } from '@/components/ui/MultiSelectSearch'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { PrecisionFilter } from '@/lib/city-boundaries'
@@ -115,12 +116,9 @@ function ViewModeRow({
   const { t } = useLanguage()
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span
-        className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-        title={t('map.view.labelHint')}
-      >
+      <ClickHint hint={t('map.view.labelHint')} className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
         <T k="map.view.label" />
-      </span>
+      </ClickHint>
       <ToggleButtons
         value={viewMode}
         onChange={onChange}
@@ -677,17 +675,29 @@ export function FindSpotsVisualization({
     const isActive = tab.id === currentPrecision
     const href = `/visualizations/find-site${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
     return (
-      <Link
-        key={tab.id}
-        href={href}
-        className={`pointer-events-auto shrink-0 whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
-          isActive
-            ? 'border-brand bg-brand text-white'
-            : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
-        }`}
-      >
-        <T k={tab.key} /> ({precisionCounts[tab.id]})
-      </Link>
+      <span key={tab.id} className="pointer-events-auto inline-flex shrink-0 items-center gap-1">
+        <Link
+          href={href}
+          className={`whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
+            isActive
+              ? 'border-brand bg-brand text-white'
+              : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
+          }`}
+        >
+          <T k={tab.key} /> ({precisionCounts[tab.id]})
+        </Link>
+        {/* "All" is the one tab whose count needs explaining — it includes
+            sites whose location is only known to county/city level, not an
+            exact point, which is why it's larger than "Specified to site". */}
+        {tab.id === 'all' && (
+          <ClickHint
+            hint={t('search.precision.allHint')}
+            className="flex h-4 w-4 items-center justify-center rounded-full border border-brand/40 bg-white/95 text-[10px] font-bold leading-none text-brand shadow-sm"
+          >
+            ?
+          </ClickHint>
+        )}
+      </span>
     )
   })
 
@@ -713,12 +723,9 @@ export function FindSpotsVisualization({
           <div className="loc_precision_map-m flex items-center gap-1.5 lg:hidden">{precisionButtons}</div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-              title={t('map.filter.modeLabelHint')}
-            >
+            <ClickHint hint={t('map.filter.modeLabelHint')} className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
               <T k="map.filter.modeLabel" />
-            </span>
+            </ClickHint>
             <ToggleButtons
               value={mode}
               onChange={(m) => {
@@ -1036,7 +1043,7 @@ export function MintTownVisualization({
       <MapVisualizationOverlay>
         <div className="space-y-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-semibold text-gray-700">
+            <span className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
               <T k="visualizations.data.label" />
             </span>
             <ToggleButtons
@@ -1171,12 +1178,9 @@ function MuseumMapOverlay({
     <div className="map-vis-overlay">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <span
-            className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-            title={t('nav.spadeHeatmapHint')}
-          >
+          <ClickHint hint={t('nav.spadeHeatmapHint')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
             <T k="nav.spadeHeatmap" />
-          </span>
+          </ClickHint>
 
           <button
             type="button"
@@ -1201,12 +1205,9 @@ function MuseumMapOverlay({
           className={`${open ? 'block' : 'hidden'} max-h-[min(60dvh,28rem)] overflow-y-auto border-t border-brand/10 px-2.5 py-2.5 sm:px-3 lg:block`}
         >
           <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-            <span
-              className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-              title={t('visualizations.viewByLabelHint')}
-            >
+            <ClickHint hint={t('visualizations.viewByLabelHint.museum')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
               <T k="visualizations.viewByLabel" />
-            </span>
+            </ClickHint>
             <ToggleButtons
               value={tab}
               onChange={onTabChange}
