@@ -35,7 +35,7 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 | [`docs/SITEMAP.md`](docs/SITEMAP.md) | Every route, what visitors see there, and — for each page — which components and `lib/` data functions it's built from. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The stack, the server/client split, where data actually lives (Supabase vs. local files), the shared map-rendering engine, i18n, styling, and deployment. Start here to understand how the app is put together. |
 | [`docs/DATA_VISUALIZATION_CALCULATIONS.md`](docs/DATA_VISUALIZATION_CALCULATIONS.md) | The exact math behind every map's point size and color (Points/Density/Compare modes) — the "what number produces what pixel" reference. |
-| [`AGENTS.md`](AGENTS.md) | Note for AI coding agents working in this repo. |
+
 
 ## Stack
 
