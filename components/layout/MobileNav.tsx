@@ -11,18 +11,20 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
-const NAV_LINKS: { href: string; key: DictionaryKey }[] = [
+const NAV_LINKS: { href: string; key: DictionaryKey; hintKey?: DictionaryKey }[] = [
   { href: '/mints', key: 'nav.mints' },
   { href: '/coin-types', key: 'nav.coinTypes' },
   { href: '/visualizations', key: 'nav.map' },
-  { href: '/museum-collections', key: 'nav.spadeHeatmap' },
+  { href: '/museum-collections', key: 'nav.spadeHeatmap', hintKey: 'nav.spadeHeatmapHint' },
   { href: '/search', key: 'nav.search' },
   { href: '/about', key: 'nav.about' },
 ]
 
 export function MobileNav() {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
@@ -71,6 +73,7 @@ export function MobileNav() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
+                title={link.hintKey ? t(link.hintKey) : undefined}
                 className="px-4 py-2.5 hover:bg-brand-light hover:text-brand"
               >
                 <T k={link.key} />

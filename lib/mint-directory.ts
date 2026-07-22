@@ -80,6 +80,25 @@ export function getMintDirectoryEntryBySlug(
   return directory.find((m) => m.mint_code === slug)
 }
 
+/**
+ * How complete a mint's documented record is — one point each for state,
+ * modern location, coordinates, a substantive description, references,
+ * images, and at least one known coin type, out of a max of 7. Used to sort
+ * the `/mints` list by "completion of information"; not shown as a number
+ * anywhere, so the exact weighting is deliberately informal.
+ */
+export function mintCompleteness(mint: MintDirectoryEntry, hasCoinTypes: boolean): number {
+  let score = 0
+  if (mint.state_zh !== '未知') score += 1
+  if (mint.modern_location_zh || mint.modern_location_en !== 'See description') score += 1
+  if (mint.lat != null && mint.lng != null) score += 1
+  if (mint.description_en.length > 60 || (mint.db_description_zh?.length ?? 0) > 0) score += 1
+  if (mint.references.length > 0) score += 1
+  if (mint.images && mint.images.length > 0) score += 1
+  if (hasCoinTypes) score += 1
+  return score
+}
+
 export type MintTypeLabel = { zh: string; en: string | null }
 
 /**

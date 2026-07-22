@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { MintListClient } from '@/components/mints/MintListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
-import { buildMintDirectory, buildMintTypeLabels } from '@/lib/mint-directory'
+import { buildMintDirectory, buildMintTypeLabels, mintCompleteness } from '@/lib/mint-directory'
+import { resolveMintNameZh } from '@/lib/mint-towns'
 import { computeMintStatsFromFinds, toMintPoints } from '@/lib/pointed-spade-data'
 import { getCoinIssues, getFindsForHeatmap, getMints } from '@/lib/queries'
 
@@ -35,6 +36,25 @@ export default async function MintsPage() {
   // replaces the static dossier's English-only MintTown.coin_types wherever
   // live data exists (see buildMintTypeLabels' doc comment).
   const typesByMint = Object.fromEntries(buildMintTypeLabels(coinIssues))
+
+  // Distinct catalogued coin_issues per mint (the "Number of issues" sort
+  // option) — different from statsByMint's coinCount/siteCount, which are
+  // derived from `finds`, not from the coin_issues catalogue itself.
+  const issuesByMint: Record<string, number> = {}
+  coinIssues.forEach((c) => {
+    const mintZh = c.mint_zh?.trim()
+    if (!mintZh) return
+    const resolved = resolveMintNameZh(mintZh)
+    issuesByMint[resolved] = (issuesByMint[resolved] ?? 0) + 1
+  })
+
+  // "Completion of information" sort option — how many of a mint's
+  // documentable fields are actually filled in (see mintCompleteness).
+  const completenessByMint: Record<string, number> = {}
+  mints.forEach((mint) => {
+    const hasCoinTypes = (typesByMint[mint.name_zh]?.length ?? 0) > 0 || mint.coin_types.length > 0
+    completenessByMint[mint.name_zh] = mintCompleteness(mint, hasCoinTypes)
+  })
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -82,7 +102,13 @@ export default async function MintsPage() {
 
       {/* Searchable list */}
       <div className="mt-8">
-        <MintListClient all={mints} statsByMint={statsByMint} typesByMint={typesByMint} />
+        <MintListClient
+          all={mints}
+          statsByMint={statsByMint}
+          typesByMint={typesByMint}
+          issuesByMint={issuesByMint}
+          completenessByMint={completenessByMint}
+        />
       </div>
     </div>
   )

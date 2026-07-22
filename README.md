@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Early Chinese Coin Finds Database
 
-## Getting Started
+A searchable, mapped record of pre-Qin to early Han coin discoveries across China — archaeological sites, excavation contexts, individual finds, coin typology, mint towns, and museum specimens, presented in both English and Chinese.
 
-First, run the development server:
+Live pieces at a glance:
+
+- **Search** every recorded find site by region, period, site type, coin type, state, mint, or quantity.
+- **Map Visualizations** for Find Site and Mint Town data, each with Points / Density / Compare display modes.
+- A full **Coin Types** typology browser (钱币/Coin and 钱范/Mould hierarchies) and a **Mints** directory of coin-producing towns.
+- **Museum Collections** — reconciled ANS (American Numismatic Society) specimens shown the same way as the database's own mint data.
+
+## Getting started
+
+This project requires **Node ≥ 20** (a system default of Node 18 via `nvm` cannot run `next dev` on Next.js 16 — switch versions first, e.g. `nvm use 20`).
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Required environment variables (`.env.local`, see that file for the current template):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `GOOGLE_SHEET_MINTS_CSV_URL` (optional — `/mints` falls back to the static local mint dossier list without it)
 
-## Learn More
+Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
-To learn more about Next.js, take a look at the following resources:
+## Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Doc | What it covers |
+|---|---|
+| [`docs/SITEMAP.md`](docs/SITEMAP.md) | Every route, what visitors see there, and — for each page — which components and `lib/` data functions it's built from. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The stack, the server/client split, where data actually lives (Supabase vs. local files), the shared map-rendering engine, i18n, styling, and deployment. Start here to understand how the app is put together. |
+| [`docs/DATA_VISUALIZATION_CALCULATIONS.md`](docs/DATA_VISUALIZATION_CALCULATIONS.md) | The exact math behind every map's point size and color (Points/Density/Compare modes) — the "what number produces what pixel" reference. |
+| [`AGENTS.md`](AGENTS.md) | Note for AI coding agents working in this repo. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack
 
-## Deploy on Vercel
+Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, Supabase (Postgres) as the one remote datastore, and Leaflet for every interactive map. No separate backend or API layer — server components query Supabase directly at render time. See `docs/ARCHITECTURE.md` for the full picture.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Data
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Two sources, kept deliberately separate — see §3 of `docs/ARCHITECTURE.md` for the full rule:
+
+- **Supabase (remote)**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
+- **Local (bundled in the repo)**: reference/gazetteer data that rarely changes (mint town dossiers in `lib/mint-towns.ts` / `lib/mint-dossiers.ts`, river overlays, specimen photography) — used as a fallback or supplement wherever the database doesn't carry a field yet.
+
+## Deployment
+
+Deployed on Vercel with no custom configuration. Most pages render per-request; `/mints` uses ISR (`revalidate = 3600`).

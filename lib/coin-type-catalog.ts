@@ -199,7 +199,17 @@ export function isMouldNode(node: CoinTypeNode): boolean {
   return rootLabel === '钱范'
 }
 
-export type CoinTypeCounts = { coinCount: number; siteCount: number }
+export type CoinTypeCounts = {
+  coinCount: number
+  siteCount: number
+  /** Number of individual find records (rows in `finds`) matched to this
+   * node — distinct from `coinCount` (their summed quantity) and
+   * `siteCount` (their distinct find sites). */
+  findCount: number
+  /** Number of distinct catalogued `coin_issues` rows under this node,
+   * regardless of whether any find has been recorded against them yet. */
+  issueCount: number
+}
 
 /** Total coin quantity + distinct find-site count for one typology node,
  * from the same raw finds/coinIssues data the Find Site map visualization
@@ -212,15 +222,21 @@ export function computeCoinTypeCounts(
 ): CoinTypeCounts {
   const idSet = new Set(matchedHierarchyIds)
   let coinCount = 0
+  let findCount = 0
   const sites = new Set<string>()
   finds.forEach((f) => {
     if (!f.coin_issues_id) return
     const hierarchyId = hierarchyIdByIssueId.get(f.coin_issues_id)
     if (!hierarchyId || !idSet.has(hierarchyId)) return
     coinCount += f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? 0
+    findCount += 1
     if (f.site_code) sites.add(f.site_code)
   })
-  return { coinCount, siteCount: sites.size }
+  let issueCount = 0
+  hierarchyIdByIssueId.forEach((hierarchyId) => {
+    if (hierarchyId && idSet.has(hierarchyId)) issueCount += 1
+  })
+  return { coinCount, siteCount: sites.size, findCount, issueCount }
 }
 
 /** Counts for every node at once — one pass building a coin_issues.id →

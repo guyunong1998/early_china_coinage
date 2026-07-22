@@ -66,7 +66,10 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
     <div className="map-vis-overlay ">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <span className="shrink-0 text-sm font-semibold text-gray-700">
+          <span
+            className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+            title={t('visualizations.viewByLabelHint')}
+          >
             <T k="visualizations.viewByLabel" />
           </span>
 

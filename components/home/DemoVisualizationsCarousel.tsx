@@ -70,27 +70,48 @@ export function DemoVisualizationsCarousel() {
 
       <div className="lg:col-span-2 p-4">
         <div className="relative" onWheel={handleWheel}>
-          <Link
-            href={demoHref(demo)}
-            data-demo-id={demo.id}
-            className="group block overflow-hidden rounded border border-brand/15 bg-gray-100"
-          >
-            {/* Every demo image is cropped to this same 16:9 ratio ahead of
-                time (scripts/crop-demo-images.mjs — capture-demo-
-                screenshots.mjs runs it automatically; re-run it by hand
-                after manually replacing an image) — object-cover here is a
-                safety net for a mismatched source, not the thing doing the
-                cropping, so the frame never resizes switching slides. */}
-            <div className="relative aspect-video w-full">
-              <Image
-                src={demo.image}
-                alt={title}
-                fill
-                sizes="(min-width: 1024px) 66vw, 100vw"
-                className="object-cover transition duration-300 group-hover:scale-[1.02]"
-              />
+          {/* The sliding "track": every slide sits side by side (width =
+              count × 100%) inside this fixed 16:9, overflow-hidden viewport,
+              and the whole track shifts by -index × 100% — a CSS transition
+              on transform gives the slide-to-slide motion. Every demo image
+              is cropped to this same 16:9 ratio ahead of time
+              (scripts/crop-demo-images.mjs — capture-demo-screenshots.mjs
+              runs it automatically; re-run it by hand after manually
+              replacing an image) — object-cover here is a safety net for a
+              mismatched source, not the thing doing the cropping, so the
+              frame never resizes switching slides. */}
+          <div className="relative aspect-video w-full overflow-hidden rounded border border-brand/15 bg-gray-100">
+            <div
+              className="flex h-full transition-transform duration-500 ease-in-out"
+              style={{ width: `${count * 100}%`, transform: `translateX(-${index * (100 / count)}%)` }}
+            >
+              {DEMO_VISUALIZATIONS.map((d, i) => {
+                const slideTitle = lang === 'zh' ? d.title.zh : d.title.en
+                return (
+                  <Link
+                    key={d.id}
+                    href={demoHref(d)}
+                    // Only the active slide is tagged — capture-demo-
+                    // screenshots.mjs reads exactly one `a[data-demo-id]` per
+                    // click, so every off-screen slide must stay untagged.
+                    data-demo-id={i === index ? demo.id : undefined}
+                    aria-hidden={i !== index}
+                    tabIndex={i === index ? 0 : -1}
+                    className="group relative block h-full shrink-0"
+                    style={{ width: `${100 / count}%` }}
+                  >
+                    <Image
+                      src={d.image}
+                      alt={slideTitle}
+                      fill
+                      sizes="(min-width: 1024px) 66vw, 100vw"
+                      className="object-cover transition duration-300 group-hover:scale-[1.02]"
+                    />
+                  </Link>
+                )
+              })}
             </div>
-          </Link>
+          </div>
 
           {count > 1 && (
             <>
@@ -114,15 +135,19 @@ export function DemoVisualizationsCarousel() {
           )}
         </div>
 
-        {/* One line, always — truncate (not line-clamp) guarantees a fixed
-            single-line height no matter how long a given slide's combined
-            title/description/via text is, so the panel's overall height
-            never changes switching slides. */}
-        <p className="mt-3 truncate text-sm">
-          <span className="font-serif font-semibold text-gray-900">{title}</span>
-          <span className="text-gray-600"> — {description} </span>
-          <span className="text-gray-400">({via})</span>
-        </p>
+        {/* Title stays truncated to one line, description+via clamped to
+            two — that combination plus the min-h fixes the block's total
+            height regardless of how long a given slide's text runs, so the
+            panel never resizes switching slides (the same guarantee the old
+            single-line truncate gave, now that description is a full
+            sentence instead of a short fragment). key={demo.id} re-triggers
+            the fade-in animation on every slide change. */}
+        <div key={demo.id} className="mt-3 min-h-[4.5rem] text-sm animate-[fade-in_0.4s_ease-in-out]">
+          <p className="truncate font-serif font-semibold text-gray-900">{title}</p>
+          <p className="mt-0.5 line-clamp-2 leading-5 text-gray-600">
+            {description} <span className="text-gray-400">({via})</span>
+          </p>
+        </div>
 
         {count > 1 && (
           <div className="mt-3 flex items-center justify-center gap-1.5">

@@ -1,9 +1,13 @@
+'use client'
+
 import Link from 'next/link'
 import { T } from '@/components/i18n/T'
 import { LanguageToggle } from '@/components/i18n/LanguageToggle'
 import { MobileNav } from '@/components/layout/MobileNav'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export function SiteHeader() {
+  const { t } = useLanguage()
   return (
     <header className="site-header">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
@@ -34,7 +38,11 @@ export function SiteHeader() {
             <Link href="/visualizations" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
               <T k="nav.map" />
             </Link>
-            <Link href="/museum-collections" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">
+            <Link
+              href="/museum-collections"
+              title={t('nav.spadeHeatmapHint')}
+              className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand"
+            >
               <T k="nav.spadeHeatmap" />
             </Link>
             <Link href="/search" className="rounded px-2.5 py-1.5 transition hover:bg-brand-light hover:text-brand">

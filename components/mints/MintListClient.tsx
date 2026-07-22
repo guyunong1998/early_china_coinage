@@ -1,14 +1,51 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import type { MintTypeLabel } from '@/lib/mint-directory'
 import type { MintTown } from '@/lib/mint-towns'
 import { stateTagColor } from '@/lib/state-colors'
 
 type MintStats = { coinCount: number; siteCount: number }
+
+type SortOption = 'name' | 'finds' | 'coins' | 'issues' | 'completeness'
+
+const SORT_OPTIONS: { value: SortOption; labelKey: DictionaryKey }[] = [
+  { value: 'name', labelKey: 'mintList.sort.name' },
+  { value: 'finds', labelKey: 'mintList.sort.finds' },
+  { value: 'coins', labelKey: 'mintList.sort.coins' },
+  { value: 'issues', labelKey: 'mintList.sort.issues' },
+  { value: 'completeness', labelKey: 'mintList.sort.completeness' },
+]
+
+function sortMints(
+  mints: MintTown[],
+  sort: SortOption,
+  statsByMint: Record<string, MintStats>,
+  issuesByMint: Record<string, number>,
+  completenessByMint: Record<string, number>
+): MintTown[] {
+  if (sort === 'name') return mints
+  const sorted = [...mints]
+  switch (sort) {
+    case 'finds':
+      sorted.sort((a, b) => (statsByMint[b.name_zh]?.siteCount ?? 0) - (statsByMint[a.name_zh]?.siteCount ?? 0))
+      break
+    case 'coins':
+      sorted.sort((a, b) => (statsByMint[b.name_zh]?.coinCount ?? 0) - (statsByMint[a.name_zh]?.coinCount ?? 0))
+      break
+    case 'issues':
+      sorted.sort((a, b) => (issuesByMint[b.name_zh] ?? 0) - (issuesByMint[a.name_zh] ?? 0))
+      break
+    case 'completeness':
+      sorted.sort((a, b) => (completenessByMint[b.name_zh] ?? 0) - (completenessByMint[a.name_zh] ?? 0))
+      break
+  }
+  return sorted
+}
 
 /** Searches the list actually being displayed (`all`), not the static
  * MINT_TOWNS dossier list — `all` may include DB-only mints with no
@@ -40,6 +77,8 @@ export function MintListClient({
   all,
   statsByMint = {},
   typesByMint = {},
+  issuesByMint = {},
+  completenessByMint = {},
 }: {
   all: MintTown[]
   statsByMint?: Record<string, MintStats>
@@ -47,25 +86,52 @@ export function MintListClient({
    * (lib/mint-directory.ts's buildMintTypeLabels) — preferred over the
    * static, English-only `MintTown.coin_types` wherever available. */
   typesByMint?: Record<string, MintTypeLabel[]>
+  /** Distinct catalogued coin_issues per mint (lib/mint-directory.ts's
+   * consumer in app/mints/page.tsx) — the "Number of issues" sort option. */
+  issuesByMint?: Record<string, number>
+  /** lib/mint-directory.ts's mintCompleteness score per mint — the
+   * "Completion of information" sort option. */
+  completenessByMint?: Record<string, number>
 }) {
   const { t, lang } = useLanguage()
   const [query, setQuery] = useState('')
-  const results = query ? filterMints(all, typesByMint, query) : all
+  const [sort, setSort] = useState<SortOption>('name')
+
+  const results = useMemo(() => {
+    const filtered = query ? filterMints(all, typesByMint, query) : all
+    return sortMints(filtered, sort, statsByMint, issuesByMint, completenessByMint)
+  }, [all, query, sort, typesByMint, statsByMint, issuesByMint, completenessByMint])
 
   return (
     <div>
-      {/* Search bar */}
-      <div className="mb-6 flex gap-0">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('mintList.searchPlaceholder')}
-          className="w-full rounded-l border border-brand/30 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-brand"
-        />
-        <span className="flex items-center rounded-r border border-l-0 border-brand/30 bg-white px-3 text-gray-400 text-sm">
-          {results.length}
-        </span>
+      {/* Search bar + sort */}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="flex flex-1 gap-0">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('mintList.searchPlaceholder')}
+            className="w-full rounded-l border border-brand/30 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-brand"
+          />
+          <span className="flex items-center rounded-r border border-l-0 border-brand/30 bg-white px-3 text-gray-400 text-sm">
+            {results.length}
+          </span>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <span className="font-semibold uppercase tracking-wide text-gray-500">{t('mintList.sortBy')}</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortOption)}
+            className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* Grid */}
@@ -113,10 +179,17 @@ export function MintListClient({
                           {lang === 'zh' || !type.en ? type.zh : type.en}
                         </span>
                       ))
-                    : mint.coin_types.map((type) => (
+                    : // mint.coin_types is a hand-transcribed, English-only
+                      // local dossier field (lib/mint-towns.ts) with no
+                      // Chinese counterpart — styled/tagged distinctly from
+                      // the bilingual, database-sourced tags above so it
+                      // never reads as translated when the page is in
+                      // Chinese (see lib/mint-directory.ts's buildMintTypeLabels).
+                      mint.coin_types.map((type) => (
                         <span
                           key={type}
-                          className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+                          title={t('mintList.localDataTag')}
+                          className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-500"
                         >
                           {type}
                         </span>

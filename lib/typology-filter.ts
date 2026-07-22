@@ -54,9 +54,19 @@ export function typologySelectionKey(sel: TypologyFilterSelection): string {
   return [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5, sel.inscriptionId].join('|')
 }
 
+/** The fields describeTypologySelection/getInscriptionOptions actually need
+ * — narrow enough that a caller can pass either the real coin_issues
+ * catalog (Find Site, the database Mint Town tab) or a synthesized,
+ * ans_data-scoped stand-in (Museum Collections' buildAnsInscriptionSource in
+ * lib/pointed-spade-data.ts) through the exact same functions. */
+export type InscriptionSourceRow = Pick<
+  CoinIssueDisplay,
+  'inscription_id' | 'inscription' | 'inscription_en' | 'mint_zh' | 'coin_type_hierarchy_id'
+>
+
 /** Human-readable label for a staged selection: its level path (if any),
  * plus its inscription's zh text (if any) — whichever parts are set. */
-export function describeTypologySelection(sel: TypologyFilterSelection, coinIssues: CoinIssueDisplay[]): string {
+export function describeTypologySelection(sel: TypologyFilterSelection, coinIssues: InscriptionSourceRow[]): string {
   const path = [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5].filter(Boolean)
   let label = path.join(' › ')
   if (sel.inscriptionId) {
@@ -263,7 +273,7 @@ export type InscriptionOption = {
  * straight to filtering by inscription.
  */
 export function getInscriptionOptions(
-  coinIssues: CoinIssueDisplay[],
+  coinIssues: InscriptionSourceRow[],
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): InscriptionOption[] {

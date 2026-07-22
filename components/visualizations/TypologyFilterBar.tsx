@@ -17,9 +17,10 @@ import {
   getInscriptionOptions,
   getLevelOptions,
   optionLabel,
+  type InscriptionSourceRow,
   type TypologyFilterSelection,
 } from '@/lib/typology-filter'
-import type { CoinIssueDisplay, CoinTypeHierarchyRow } from '@/lib/types'
+import type { CoinTypeHierarchyRow } from '@/lib/types'
 
 type TypologyFilterBarProps = {
   sel: TypologyFilterSelection
@@ -27,7 +28,10 @@ type TypologyFilterBarProps = {
   /** Show inscription list below dropdowns (find spots page). */
   showInscriptionList?: boolean
   hierarchyRows: CoinTypeHierarchyRow[]
-  coinIssues: CoinIssueDisplay[]
+  /** The real coin_issues catalog on Find Site / Mint Town; a
+   * museum-scoped stand-in (buildAnsInscriptionSource) on Museum
+   * Collections — see InscriptionSourceRow's doc comment. */
+  coinIssues: InscriptionSourceRow[]
   compact?: boolean
 }
 

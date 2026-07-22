@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "./maps.css";
 
+/* Homepage demo carousel — caption crossfade on slide change
+   (components/home/DemoVisualizationsCarousel.tsx). */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ============================================================================
    EARLY CHINESE COIN FINDS — CLEAN CATALOGUE THEME
    ----------------------------------------------------------------------------

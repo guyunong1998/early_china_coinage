@@ -3,7 +3,15 @@ import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
 import { T } from '@/components/i18n/T'
 
 const GITHUB_URL = 'https://github.com/guyunong1998/early_china_coinage'
-const TEAM_MEMBERS = [{ name: 'Yunong Gu' }, { name: 'Sophia Ling' }]
+
+type TeamMember = {
+  name: string
+  title?: string
+  affiliation?: string
+  email?: string
+}
+
+const TEAM_MEMBERS: TeamMember[] = [{ name: 'Yunong Gu' }, { name: 'Sophia Ling' }]
 
 export default function AboutPage() {
   return (
@@ -45,9 +53,18 @@ export default function AboutPage() {
                   className="h-32 w-32 rounded-full"
                 />
                 <h3 className="mt-3 font-serif text-lg font-semibold text-gray-900">{member.name}</h3>
-                <p className="mt-1 text-sm text-gray-400">
-                  <T k="about.team.titlePlaceholder" />
+                <p className="mt-1 text-sm text-gray-600">
+                  {member.title ?? <T k="about.team.titlePlaceholder" />}
                 </p>
+                {member.affiliation && <p className="mt-0.5 text-sm text-gray-500">{member.affiliation}</p>}
+                {member.email && (
+                  <a
+                    href={`mailto:${member.email}`}
+                    className="mt-1.5 text-sm text-brand hover:underline"
+                  >
+                    {member.email}
+                  </a>
+                )}
               </div>
             ))}
           </div>
@@ -60,18 +77,14 @@ export default function AboutPage() {
         </DataCard>
 
         <DataCard title={<T k="about.resources.title" />}>
-          <ul className="space-y-1.5 text-sm text-gray-700">
-            <li>
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand hover:underline"
-              >
-                <T k="about.resources.github" />
-              </a>
-            </li>
-          </ul>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          >
+            <T k="about.resources.github" /> →
+          </a>
         </DataCard>
       </div>
     </div>

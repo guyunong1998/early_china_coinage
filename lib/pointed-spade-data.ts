@@ -1,5 +1,5 @@
 import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
-import { coinMatchesTypologyFilter, type TypologySelectionEntry } from '@/lib/typology-filter'
+import { coinMatchesTypologyFilter, type InscriptionSourceRow, type TypologySelectionEntry } from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
@@ -229,6 +229,50 @@ export function getMatchingAnsSpecimensMulti(
       )
     )
   )
+}
+
+/**
+ * Museum Collections' inscription-filter source: one entry per specimen that
+ * actually has an inscription, shaped to slot straight into
+ * lib/typology-filter.ts's getInscriptionOptions/describeTypologySelection
+ * (they only ever read this narrow shape — see InscriptionSourceRow) in
+ * place of the real coin_issues catalog. This is what scopes the Museum
+ * Collections filter's inscription dropdown (and its count) to inscriptions
+ * that actually exist among ans_data specimens, instead of every inscription
+ * catalogued sitewide.
+ *
+ * ans_data doesn't carry its own zh/en inscription label — only
+ * inscription_raw (the specimen's own transcribed text) plus inscription_id
+ * (a FK in the same id space as coin_issues.inscription_id, per
+ * docs/ARCHITECTURE.md). So the label prefers the matching coin_issues row's
+ * bilingual `inscription`/`inscription_en` where one exists, and falls back
+ * to inscription_raw for specimens whose inscription isn't (yet) catalogued
+ * as a coin_issues row at all.
+ */
+export function buildAnsInscriptionSource(
+  specimens: AnsSpecimen[],
+  coinIssues: CoinIssueDisplay[]
+): InscriptionSourceRow[] {
+  const issueByInscriptionId = new Map<string, CoinIssueDisplay>()
+  coinIssues.forEach((c) => {
+    if (c.inscription_id && !issueByInscriptionId.has(c.inscription_id)) issueByInscriptionId.set(c.inscription_id, c)
+  })
+
+  return specimens.flatMap((s): InscriptionSourceRow[] => {
+    if (!s.inscription_id) return []
+    const issue = issueByInscriptionId.get(s.inscription_id)
+    const zh = issue?.inscription ?? s.inscription_raw
+    if (!zh) return []
+    return [
+      {
+        inscription_id: s.inscription_id,
+        inscription: zh,
+        inscription_en: issue?.inscription_en ?? s.inscription_raw,
+        mint_zh: s.mint_zh,
+        coin_type_hierarchy_id: s.hierarchy_id,
+      },
+    ]
+  })
 }
 
 /** Per-mint, per-selection-entry specimen counts for Compare mode — outer

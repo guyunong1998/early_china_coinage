@@ -47,6 +47,7 @@ import {
 import { getMintByNameZh } from '@/lib/mint-towns'
 import {
   ansCollectionUrl,
+  buildAnsInscriptionSource,
   computeAnsMintStats,
   computeAnsMintTypeQuantities,
   computeMintStatsFromFinds,
@@ -63,6 +64,7 @@ import {
   getMatchingCoinIssueIdsMulti,
   hasTypologyFilter,
   typologySelectionKey,
+  type InscriptionSourceRow,
   type TypologyFilterSelection,
   type TypologySelectionEntry,
 } from '@/lib/typology-filter'
@@ -110,9 +112,13 @@ function ViewModeRow({
    * Site's "by mint" filter mode) — every other caller leaves this off. */
   showCompare?: boolean
 }) {
+  const { t } = useLanguage()
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-sm font-semibold text-gray-700">
+      <span
+        className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+        title={t('map.view.labelHint')}
+      >
         <T k="map.view.label" />
       </span>
       <ToggleButtons
@@ -229,7 +235,7 @@ function CompareLegend({
  * once, like any other useState initializer; a later-changing prop doesn't
  * re-seed already-mounted state.
  */
-function buildInitialTypologyState(coinIssues: CoinIssueDisplay[], initialSelections: TypologyFilterSelection[]) {
+function buildInitialTypologyState(coinIssues: InscriptionSourceRow[], initialSelections: TypologyFilterSelection[]) {
   const order: string[] = []
   const slotById = new Map<string, number>()
   const selByKey = new Map<string, TypologyFilterSelection>()
@@ -246,7 +252,7 @@ function buildInitialTypologyState(coinIssues: CoinIssueDisplay[], initialSelect
   return { order, slotById, selByKey, labelByKey }
 }
 
-function useTypologyMultiSelect(coinIssues: CoinIssueDisplay[], initialSelections: TypologyFilterSelection[] = []) {
+function useTypologyMultiSelect(coinIssues: InscriptionSourceRow[], initialSelections: TypologyFilterSelection[] = []) {
   const [staged, setStagedRaw] = useState<TypologyFilterSelection>(emptyTypologySelection())
   const [initial] = useState(() => buildInitialTypologyState(coinIssues, initialSelections))
   const [order, setOrder] = useState<string[]>(initial.order)
@@ -367,7 +373,7 @@ function TypologyMultiSelect({
   onRemove: (key: string) => void
   onClear: () => void
   hierarchyRows: CoinTypeHierarchyRow[]
-  coinIssues: CoinIssueDisplay[]
+  coinIssues: InscriptionSourceRow[]
 }) {
   const { t } = useLanguage()
   const canAddAnother = hasTypologyFilter(staged) && !committedEntries.some((e) => e.key === typologySelectionKey(staged))
@@ -707,7 +713,10 @@ export function FindSpotsVisualization({
           <div className="loc_precision_map-m flex items-center gap-1.5 lg:hidden">{precisionButtons}</div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-semibold text-gray-700">
+            <span
+              className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+              title={t('map.filter.modeLabelHint')}
+            >
               <T k="map.filter.modeLabel" />
             </span>
             <ToggleButtons
@@ -1156,12 +1165,16 @@ function MuseumMapOverlay({
   onTabChange: (tab: MuseumTab) => void
   children?: ReactNode
 }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   return (
     <div className="map-vis-overlay">
       <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <span className="shrink-0 text-sm font-semibold text-gray-700">
+          <span
+            className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+            title={t('nav.spadeHeatmapHint')}
+          >
             <T k="nav.spadeHeatmap" />
           </span>
 
@@ -1188,7 +1201,10 @@ function MuseumMapOverlay({
           className={`${open ? 'block' : 'hidden'} max-h-[min(60dvh,28rem)] overflow-y-auto border-t border-brand/10 px-2.5 py-2.5 sm:px-3 lg:block`}
         >
           <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="shrink-0 text-sm font-semibold text-gray-700">
+            <span
+              className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+              title={t('visualizations.viewByLabelHint')}
+            >
               <T k="visualizations.viewByLabel" />
             </span>
             <ToggleButtons
@@ -1235,6 +1251,11 @@ export function AnsMintTownVisualization({
   const { t } = useLanguage()
   const [tab, setTab] = useState<MuseumTab>('mint')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
+  // Scopes the inscription filter (dropdown options + its count) to
+  // inscriptions actually present among these specimens, instead of every
+  // inscription in the sitewide coin_issues catalog — see
+  // buildAnsInscriptionSource's doc comment.
+  const inscriptionSource = useMemo(() => buildAnsInscriptionSource(specimens, coinIssues), [specimens, coinIssues])
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -1244,7 +1265,7 @@ export function AnsMintTownVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
+  } = useTypologyMultiSelect(inscriptionSource, initialTypeSelections)
   // Order of selection (not of `specimens`) so each pick keeps its color
   // slot as later picks are added/removed around it. Keyed by ans_data.id —
   // catalog_number isn't unique (some specimens share an accession number).
@@ -1446,7 +1467,7 @@ export function AnsMintTownVisualization({
               onRemove={removeTypeEntry}
               onClear={clearTypeEntries}
               hierarchyRows={hierarchyRows}
-              coinIssues={coinIssues}
+              coinIssues={inscriptionSource}
             />
 
             {mintPoints.length === 0 && (

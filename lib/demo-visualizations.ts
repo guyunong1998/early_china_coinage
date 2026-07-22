@@ -39,8 +39,9 @@ type DemoTarget =
 export type DemoVisualization = {
   id: string
   title: { zh: string; en: string }
-  /** What the view shows — kept short, this renders on the same line as
-   * `title` and `via` (see DemoVisualizationsCarousel.tsx). */
+  /** What the view shows, one full sentence — rendered under `title`/`via`
+   * and clamped to a fixed number of lines (see DemoVisualizationsCarousel.tsx)
+   * so the panel's height never changes switching slides. */
   description: { zh: string; en: string }
   /** How to get there (filter mode + display mode), rendered in parens
    * after `description` — e.g. "Mint Town view, Points display". */
@@ -55,8 +56,8 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     id: 'spade-knife-round-compare',
     title: { zh: '布币、刀币、圜钱对比', en: 'Spade, knife & round coins compared' },
     description: {
-      zh: '各出土遗址分布',
-      en: 'across every find site',
+      zh: '对比布币、刀币、圜钱三大币种在各出土遗址中的分布情况',
+      en: 'Compares spade, knife, and round coin distributions across every recorded find site',
     },
     via: {
       zh: '按币种，对比视图',
@@ -74,8 +75,8 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     id: 'mint-compare-anyang-anyi',
     title: { zh: '安阳与安邑铸地对比', en: 'Anyang vs. Anyi mints' },
     description: {
-      zh: '铸币分布对比',
-      en: 'coin distribution compared',
+      zh: '对比安阳与安邑两处铸地的铸币产量与出土遗址分布',
+      en: 'Compares coin output and find-site reach between the Anyang and Anyi mints',
     },
     via: {
       zh: '按铸地，对比视图',
@@ -88,8 +89,8 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     id: 'knife-density',
     title: { zh: '刀币分布密度', en: 'Knife coin density' },
     description: {
-      zh: '集中分布区域',
-      en: 'where finds concentrate',
+      zh: '以密度热力图展示刀币出土最为集中的区域',
+      en: 'A density heatmap showing where knife coin finds concentrate most heavily',
     },
     via: {
       zh: '按币种，密度视图',
@@ -102,8 +103,8 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     id: 'spade-mint-towns',
     title: { zh: '布币铸地', en: 'Spade coin mint towns' },
     description: {
-      zh: '按产量显示',
-      en: 'sized by output',
+      zh: '按铸币产量显示每一处铸造布币的城邑',
+      en: 'Every mint town that produced spade coins, sized by its recorded output',
     },
     via: {
       zh: '铸地视图，点状显示',
@@ -116,8 +117,8 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     id: 'museum-fangzubu-jianzubu',
     title: { zh: '方足布与尖足布馆藏对比', en: 'Square-foot vs. pointed-foot spades' },
     description: {
-      zh: 'ANS 馆藏标本',
-      en: 'ANS specimens',
+      zh: '对比方足布与尖足布两类布币在 ANS 博物馆藏品中的分布',
+      en: 'Compares ANS museum specimens of square-foot and pointed-foot spade coins',
     },
     via: {
       zh: '博物馆，对比',

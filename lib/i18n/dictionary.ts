@@ -11,6 +11,10 @@ export const DICTIONARY = {
   'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Museum Collections', zh: '博物馆藏品' },
+  'nav.spadeHeatmapHint': {
+    en: 'Photographed specimens from the American Numismatic Society (ANS) collection, mapped by mint town.',
+    zh: '美国钱币学会（ANS）馆藏标本照片，按铸地城邑映射展示。',
+  },
   'nav.coinTypes': { en: 'Coin Types', zh: '币种分布' },
 
   // ── hero banner ───────────────────────────────────────────────────────
@@ -253,6 +257,10 @@ export const DICTIONARY = {
 
   // ── map visualizations page ──────────────────────────────────────────────
   'visualizations.viewByLabel': { en: 'View by', zh: '浏览方式' },
+  'visualizations.viewByLabelHint': {
+    en: 'Switch between the different top-level views/tabs available on this page.',
+    zh: '切换本页可用的不同顶层视图／标签。',
+  },
   'visualizations.tabs.mintTown': { en: 'Mint Town', zh: '铸地' },
   'visualizations.tabs.findSite': { en: 'Find Site', zh: '出土遗址' },
   'visualizations.mintTown.brief': {
@@ -299,12 +307,16 @@ export const DICTIONARY = {
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
   'map.filter.modeLabel': { en: 'Filter by', zh: '筛选方式' },
+  'map.filter.modeLabelHint': {
+    en: 'Choose whether to filter find sites by coin type or by mint.',
+    zh: '选择按币种还是按铸地筛选出土遗址。',
+  },
   'map.filter.byType': { en: 'Coin Type', zh: '按币种' },
   'map.filter.byMint': { en: 'Mint', zh: '按铸地' },
   'map.filter.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
   'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
-  'map.filter.addSelection': { en: 'Add another', zh: '再添加一项' },
+  'map.filter.addSelection': { en: 'Add', zh: '添加' },
 
   // ── map explanation paragraph 2: one per view mode, shared by every map ──
   'map.explain.points': {
@@ -374,6 +386,10 @@ export const DICTIONARY = {
   'map.view.density': { en: 'Density mass', zh: '密度色块' },
   'map.view.compare': { en: 'Compare', zh: '对比' },
   'map.view.label': { en: 'Display', zh: '显示' },
+  'map.view.labelHint': {
+    en: 'Choose how matching points are rendered: individual dots, a blended density heatmap, or side-by-side comparison.',
+    zh: '选择匹配点的显示方式：单点、混合密度热力图，或并列对比。',
+  },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
   'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
   'map.legend.byType': { en: 'By type:', zh: '按类型：' },
@@ -414,6 +430,16 @@ export const DICTIONARY = {
     zh: '{sites} 个遗址中共发现 {coins} 枚钱币',
   },
   'mintList.viewDetails': { en: 'View details →', zh: '查看详情 →' },
+  'mintList.sortBy': { en: 'Sort by', zh: '排序方式' },
+  'mintList.sort.name': { en: 'Name', zh: '名称' },
+  'mintList.sort.finds': { en: 'Number of finds', zh: '出土记录数' },
+  'mintList.sort.coins': { en: 'Number of coins', zh: '钱币数量' },
+  'mintList.sort.issues': { en: 'Number of issues', zh: '钱币品种数' },
+  'mintList.sort.completeness': { en: 'Completion of information', zh: '信息完整度' },
+  'mintList.localDataTag': {
+    en: 'From local reference data, not the live database',
+    zh: '来自本地参考资料，非数据库实时数据',
+  },
   'mintDetail.back': { en: '← Mint Town Locations', zh: '← 铸币城邑位置' },
   'mintDetail.location': { en: 'Location', zh: '位置' },
   'mintDetail.information': { en: 'Information', zh: '基本信息' },
@@ -436,6 +462,12 @@ export const DICTIONARY = {
     en: '{coins} coins found in {sites} sites',
     zh: '{sites} 个遗址中共发现 {coins} 枚钱币',
   },
+  'coinTypeList.sortBy': { en: 'Sort by', zh: '排序方式' },
+  'coinTypeList.sort.hierarchy': { en: 'Hierarchy order', zh: '层级顺序' },
+  'coinTypeList.sort.level': { en: 'Level (broadest first)', zh: '层级（从大类开始）' },
+  'coinTypeList.sort.finds': { en: 'Number of finds', zh: '出土记录数' },
+  'coinTypeList.sort.coins': { en: 'Number of coins', zh: '钱币数量' },
+  'coinTypeList.sort.issues': { en: 'Number of issues', zh: '钱币品种数' },
   'coinTypeDetail.back': { en: '← Coin Types', zh: '← 币种分布' },
   'coinTypeDetail.row.level': { en: 'Level', zh: '层级' },
   'coinTypeDetail.row.parentTypes': { en: 'Parent types', zh: '上级类型' },
