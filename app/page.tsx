@@ -24,6 +24,9 @@ export default function Home() {
             just with the panel as the larger two-thirds since it's the
             whole point here (a mini version of /coin-types' full viewer). */}
         <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
+          <div className="lg:col-span-2 p-4">
+            <TypologyViewer src="/images/coin-type-hierarchy.png" manifest={typologyManifest} height={440} />
+          </div>
           <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
             <h2 className="font-serif text-xl font-semibold text-brand">
               <T k="nav.coinTypes" />
@@ -33,14 +36,12 @@ export default function Home() {
             </p>
             <Link
               href="/coin-types"
-              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+              className="mt-4 inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
             >
               <T k="home.coinTypesSection.title" /> →
             </Link>
           </div>
-          <div className="lg:col-span-2 p-4">
-            <TypologyViewer src="/images/coin-type-hierarchy.png" manifest={typologyManifest} height={440} />
-          </div>
+          
         </div>
       </div>
     </>

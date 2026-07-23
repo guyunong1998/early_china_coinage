@@ -60,7 +60,12 @@ Both files are imported **only from `page.tsx` files** (server components) — n
 
 Supabase's PostgREST API caps a single response at 1000 rows. `queries.ts` exports a `fetchAllPages()` helper that every multi-row query uses to page through `.range()` until it gets a short page back — several tables here (`sites`, `finds`, `contexts`) exceed 1000 rows, so without this, results would silently truncate.
 
-Two tables exist in Postgres but are **not** read by the running app at all: `ans_data_upload` (raw import staging) and the reconciliation that turns it into `ans_data` — that's `scripts/reconcile-ans-data.sql`, run by hand in the Supabase SQL editor whenever new ANS catalogue data comes in. `scripts/append-new-coin-issues.sql` is the same kind of manual, one-off tool.
+The core find-provenance chain is `sites` → `contexts` (an archaeological findspot within a site — a tomb, hoard pit, stratum) → `finds` (a reported coin group from one context, per one source — quantity fields like `quantity_total`/`quantity_min`/`quantity_estimated` live here) → `coin_items` (individually catalogued specimens within a find, with their own measurements/condition/photos). **`coin_items` is defined in the schema but never queried by the app** — every quantity shown in the UI comes from the `finds`-level quantity fields directly (see `getContextHeatmapData`/`getSiteAggregates` in `lib/queries.ts`), not from counting `coin_items` rows; most finds have quantities but no itemized `coin_items` at all.
+
+Three more tables exist in Postgres but are **not** read by the running app at all:
+- `ans_data_upload` (raw import staging) — reconciled by hand into `ans_data` via `scripts/reconcile-ans-data.sql`, run in the Supabase SQL editor whenever new ANS catalogue data comes in. `scripts/append-new-coin-issues.sql` is the same kind of manual, one-off tool.
+- `coin_items` (see above) — itemized-specimen detail that no page currently surfaces.
+- `source_links` — a generic polymorphic join table (`source_code` × `target_type`/`target_code`, where `target_type` is one of `site`/`context`/`find`/`coin_item`/`coin_type`) apparently meant to attach citations to arbitrary records; unused by any query today.
 
 ### 3b. Local — bundled into the repo
 

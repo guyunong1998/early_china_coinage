@@ -62,7 +62,7 @@ export function DemoVisualizationsCarousel() {
         </p>
         <Link
           href="/visualizations"
-          className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          className="mt-4 block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
         >
           <T k="home.mapSection.title" /> →
         </Link>

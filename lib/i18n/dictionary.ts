@@ -89,7 +89,6 @@ export const DICTIONARY = {
     en: 'This project is maintained by researchers working on early Chinese numismatics and archaeological publication.',
     zh: '本项目由从事早期中国钱币学与考古出版研究的学者维护。',
   },
-  'about.team.portraitPlaceholder': { en: 'Portrait', zh: '照片' },
   'about.collab.title': { en: 'Collaborations', zh: '合作' },
   'about.collab.body': {
     en: 'We welcome collaboration with museums, excavation teams, and publication projects. Contact information and partner institutions can be listed in this section.',
@@ -102,10 +101,9 @@ export const DICTIONARY = {
   },
   'about.schema.title': { en: 'Database Schema', zh: '数据库结构' },
   'about.schema.body': {
-    en: 'A diagram of how sites, finds, coin types, and mints relate to one another will go here.',
-    zh: '此处将展示遗址、出土记录、币种与铸地之间关系的结构图。',
+    en: 'A diagram of how sites, finds, coin types, and mints relate to one another.',
+    zh: '下图展示了遗址、出土记录、币种与铸地之间的关系结构。',
   },
-  'about.schema.imageLabel': { en: 'Database schema diagram', zh: '数据库结构图' },
   'about.resources.title': { en: 'Additional Resources', zh: '更多资源' },
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
 
@@ -503,6 +501,8 @@ export const DICTIONARY = {
     zh: '该类型下暂无具体钱币品种记录。',
   },
   'coinTypeDetail.hierarchy': { en: 'Typology Hierarchy', zh: '类型学层级' },
+  'coinTypeList.mapPanel.mintTowns': { en: 'View Mint Towns', zh: '查看铸地' },
+  'coinTypeList.mapPanel.findSpots': { en: 'Find Spots by Coin Type', zh: '按币种查看出土遗址' },
   'coinTypeDetail.imagePlaceholder': { en: 'Coin image', zh: '钱币图片' },
   'coinType.mouldTag': { en: 'M', zh: '范' },
 

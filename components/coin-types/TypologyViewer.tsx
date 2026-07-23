@@ -11,7 +11,12 @@
  * pan, wheel/pinch to zoom, and one invisible clickable overlay per manifest
  * node (positioned in the same raw pixel space as the image, since it's a
  * sibling inside the same scaled/translated layer) that smoothly zooms the
- * view to frame that node on click.
+ * view to frame that node on click. Level1 (钱币, the whole tree) has no
+ * overlay at all -- hovering/clicking blank space shouldn't highlight or
+ * zoom to "everything". Hovering a level2 family's own box (布币/刀币/圜钱/
+ * ...) draws the highlight over that whole branch's bounding box, not just
+ * the small header card, since that's the region a click there actually
+ * zooms to -- what's highlighted is what you get.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -121,16 +126,16 @@ export function TypologyViewer({
     })
   }, [])
 
-  const zoomToNode = useCallback((node: TypologyViewerNode) => {
+  const zoomToBBox = useCallback((bbox: [number, number, number, number]) => {
     const vp = viewportRef.current
     if (!vp) return
-    const [x0, y0, x1, y1] = node.bbox
-    const nodeW = x1 - x0
-    const nodeH = y1 - y0
+    const [x0, y0, x1, y1] = bbox
+    const boxW = x1 - x0
+    const boxH = y1 - y0
     const vw = vp.clientWidth
     const vh = vp.clientHeight
     const targetScale = clamp(
-      Math.min((vw - NODE_ZOOM_PADDING * 2) / nodeW, (vh - NODE_ZOOM_PADDING * 2) / nodeH),
+      Math.min((vw - NODE_ZOOM_PADDING * 2) / boxW, (vh - NODE_ZOOM_PADDING * 2) / boxH),
       minScaleRef.current,
       MAX_SCALE
     )
@@ -140,6 +145,36 @@ export function TypologyViewer({
     setTransform({ scale: targetScale, tx: vw / 2 - cx * targetScale, ty: vh / 2 - cy * targetScale })
     window.setTimeout(() => setTransitioning(false), TRANSITION_MS)
   }, [])
+
+  const zoomToNode = useCallback((node: TypologyViewerNode) => zoomToBBox(node.bbox), [zoomToBBox])
+
+  /** Every level2 family's id mapped to the union bounding box of its own
+   * node plus every descendant sharing its path -- computed once and reused
+   * both for the highlight drawn on hover and for the zoom target on click,
+   * so the two always agree (what's highlighted is what you get). */
+  const familyBBoxes = useMemo(() => {
+    const map = new Map<string, [number, number, number, number]>()
+    manifest.nodes
+      .filter((n) => n.level === 2)
+      .forEach((family) => {
+        const members = manifest.nodes.filter((n) => n.id === family.id || n.path?.[1] === family.labelZh)
+        map.set(family.id, [
+          Math.min(...members.map((n) => n.bbox[0])),
+          Math.min(...members.map((n) => n.bbox[1])),
+          Math.max(...members.map((n) => n.bbox[2])),
+          Math.max(...members.map((n) => n.bbox[3])),
+        ])
+      })
+    return map
+  }, [manifest.nodes])
+
+  const zoomToFamily = useCallback(
+    (family: TypologyViewerNode) => {
+      const bbox = familyBBoxes.get(family.id)
+      if (bbox) zoomToBBox(bbox)
+    },
+    [familyBBoxes, zoomToBBox]
+  )
 
   // React's onWheel prop is passive by default, so e.preventDefault() inside
   // it silently no-ops and the page scrolls instead of the viewer zooming --
@@ -213,10 +248,21 @@ export function TypologyViewer({
 
   function handleNodeClick(node: TypologyViewerNode) {
     if (dragDistRef.current > CLICK_DRAG_THRESHOLD) return
-    zoomToNode(node)
+    if (node.level === 2) zoomToFamily(node)
+    else zoomToNode(node)
   }
 
-  const clickableNodes = useMemo(() => manifest.nodes, [manifest.nodes])
+  // Level1 (钱币) is excluded -- it's a section heading spanning the entire
+  // canvas, not a real zoom target, and giving it an overlay is exactly the
+  // "highlighting the whole tree" behavior this is meant to avoid.
+  const clickableNodes = useMemo(() => manifest.nodes.filter((n) => n.level !== 1), [manifest.nodes])
+
+  const hoveredNode = useMemo(() => clickableNodes.find((n) => n.id === hovered) ?? null, [clickableNodes, hovered])
+  const highlightBBox = hoveredNode
+    ? hoveredNode.level === 2
+      ? familyBBoxes.get(hoveredNode.id) ?? hoveredNode.bbox
+      : hoveredNode.bbox
+    : null
 
   return (
     <div>
@@ -288,9 +334,24 @@ export function TypologyViewer({
               draggable={false}
               style={{ width: manifest.width, height: manifest.height, maxWidth: 'none', display: 'block' }}
             />
+            {/* Drawn once, behind the per-node click targets below, so it
+                never blocks a deeper node's own overlay from receiving the
+                hover -- sized to the level2 family's whole branch when
+                that's what's hovered, or to the hovered node's own box
+                otherwise, matching exactly what a click there zooms to. */}
+            {highlightBBox && (
+              <div
+                style={{
+                  left: highlightBBox[0],
+                  top: highlightBBox[1],
+                  width: highlightBBox[2] - highlightBBox[0],
+                  height: highlightBBox[3] - highlightBBox[1],
+                }}
+                className="pointer-events-none absolute rounded bg-brand/10 ring-2 ring-brand transition-colors"
+              />
+            )}
             {clickableNodes.map((node) => {
               const [x0, y0, x1, y1] = node.bbox
-              const isHovered = hovered === node.id
               return (
                 <div
                   key={node.id}
@@ -299,9 +360,7 @@ export function TypologyViewer({
                   onMouseLeave={() => setHovered((h) => (h === node.id ? null : h))}
                   title={`${node.labelZh} · ${node.labelEn}`}
                   style={{ left: x0, top: y0, width: x1 - x0, height: y1 - y0 }}
-                  className={`absolute cursor-pointer rounded transition-colors ${
-                    isHovered ? 'bg-brand/10 ring-2 ring-brand' : ''
-                  }`}
+                  className="absolute cursor-pointer rounded"
                 />
               )
             })}

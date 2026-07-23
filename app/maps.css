@@ -118,11 +118,6 @@
   background: var(--map-dot-special);
 }
 
-/* SinglePointMap.tsx (generic one-marker map — a mint town's own location). */
-.map-dot-single-point {
-  background: var(--map-dot-special);
-}
-
 /* Modifier for de-emphasized/inactive dots. Stack with `.map-dot`:
    className="map-dot map-dot-size-N map-dot-disabled". */
 .map-dot-disabled {

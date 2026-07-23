@@ -2,12 +2,22 @@
 
 /**
  * Generic single-marker map for one lat/lng point (configurable height/zoom).
+ * The one marker is rendered as a dropped pin rather than the plain dot
+ * every other map's markers use — since this map only ever shows exactly
+ * one point, a pin reads immediately as "the location," not as one data
+ * point among many.
  *
  * Used by: app/mints/[mint_code]/page.tsx (the mint town's own location).
  */
 
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
+import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
+
+// Solid form of --accent-rgb (app/globals.css) — the same hue
+// .map-dot-single-point used at 0.6 opacity, but a dropped pin is always
+// fully opaque (see dropPinHtml's own doc comment).
+const SINGLE_POINT_PIN_COLOR = '#e1941f'
 
 type SinglePointMapProps = {
   lat: number
@@ -50,9 +60,9 @@ export default function SinglePointMap({
       L.marker([lat, lng], {
         icon: L.divIcon({
           className: '',
-          html: '<div class="map-dot map-dot-size-16 map-dot-single-point"></div>',
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
+          html: dropPinHtml(SINGLE_POINT_PIN_COLOR),
+          iconSize: [PIN_WIDTH, PIN_HEIGHT],
+          iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
         }),
       })
         .addTo(map)

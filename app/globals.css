@@ -422,3 +422,15 @@ button:not(:disabled):hover {
     border-radius: var(--radius) var(--radius) 0 0;
   }
 }
+
+/* A scrollable box that hides its own scrollbar across browsers (coin-types'
+   typology hierarchy panel: it needs to scroll once expanded past its
+   card's height, but a visible bar there would fight the card's clean
+   edge) -- scrolling still works via wheel/trackpad/touch or arrow keys. */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}

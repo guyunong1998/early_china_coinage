@@ -1,6 +1,6 @@
 {
  "width": 8020,
- "height": 4680,
+ "height": 3000,
  "nodes": [
   {
    "id": "root::钱币",
@@ -8,208 +8,10 @@
    "labelZh": "钱币",
    "labelEn": "Coin",
    "bbox": [
-    -100.0,
-    84,
-    7840.0,
-    2190
-   ]
-  },
-  {
-   "id": "35872b03-a0f0-4b10-9102-7ad01420154d",
-   "level": 3,
-   "labelZh": "原始大型刀币",
-   "labelEn": "Primitive Large Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "原始大型刀币"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    -15.0,
-    998,
-    195.0,
-    1340
-   ]
-  },
-  {
-   "id": "50753dcb-bf17-4d49-bd50-033589d3b3fd",
-   "level": 3,
-   "labelZh": "尖首刀",
-   "labelEn": "Pointed-tip Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "尖首刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    265.0,
-    998,
-    475.0,
-    1340
-   ]
-  },
-  {
-   "id": "c7e2ef28-9a6a-4182-ab2b-95e91eee23ec",
-   "level": 4,
-   "labelZh": "弧背明刀",
-   "labelEn": "Curved-back Ming Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "明刀",
-    "弧背明刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    545.0,
-    1398,
-    755.0,
-    1740
-   ]
-  },
-  {
-   "id": "fc6c2585-4c3e-48c2-8694-fc343f8530ca",
-   "level": 4,
-   "labelZh": "折背明刀",
-   "labelEn": "Angled-back Ming Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "明刀",
-    "折背明刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    825.0,
-    1398,
-    1035.0,
-    1740
-   ]
-  },
-  {
-   "id": "ea142fec-4d2d-43de-9461-9c7e534710ff",
-   "level": 3,
-   "labelZh": "明刀",
-   "labelEn": "Ming Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "明刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    685.0,
-    998,
-    895.0,
-    1340
-   ]
-  },
-  {
-   "id": "2fb1a139-e332-4b15-9b39-6b3686dc61d7",
-   "level": 3,
-   "labelZh": "直刀",
-   "labelEn": "Straight-back Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "直刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    1105.0,
-    998,
-    1315.0,
-    1340
-   ]
-  },
-  {
-   "id": "9e9b81ff-711e-413e-810a-6e60797d3a93",
-   "level": 3,
-   "labelZh": "针首刀",
-   "labelEn": "Needle-tip Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "针首刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    1385.0,
-    998,
-    1595.0,
-    1340
-   ]
-  },
-  {
-   "id": "9561ba74-e63a-44db-8916-b570d0b58187",
-   "level": 3,
-   "labelZh": "齐大刀",
-   "labelEn": "Qi large Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "齐大刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    1665.0,
-    998,
-    1875.0,
-    1340
-   ]
-  },
-  {
-   "id": "f06070b5-ea4c-4ed8-aaba-97d2367377e2",
-   "level": 3,
-   "labelZh": "齐明刀",
-   "labelEn": "Qi-Ming Knife",
-   "path": [
-    "钱币",
-    "刀币",
-    "齐明刀"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    1945.0,
-    998,
-    2155.0,
-    1340
-   ]
-  },
-  {
-   "id": "19977bb7-be0d-45e1-b128-15b59f5dd35d",
-   "level": 2,
-   "labelZh": "刀币",
-   "labelEn": "Knife-Shaped Coin",
-   "path": [
-    "钱币",
-    "刀币"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1005.0,
-    598,
-    1215.0,
-    940
-   ]
-  },
-  {
-   "id": "fef5cfd1-2787-4285-8dcb-380313bd723c",
-   "level": 2,
-   "labelZh": "圜钱",
-   "labelEn": "Round Coin",
-   "path": [
-    "钱币",
-    "圜钱"
-   ],
-   "hasOwnPhoto": true,
-   "bbox": [
-    2225.0,
-    598,
-    2435.0,
-    940
+    -20.0,
+    642,
+    7920.0,
+    2748
    ]
   },
   {
@@ -225,10 +27,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    2505.0,
-    1398,
-    2715.0,
-    1740
+    65.0,
+    1956,
+    275.0,
+    2298
    ]
   },
   {
@@ -245,10 +47,10 @@
    ],
    "hasOwnPhoto": false,
    "bbox": [
-    2785.0,
-    1798,
-    2995.0,
-    2140
+    345.0,
+    2356,
+    555.0,
+    2698
    ]
   },
   {
@@ -264,10 +66,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    2785.0,
-    1398,
-    2995.0,
-    1740
+    345.0,
+    1956,
+    555.0,
+    2298
    ]
   },
   {
@@ -283,10 +85,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3065.0,
-    1398,
-    3275.0,
-    1740
+    625.0,
+    1956,
+    835.0,
+    2298
    ]
   },
   {
@@ -303,10 +105,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3345.0,
-    1798,
-    3555.0,
-    2140
+    905.0,
+    2356,
+    1115.0,
+    2698
    ]
   },
   {
@@ -322,10 +124,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3345.0,
-    1398,
-    3555.0,
-    1740
+    905.0,
+    1956,
+    1115.0,
+    2298
    ]
   },
   {
@@ -342,10 +144,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3625.0,
-    1798,
-    3835.0,
-    2140
+    1185.0,
+    2356,
+    1395.0,
+    2698
    ]
   },
   {
@@ -361,10 +163,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3625.0,
-    1398,
-    3835.0,
-    1740
+    1185.0,
+    1956,
+    1395.0,
+    2298
    ]
   },
   {
@@ -380,10 +182,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    3905.0,
-    1398,
-    4115.0,
-    1740
+    1465.0,
+    1956,
+    1675.0,
+    2298
    ]
   },
   {
@@ -399,10 +201,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    4185.0,
-    1398,
-    4395.0,
-    1740
+    1745.0,
+    1956,
+    1955.0,
+    2298
    ]
   },
   {
@@ -418,10 +220,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    4465.0,
-    1398,
-    4675.0,
-    1740
+    2025.0,
+    1956,
+    2235.0,
+    2298
    ]
   },
   {
@@ -437,10 +239,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    4745.0,
-    1398,
-    4955.0,
-    1740
+    2305.0,
+    1956,
+    2515.0,
+    2298
    ]
   },
   {
@@ -456,10 +258,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    5025.0,
-    1398,
-    5235.0,
-    1740
+    2585.0,
+    1956,
+    2795.0,
+    2298
    ]
   },
   {
@@ -476,10 +278,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    5305.0,
-    1798,
-    5515.0,
-    2140
+    2865.0,
+    2356,
+    3075.0,
+    2698
    ]
   },
   {
@@ -495,10 +297,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    5305.0,
-    1398,
-    5515.0,
-    1740
+    2865.0,
+    1956,
+    3075.0,
+    2298
    ]
   },
   {
@@ -513,10 +315,10 @@
    ],
    "hasOwnPhoto": false,
    "bbox": [
-    3905.0,
-    998,
-    4115.0,
-    1340
+    1465.0,
+    1556,
+    1675.0,
+    1898
    ]
   },
   {
@@ -533,10 +335,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    5585.0,
-    1798,
-    5795.0,
-    2140
+    3145.0,
+    2356,
+    3355.0,
+    2698
    ]
   },
   {
@@ -553,10 +355,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    5865.0,
-    1798,
-    6075.0,
-    2140
+    3425.0,
+    2356,
+    3635.0,
+    2698
    ]
   },
   {
@@ -572,10 +374,10 @@
    ],
    "hasOwnPhoto": false,
    "bbox": [
-    5725.0,
-    1398,
-    5935.0,
-    1740
+    3285.0,
+    1956,
+    3495.0,
+    2298
    ]
   },
   {
@@ -591,10 +393,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    6145.0,
-    1398,
-    6355.0,
-    1740
+    3705.0,
+    1956,
+    3915.0,
+    2298
    ]
   },
   {
@@ -610,10 +412,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    6425.0,
-    1398,
-    6635.0,
-    1740
+    3985.0,
+    1956,
+    4195.0,
+    2298
    ]
   },
   {
@@ -628,10 +430,10 @@
    ],
    "hasOwnPhoto": false,
    "bbox": [
-    6098.333333333333,
-    998,
-    6308.333333333333,
-    1340
+    3658.3333333333335,
+    1556,
+    3868.3333333333335,
+    1898
    ]
   },
   {
@@ -645,10 +447,208 @@
    ],
    "hasOwnPhoto": false,
    "bbox": [
-    5001.666666666666,
-    598,
-    5211.666666666666,
-    940
+    2561.666666666667,
+    1156,
+    2771.666666666667,
+    1498
+   ]
+  },
+  {
+   "id": "35872b03-a0f0-4b10-9102-7ad01420154d",
+   "level": 3,
+   "labelZh": "原始大型刀币",
+   "labelEn": "Primitive Large Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "原始大型刀币"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    4265.0,
+    1556,
+    4475.0,
+    1898
+   ]
+  },
+  {
+   "id": "50753dcb-bf17-4d49-bd50-033589d3b3fd",
+   "level": 3,
+   "labelZh": "尖首刀",
+   "labelEn": "Pointed-tip Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "尖首刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    4545.0,
+    1556,
+    4755.0,
+    1898
+   ]
+  },
+  {
+   "id": "c7e2ef28-9a6a-4182-ab2b-95e91eee23ec",
+   "level": 4,
+   "labelZh": "弧背明刀",
+   "labelEn": "Curved-back Ming Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "明刀",
+    "弧背明刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    4825.0,
+    1956,
+    5035.0,
+    2298
+   ]
+  },
+  {
+   "id": "fc6c2585-4c3e-48c2-8694-fc343f8530ca",
+   "level": 4,
+   "labelZh": "折背明刀",
+   "labelEn": "Angled-back Ming Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "明刀",
+    "折背明刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    5105.0,
+    1956,
+    5315.0,
+    2298
+   ]
+  },
+  {
+   "id": "ea142fec-4d2d-43de-9461-9c7e534710ff",
+   "level": 3,
+   "labelZh": "明刀",
+   "labelEn": "Ming Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "明刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    4965.0,
+    1556,
+    5175.0,
+    1898
+   ]
+  },
+  {
+   "id": "2fb1a139-e332-4b15-9b39-6b3686dc61d7",
+   "level": 3,
+   "labelZh": "直刀",
+   "labelEn": "Straight-back Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "直刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    5385.0,
+    1556,
+    5595.0,
+    1898
+   ]
+  },
+  {
+   "id": "9e9b81ff-711e-413e-810a-6e60797d3a93",
+   "level": 3,
+   "labelZh": "针首刀",
+   "labelEn": "Needle-tip Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "针首刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    5665.0,
+    1556,
+    5875.0,
+    1898
+   ]
+  },
+  {
+   "id": "9561ba74-e63a-44db-8916-b570d0b58187",
+   "level": 3,
+   "labelZh": "齐大刀",
+   "labelEn": "Qi large Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "齐大刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    5945.0,
+    1556,
+    6155.0,
+    1898
+   ]
+  },
+  {
+   "id": "f06070b5-ea4c-4ed8-aaba-97d2367377e2",
+   "level": 3,
+   "labelZh": "齐明刀",
+   "labelEn": "Qi-Ming Knife",
+   "path": [
+    "钱币",
+    "刀币",
+    "齐明刀"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    6225.0,
+    1556,
+    6435.0,
+    1898
+   ]
+  },
+  {
+   "id": "19977bb7-be0d-45e1-b128-15b59f5dd35d",
+   "level": 2,
+   "labelZh": "刀币",
+   "labelEn": "Knife-Shaped Coin",
+   "path": [
+    "钱币",
+    "刀币"
+   ],
+   "hasOwnPhoto": false,
+   "bbox": [
+    5285.0,
+    1156,
+    5495.0,
+    1498
+   ]
+  },
+  {
+   "id": "fef5cfd1-2787-4285-8dcb-380313bd723c",
+   "level": 2,
+   "labelZh": "圜钱",
+   "labelEn": "Round Coin",
+   "path": [
+    "钱币",
+    "圜钱"
+   ],
+   "hasOwnPhoto": true,
+   "bbox": [
+    6505.0,
+    1156,
+    6715.0,
+    1498
    ]
   },
   {
@@ -662,10 +662,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    6705.0,
-    598,
-    6915.0,
-    940
+    6785.0,
+    1156,
+    6995.0,
+    1498
    ]
   },
   {
@@ -679,10 +679,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    6985.0,
-    598,
-    7195.0,
-    940
+    7065.0,
+    1156,
+    7275.0,
+    1498
    ]
   },
   {
@@ -696,10 +696,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    7265.0,
-    598,
-    7475.0,
-    940
+    7345.0,
+    1156,
+    7555.0,
+    1498
    ]
   },
   {
@@ -713,620 +713,10 @@
    ],
    "hasOwnPhoto": true,
    "bbox": [
-    7545.0,
-    598,
-    7755.0,
-    940
-   ]
-  },
-  {
-   "id": "root::钱范",
-   "level": 1,
-   "labelZh": "钱范",
-   "labelEn": "Mould",
-   "bbox": [
-    740.0,
-    2334,
-    7000.0,
-    4440
-   ]
-  },
-  {
-   "id": "49d3f142-c1ca-4532-b50e-52394a09ee04",
-   "level": 3,
-   "labelZh": "尖首刀范",
-   "labelEn": "Pointed-tip Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "尖首刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    825.0,
-    3248,
-    1035.0,
-    3590
-   ]
-  },
-  {
-   "id": "77ba42b7-d242-4181-93a0-eb5516a416d3",
-   "level": 4,
-   "labelZh": "弧背明刀范",
-   "labelEn": "Curved back Ming Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "明刀范",
-    "弧背明刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1105.0,
-    3648,
-    1315.0,
-    3990
-   ]
-  },
-  {
-   "id": "edf71ce9-5165-48fc-8324-88be187d0cf0",
-   "level": 4,
-   "labelZh": "折背明刀范",
-   "labelEn": "Angled-back Ming Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "明刀范",
-    "折背明刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1385.0,
-    3648,
-    1595.0,
-    3990
-   ]
-  },
-  {
-   "id": "531606fe-ae6d-42a8-93f0-f16392970513",
-   "level": 3,
-   "labelZh": "明刀范",
-   "labelEn": "Ming Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "明刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1245.0,
-    3248,
-    1455.0,
-    3590
-   ]
-  },
-  {
-   "id": "db354963-63c0-4c2c-9939-589fb4f08e2c",
-   "level": 3,
-   "labelZh": "直刀范",
-   "labelEn": "Straight-back Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "直刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1665.0,
-    3248,
-    1875.0,
-    3590
-   ]
-  },
-  {
-   "id": "5fd1adca-dd46-4df0-8b72-1cb77646fbee",
-   "level": 3,
-   "labelZh": "针首刀范",
-   "labelEn": "Needle-tip Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "针首刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1945.0,
-    3248,
-    2155.0,
-    3590
-   ]
-  },
-  {
-   "id": "218beda5-70fa-4b62-976a-cd39cafe2813",
-   "level": 3,
-   "labelZh": "齐大刀范",
-   "labelEn": "Qi large Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "齐大刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    2225.0,
-    3248,
-    2435.0,
-    3590
-   ]
-  },
-  {
-   "id": "1607e4cd-ce7c-401f-85ef-8eda6ccec054",
-   "level": 3,
-   "labelZh": "齐明刀范",
-   "labelEn": "Qi-Ming Knife Mould",
-   "path": [
-    "钱范",
-    "刀币范",
-    "齐明刀范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    2505.0,
-    3248,
-    2715.0,
-    3590
-   ]
-  },
-  {
-   "id": "09772bfb-5c8a-4715-b7c3-38a8ceb1f255",
-   "level": 2,
-   "labelZh": "刀币范",
-   "labelEn": "Knife-Shaped Coin",
-   "path": [
-    "钱范",
-    "刀币范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    1735.0,
-    2848,
-    1945.0,
-    3190
-   ]
-  },
-  {
-   "id": "c6de3317-cb5b-43b8-9634-bed49e8e3b68",
-   "level": 2,
-   "labelZh": "圜钱范",
-   "labelEn": "Round Coin Mould",
-   "path": [
-    "钱范",
-    "圜钱范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    2785.0,
-    2848,
-    2995.0,
-    3190
-   ]
-  },
-  {
-   "id": "d7826ded-2014-4a4d-8db5-f7e06a7a0cb6",
-   "level": 4,
-   "labelZh": "三孔布范",
-   "labelEn": "Three-hole Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "三孔布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3065.0,
-    3648,
-    3275.0,
-    3990
-   ]
-  },
-  {
-   "id": "d7022f25-f420-4981-ab2c-ff668f2916fd",
-   "level": 5,
-   "labelZh": "大圆足布范",
-   "labelEn": "Large Round-foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "圆足布范",
-    "大圆足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3345.0,
-    4048,
-    3555.0,
-    4390
-   ]
-  },
-  {
-   "id": "17928cdd-f17a-4cc9-b1f4-48d03c5a1782",
-   "level": 4,
-   "labelZh": "圆足布范",
-   "labelEn": "Round-foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "圆足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3345.0,
-    3648,
-    3555.0,
-    3990
-   ]
-  },
-  {
-   "id": "f5af38a6-c84d-47d2-b016-20e3c0bc15b2",
-   "level": 4,
-   "labelZh": "实首平肩布范",
-   "labelEn": "Flat-Shoulder Solid-head Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "实首平肩布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3625.0,
-    3648,
-    3835.0,
-    3990
-   ]
-  },
-  {
-   "id": "3c85bdd7-0047-47aa-92b6-f34cbf9ef378",
-   "level": 5,
-   "labelZh": "大尖足布范",
-   "labelEn": "Large Pointed-Foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "尖足布范",
-    "大尖足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3905.0,
-    4048,
-    4115.0,
-    4390
-   ]
-  },
-  {
-   "id": "f7c140b8-683e-412c-9c87-28e7cfe2e9cf",
-   "level": 4,
-   "labelZh": "尖足布范",
-   "labelEn": "Pointed-Foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "尖足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    3905.0,
-    3648,
-    4115.0,
-    3990
-   ]
-  },
-  {
-   "id": "77b675d8-55ab-45ae-aae5-79d30564c034",
-   "level": 5,
-   "labelZh": "大方足布范",
-   "labelEn": "Large Square-foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "方足布范",
-    "大方足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    4185.0,
-    4048,
-    4395.0,
-    4390
-   ]
-  },
-  {
-   "id": "9f53cb82-8e19-41a4-b15a-984067fe53b2",
-   "level": 4,
-   "labelZh": "方足布范",
-   "labelEn": "Square-foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "方足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    4185.0,
-    3648,
-    4395.0,
-    3990
-   ]
-  },
-  {
-   "id": "efc39905-94c9-4a7d-87c0-27e361130439",
-   "level": 4,
-   "labelZh": "桥足布范",
-   "labelEn": "Bridge-foot Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "桥足布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    4465.0,
-    3648,
-    4675.0,
-    3990
-   ]
-  },
-  {
-   "id": "5c499357-0644-4615-b62e-56d5700e1476",
-   "level": 4,
-   "labelZh": "燕尾布范",
-   "labelEn": "Swallow-tailed Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "燕尾布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    4745.0,
-    3648,
-    4955.0,
-    3990
-   ]
-  },
-  {
-   "id": "4d320c04-c92e-4432-9bba-4e3ecf6bd850",
-   "level": 4,
-   "labelZh": "连布范",
-   "labelEn": "Linked Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "连布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5025.0,
-    3648,
-    5235.0,
-    3990
-   ]
-  },
-  {
-   "id": "851b7c7a-8cc6-4b78-ad71-6b8fd8cb830e",
-   "level": 5,
-   "labelZh": "大锐角布范",
-   "labelEn": "Large Sharp-cornered Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "锐角布范",
-    "大锐角布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5305.0,
-    4048,
-    5515.0,
-    4390
-   ]
-  },
-  {
-   "id": "04ecd6ae-fda5-4dae-807e-69d1669505bb",
-   "level": 4,
-   "labelZh": "锐角布范",
-   "labelEn": "Sharp-cornered Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范",
-    "锐角布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5305.0,
-    3648,
-    5515.0,
-    3990
-   ]
-  },
-  {
-   "id": "ab56b106-b14f-4e58-976a-e105813cf799",
-   "level": 3,
-   "labelZh": "平首布范",
-   "labelEn": "Flat-handle Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "平首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    4185.0,
-    3248,
-    4395.0,
-    3590
-   ]
-  },
-  {
-   "id": "ac68370a-e423-440e-ab8c-be96d219f36b",
-   "level": 5,
-   "labelZh": "大型平肩空首布范",
-   "labelEn": "Large Flat-Shoulder Hollow-socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范",
-    "平肩空首布范",
-    "大型平肩空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5585.0,
-    4048,
-    5795.0,
-    4390
-   ]
-  },
-  {
-   "id": "b26cdf6c-9a6c-41b3-af70-22a3785d5207",
-   "level": 5,
-   "labelZh": "小型平肩空首布范",
-   "labelEn": "Small Flat-Shoulder Hollow-socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范",
-    "平肩空首布范",
-    "小型平肩空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5865.0,
-    4048,
-    6075.0,
-    4390
-   ]
-  },
-  {
-   "id": "62b7f14f-3f99-4742-80e2-59b4146b309b",
-   "level": 4,
-   "labelZh": "平肩空首布范",
-   "labelEn": "Flat-Shoulder Hollow-socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范",
-    "平肩空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5725.0,
-    3648,
-    5935.0,
-    3990
-   ]
-  },
-  {
-   "id": "ee861229-1a03-4d9a-812d-e53ef95a9317",
-   "level": 4,
-   "labelZh": "斜肩空首布范",
-   "labelEn": "Slanted-Shoulder Hollow-Socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范",
-    "斜肩空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    6145.0,
-    3648,
-    6355.0,
-    3990
-   ]
-  },
-  {
-   "id": "7340a216-9d0c-4634-a7b5-3647f606f39f",
-   "level": 4,
-   "labelZh": "耸肩空首布范",
-   "labelEn": "Pointed-Shoulder Hollow-Socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范",
-    "耸肩空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    6425.0,
-    3648,
-    6635.0,
-    3990
-   ]
-  },
-  {
-   "id": "9f7abc6b-5c3e-4e6d-9cd9-0a44a809ea63",
-   "level": 3,
-   "labelZh": "空首布范",
-   "labelEn": "Hollow-socket Spade Mould",
-   "path": [
-    "钱范",
-    "布币范",
-    "空首布范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    6098.333333333333,
-    3248,
-    6308.333333333333,
-    3590
-   ]
-  },
-  {
-   "id": "bda7f44e-e6e9-4716-be8d-cae33548bbc7",
-   "level": 2,
-   "labelZh": "布币范",
-   "labelEn": "Spade Coin",
-   "path": [
-    "钱范",
-    "布币范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    5141.666666666666,
-    2848,
-    5351.666666666666,
-    3190
-   ]
-  },
-  {
-   "id": "cc4e0dc1-f0c2-405a-b4d7-cd7cbe071ac1",
-   "level": 2,
-   "labelZh": "蚁鼻钱范",
-   "labelEn": "Ant-nose Coin",
-   "path": [
-    "钱范",
-    "蚁鼻钱范"
-   ],
-   "hasOwnPhoto": false,
-   "bbox": [
-    6705.0,
-    2848,
-    6915.0,
-    3190
+    7625.0,
+    1156,
+    7835.0,
+    1498
    ]
   }
  ]

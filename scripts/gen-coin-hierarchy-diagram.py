@@ -116,8 +116,17 @@ FONT_CANDIDATES = [
 
 # level1_zh only ever takes these two values in practice (see isMouldNode in
 # lib/coin-type-catalog.ts) -- hardcoded rather than sourced from a column
-# since coin_type_hierarchy has no level1_en field of its own to read.
+# since coin_type_hierarchy has no level1_en field of its own to read. Only
+# 钱币 (Coin) is rendered here -- 钱范 (Mould) rows are dropped in build_tree,
+# per an explicit ask to keep this diagram to coins only.
 LEVEL1_EN = {"钱币": "Coin", "钱范": "Mould"}
+
+# Level2 categories in the typological order asked for (major struck-coin
+# shapes first, then the non-shape-cast gold currencies) rather than the
+# Supabase query's default zh string sort. Anything not listed here (there
+# shouldn't be, short of a new level2 row appearing) sorts after these, in
+# whatever order it was fetched in.
+LEVEL2_ORDER = ["布币", "刀币", "圜钱", "蚁鼻钱", "金版", "金饼", "马蹄金"]
 
 
 # ── 0. env + Supabase fetch ────────────────────────────────────────────────
@@ -164,6 +173,7 @@ def find_obv(acc_num, files):
 
 
 def build_tree(rows):
+    rows = [r for r in rows if r.get("level1_zh") == "钱币"]  # coins only, no moulds
     files = os.listdir(IMG_DIR)
     nodes = {}
     by_path = {}
@@ -207,6 +217,11 @@ def build_tree(rows):
         if parent_id:
             node["parent"] = parent_id
             nodes[parent_id]["children"].append(nid)
+
+    order_index = {label: i for i, label in enumerate(LEVEL2_ORDER)}
+    for node in nodes.values():
+        if node["level"] == 1:
+            node["children"].sort(key=lambda c: order_index.get(nodes[c]["label"], len(order_index)))
 
     return nodes
 
@@ -461,7 +476,11 @@ def render(nodes, resolved, node_image, png_path, json_path):
     for l in layouts:
         pos = l["pos"]
         root_label = f"{nodes[l['root']]['label']} · {nodes[l['root']]['label_en']}"
-        text_center((canvas_w / 2, l["top"]), root_label, font_section, INK)
+        _, root_label_h = text_center((canvas_w / 2, l["top"]), root_label, font_section, INK)
+        # Anchor for lines into level2 -- the root has no card/thumbnail of
+        # its own (just this title), so its "bottom" is just below the title
+        # text, not the box-height formula used for every other level.
+        root_x, root_bottom = canvas_w / 2, l["top"] + root_label_h + 10
 
         xs = [x for x, _ in pos.values()]
         manifest.append({
@@ -472,20 +491,23 @@ def render(nodes, resolved, node_image, png_path, json_path):
         })
 
         # connecting lines first, so node photos paint over any overlap at
-        # the joins rather than lines drawing on top of them. Nothing is
-        # drawn from the root (钱币/钱范) down to its own immediate
-        # children -- that first link is visual noise once the root is just
-        # a section heading with no card of its own.
+        # the joins rather than lines drawing on top of them -- including
+        # from the root down to its level2 children, so every level2 family
+        # is visibly attached to the root like every deeper level is.
         for nid, (x, y) in pos.items():
             parent = nodes[nid]["parent"]
-            if parent and parent in pos and nodes[parent]["level"] != 1:
+            if not parent or parent not in pos:
+                continue
+            if nodes[parent]["level"] == 1:
+                px, parent_bottom = root_x, root_bottom
+            else:
                 px, py = pos[parent]
                 parent_bottom = py + CONTENT_TOP_OFFSET + BOX_TOP_OFFSET + MAX_THUMB_H + 6
-                child_top = y + LINE_END_OFFSET
-                mid_y = (parent_bottom + child_top) / 2
-                draw.line([(px, parent_bottom), (px, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
-                draw.line([(px, mid_y), (x, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
-                draw.line([(x, mid_y), (x, child_top)], fill=LINE_COLOR, width=LINE_WIDTH)
+            child_top = y + LINE_END_OFFSET
+            mid_y = (parent_bottom + child_top) / 2
+            draw.line([(px, parent_bottom), (px, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
+            draw.line([(px, mid_y), (x, mid_y)], fill=LINE_COLOR, width=LINE_WIDTH)
+            draw.line([(x, mid_y), (x, child_top)], fill=LINE_COLOR, width=LINE_WIDTH)
 
         for nid, (x, y) in pos.items():
             n = nodes[nid]

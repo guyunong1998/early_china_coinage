@@ -78,16 +78,16 @@ function noDataDot() {
   return `<div class="map-dot map-dot-no-data"></div>`
 }
 
-const PIN_WIDTH = 22
-const PIN_HEIGHT = 30
+export const PIN_WIDTH = 22
+export const PIN_HEIGHT = 30
 
 // A classic teardrop map pin, fully opaque (solid `fill`, no CSS opacity) —
 // unlike dot()'s color, which is deliberately alpha-blended for the
-// heatmap's match-ratio reading, a pin should never look "faded." Used both
-// for user-selected PinPoints below and, in applyHeatMarkerStyle, for a
-// "single-find" site/mint (its one recorded coin makes it a much more
-// notable point than a same-sized ratio dot would suggest).
-function dropPinHtml(color: string): string {
+// heatmap's match-ratio reading, a pin should never look "faded." Used for
+// user-selected PinPoints below; exported for SinglePointMap.tsx, whose
+// one-marker-only maps (a mint town's own location) get this same shape
+// instead of the plain dot every other map's markers use.
+export function dropPinHtml(color: string): string {
   return `<svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.45))"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.9 17.1 0 11 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4" fill="white"/></svg>`
 }
 
@@ -375,26 +375,13 @@ function applyHeatMarkerStyle(
         ? siteSizeByQuantity(totalQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
         : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
 
-  // A single-find point (Points mode only — density blends everything into
-  // the heat layer instead) gets a dropped pin rather than a same-sized dot,
-  // so its one recorded coin actually stands out instead of reading as just
-  // another small ratio dot.
-  const isSingleFindPin = !inDensity && state.kind === 'single-find'
-
   marker.setIcon(
-    isSingleFindPin
-      ? L.divIcon({
-          className: '',
-          html: dropPinHtml(color),
-          iconSize: [PIN_WIDTH, PIN_HEIGHT],
-          iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
-        })
-      : L.divIcon({
-          className: '',
-          html: size > 0 ? (isStaticNoData ? noDataDot() : dot(color, size)) : '',
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2],
-        })
+    L.divIcon({
+      className: '',
+      html: size > 0 ? (isStaticNoData ? noDataDot() : dot(color, size)) : '',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
   )
   marker.setOpacity(inDensity && state.kind === 'no-data' ? 0 : 1)
   marker.setZIndexOffset(
