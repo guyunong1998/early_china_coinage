@@ -235,7 +235,7 @@
    "id": "4db7a953-0dc1-4f10-a427-c367c8ac645d",
    "level": 5,
    "labelZh": "大圆足布",
-   "labelEn": "Large",
+   "labelEn": "Large Round-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -255,7 +255,7 @@
    "id": "1edb1c0f-cc14-4296-ac0c-d7d6b1c9d272",
    "level": 4,
    "labelZh": "圆足布",
-   "labelEn": "Round-foot Spade Flat-handle Spade",
+   "labelEn": "Round-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -293,7 +293,7 @@
    "id": "a5c0808a-f00e-44ed-9098-9fe394813edf",
    "level": 5,
    "labelZh": "大尖足布",
-   "labelEn": "Large",
+   "labelEn": "Large Pointed-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -313,7 +313,7 @@
    "id": "6fcc94d5-69ca-443e-a687-c25b28ed4695",
    "level": 4,
    "labelZh": "尖足布",
-   "labelEn": "Pointed-Foot Spade Flat-handle Spade",
+   "labelEn": "Pointed-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -332,7 +332,7 @@
    "id": "d8efa5e5-5bea-4467-91cb-6dc0d99fed8a",
    "level": 5,
    "labelZh": "大方足布",
-   "labelEn": "Large",
+   "labelEn": "Large Square-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -352,7 +352,7 @@
    "id": "17484bd0-b8d0-42b4-acfb-3cd6b9ffdbe4",
    "level": 4,
    "labelZh": "方足布",
-   "labelEn": "Square-foot Spade Flat-handle Spade",
+   "labelEn": "Square-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -371,7 +371,7 @@
    "id": "90a8eacb-cd58-44be-af4e-0d5d1887d8ae",
    "level": 4,
    "labelZh": "桥足布",
-   "labelEn": "Bridge-foot Spade Flat-handle Spade",
+   "labelEn": "Bridge-foot Spade",
    "path": [
     "钱币",
     "布币",
@@ -466,7 +466,7 @@
    "id": "593407a4-f144-4330-b114-f21c82344aca",
    "level": 5,
    "labelZh": "大锐角布",
-   "labelEn": "Large",
+   "labelEn": "Large Sharp-cornered Spade",
    "path": [
     "钱币",
     "布币",
@@ -523,7 +523,7 @@
    "id": "1c634a08-ba3c-4984-b46f-d404da3e15a1",
    "level": 5,
    "labelZh": "大型平肩空首布",
-   "labelEn": "Large",
+   "labelEn": "Large Flat-Shoulder Hollow-socket Spade",
    "path": [
     "钱币",
     "布币",
@@ -543,7 +543,7 @@
    "id": "d23bb231-85b3-4a09-9792-d2f4247aad87",
    "level": 5,
    "labelZh": "小型平肩空首布",
-   "labelEn": "Small",
+   "labelEn": "Small Flat-Shoulder Hollow-socket Spade",
    "path": [
     "钱币",
     "布币",
@@ -934,7 +934,7 @@
    "id": "d7022f25-f420-4981-ab2c-ff668f2916fd",
    "level": 5,
    "labelZh": "大圆足布范",
-   "labelEn": "Large Mould",
+   "labelEn": "Large Round-foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -954,7 +954,7 @@
    "id": "17928cdd-f17a-4cc9-b1f4-48d03c5a1782",
    "level": 4,
    "labelZh": "圆足布范",
-   "labelEn": "Round-foot Spade Flat-handle Spade Mould",
+   "labelEn": "Round-foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -992,7 +992,7 @@
    "id": "3c85bdd7-0047-47aa-92b6-f34cbf9ef378",
    "level": 5,
    "labelZh": "大尖足布范",
-   "labelEn": "Large Mould",
+   "labelEn": "Large Pointed-Foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1012,7 +1012,7 @@
    "id": "f7c140b8-683e-412c-9c87-28e7cfe2e9cf",
    "level": 4,
    "labelZh": "尖足布范",
-   "labelEn": "Pointed-Foot Spade Flat-handle Spade Mould",
+   "labelEn": "Pointed-Foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1031,7 +1031,7 @@
    "id": "77b675d8-55ab-45ae-aae5-79d30564c034",
    "level": 5,
    "labelZh": "大方足布范",
-   "labelEn": "Large Mould",
+   "labelEn": "Large Square-foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1051,7 +1051,7 @@
    "id": "9f53cb82-8e19-41a4-b15a-984067fe53b2",
    "level": 4,
    "labelZh": "方足布范",
-   "labelEn": "Square-foot Spade Flat-handle Spade Mould",
+   "labelEn": "Square-foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1070,7 +1070,7 @@
    "id": "efc39905-94c9-4a7d-87c0-27e361130439",
    "level": 4,
    "labelZh": "桥足布范",
-   "labelEn": "Bridge-foot Spade Flat-handle Spade Mould",
+   "labelEn": "Bridge-foot Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1127,7 +1127,7 @@
    "id": "851b7c7a-8cc6-4b78-ad71-6b8fd8cb830e",
    "level": 5,
    "labelZh": "大锐角布范",
-   "labelEn": "Large Mould",
+   "labelEn": "Large Sharp-cornered Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1184,7 +1184,7 @@
    "id": "ac68370a-e423-440e-ab8c-be96d219f36b",
    "level": 5,
    "labelZh": "大型平肩空首布范",
-   "labelEn": "Large Mould",
+   "labelEn": "Large Flat-Shoulder Hollow-socket Spade Mould",
    "path": [
     "钱范",
     "布币范",
@@ -1204,7 +1204,7 @@
    "id": "b26cdf6c-9a6c-41b3-af70-22a3785d5207",
    "level": 5,
    "labelZh": "小型平肩空首布范",
-   "labelEn": "Small Mould",
+   "labelEn": "Small Flat-Shoulder Hollow-socket Spade Mould",
    "path": [
     "钱范",
     "布币范",

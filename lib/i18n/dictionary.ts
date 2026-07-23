@@ -508,6 +508,7 @@ export const DICTIONARY = {
 
   // ── home map filter panel (CoinFilterMap) ────────────────────────────
   'home.mapSection.title': { en: 'View More Map Visualizations', zh: '查看更多地图可视化' },
+  'home.coinTypesSection.title': { en: 'Explore Coin Types', zh: '探索币种分类' },
   'coinFilterMap.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
   'coinFilterMap.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
   'coinFilterMap.clearFilter': { en: '✕ Clear filter', zh: '✕ 清除筛选' },

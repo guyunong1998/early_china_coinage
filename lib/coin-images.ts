@@ -31,6 +31,27 @@ function findSide(accNum: string, side: 'obv' | 'rev'): string | null {
 }
 
 /**
+ * Hand-picked single-icon (not obverse/reverse — these are stylized line-art
+ * shapes, not specimen photos) stand-ins for a handful of broad category
+ * nodes, keyed by the node's own slug (`fallbackKey` below). Checked before
+ * the generic slug-prefixed obv/rev lookup so these take precedence over
+ * whatever a plain `{slug}.obv...` file might otherwise match.
+ */
+const GENERIC_ICON_BY_SLUG: Record<string, string> = {
+  'spade-coin': 'spadecoin.svg',
+  'knife-shaped-coin': 'knifecoin.svg',
+  'flat-handle-spade': 'flathandlespade.svg',
+  'hollow-socket-spade': 'hollowsocketspade.svg',
+  'flat-shoulder-hollow-socket-spade': 'flatshoulder-hollowsocketspade.svg',
+}
+
+function findGenericIcon(slug: string): string | null {
+  const file = GENERIC_ICON_BY_SLUG[slug]
+  if (!file || !listTypeImageFiles().includes(file)) return null
+  return `/images/type_imgs/${encodeURIComponent(file)}`
+}
+
+/**
  * `fallbackKey` covers types with no photographed specimen (no img_acc_num):
  * a synthetic "children silhouette" composite, generated for nodes that
  * still lack their own image, is saved under the node's own slug (see
@@ -45,5 +66,9 @@ export function getCoinTypeImagePaths(
     : EMPTY_PATHS
   if (primary.obverseSrc || primary.reverseSrc) return primary
   if (!fallbackKey) return primary
+
+  const generic = findGenericIcon(fallbackKey)
+  if (generic) return { obverseSrc: generic, reverseSrc: null }
+
   return { obverseSrc: findSide(fallbackKey, 'obv'), reverseSrc: findSide(fallbackKey, 'rev') }
 }
