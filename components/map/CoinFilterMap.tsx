@@ -87,8 +87,8 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       // Homepage teaser map: no layers-switcher or river-mode control widgets
       // (kept for the full map visualizations pages) — just the street tiles
       // plus the bilingual place-name overlay, always on.
-      const { cyclosm, satelliteLabels } = buildBaseLayers(L)
-      cyclosm.addTo(map)
+      const { cawm, satelliteLabels } = buildBaseLayers(L)
+      cawm.addTo(map)
       satelliteLabels.addTo(map)
 
       const bounds: [number, number][] = []

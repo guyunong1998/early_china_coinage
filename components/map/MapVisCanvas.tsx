@@ -700,8 +700,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { osm, cyclosm, satellite, satelliteLabels } = buildBaseLayers(L)
-      cyclosm.addTo(map)
+      const { cawm, satellite, satelliteLabels } = buildBaseLayers(L)
+      cawm.addTo(map)
 
       // Full layer-switcher + river-mode controls are reserved for the
       // dedicated Map Visualizations pages (fullControls, default true),
@@ -714,7 +714,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         satelliteLabels.addTo(map)
         addStaticMajorRivers(L, map)
       } else {
-        addLayerControl(L, map, cyclosm, osm, satellite, satelliteLabels, {
+        addLayerControl(L, map, cawm, satellite, satelliteLabels, {
           collapsed: true,
           position: 'bottomright',
         })

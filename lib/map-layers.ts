@@ -154,27 +154,16 @@ function addRiverModeControl(
 }
 
 export function buildBaseLayers(L: LeafletNS) {
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // The default (and only) base layer across the site — the Consortium of
+  // Ancient World Mappers' hillshaded terrain basemap, a better fit for a
+  // historical/archaeological atlas than a modern street map. Its own tiles
+  // only go up to zoom 11 (maxNativeZoom); maxZoom stays high so Leaflet
+  // just upscales the last tile instead of leaving deep zooms blank.
+  const cawm = L.tileLayer('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png', {
     attribution:
-      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      'Basemap © <a href="https://cawm.lib.uiowa.edu">Consortium of Ancient World Mappers</a>',
     maxZoom: 19,
-  })
-
-  // The default base layer across the site — CyclOSM's cartography (warm
-  // terrain hillshading, distinct green/beige palette) reads better at a
-  // glance than plain OSM. It's a cycling-oriented style upstream (bright
-  // purple motorways, blue cycle-route overlays baked directly into the
-  // tiles), which this app has no use for, but those only actually show up
-  // at street-level zoom — this app's own content (find sites, mint towns)
-  // is never itself colored by this layer, so it's left as-is rather than
-  // fighting the raster tiles with a CSS filter. Plain OSM (`osm` above)
-  // stays picked in the layer switcher wherever one exists, for anyone who
-  // wants it back.
-  const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
-    attribution:
-      'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles by <a href="https://www.cyclosm.org">CyclOSM</a> hosted by <a href="https://www.openstreetmap.fr">OpenStreetMap France</a>',
-    maxZoom: 19,
-    subdomains: 'abc',
+    maxNativeZoom: 11,
   })
 
   const satellite = L.tileLayer(
@@ -187,47 +176,46 @@ export function buildBaseLayers(L: LeafletNS) {
   )
 
   // Transparent English place-name/boundary overlay (Esri's reference
-  // layer). OSM's own "Street map" tiles are labelled in the local script
-  // (Chinese, for places in China), so layering this on top gives a
-  // bilingual view; it's also the only source of text on the label-less
-  // satellite imagery. Togglable via the "English labels" overlay checkbox.
+  // layer). The CAWM basemap carries no place labels of its own, so
+  // layering this on top is the only source of text on it; it's also the
+  // only source of text on the label-less satellite imagery. Togglable via
+  // the "English labels" overlay checkbox.
   const satelliteLabels = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     { attribution: '', maxZoom: 19, opacity: 1 }
   )
 
-  return { osm, cyclosm, satellite, satelliteLabels }
+  return { cawm, satellite, satelliteLabels }
 }
 
 /**
- * Full interactive chrome: the Street map/Satellite/English-labels layer
- * switcher, plus the Off/Major/Minor/All river-mode control. Reserved for
- * the dedicated Map Visualizations pages (desktop only — see
+ * Full interactive chrome: the Ancient World Map/Satellite/English-labels
+ * layer switcher, plus the Off/Major/Minor/All river-mode control. Reserved
+ * for the dedicated Map Visualizations pages (desktop only — see
  * `addStaticMajorRivers` below for every other map, and for all maps on
  * mobile screens).
  */
 export function addLayerControl(
   L: LeafletNS,
   map: import('leaflet').Map,
-  cyclosm: import('leaflet').TileLayer,
-  osm: import('leaflet').TileLayer,
+  cawm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
   satelliteLabels: import('leaflet').TileLayer,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
-  // On by default on top of either base layer — gives bilingual labels on
-  // the street map, and is the only text shown on the satellite view. Users
-  // can switch it off via the overlay checkbox if it feels cluttered.
+  // On by default on top of either base layer — gives English labels on
+  // the ancient-world basemap, and is the only text shown on the satellite
+  // view. Users can switch it off via the overlay checkbox if it feels
+  // cluttered.
   satelliteLabels.addTo(map)
 
   const position = options?.position ?? 'topright'
 
   L.control
     .layers(
-      // CyclOSM (already the active base layer when this control is built —
-      // see MapVisCanvas's init effect) stays first/checked; plain OSM's
-      // "Street map" is kept one click away for anyone who wants it back.
-      { CyclOSM: cyclosm, 'Street map': osm, Satellite: satellite },
+      // CAWM (already the active base layer when this control is built —
+      // see MapVisCanvas's init effect) stays first/checked.
+      { 'Ancient World Map': cawm, Satellite: satellite },
       { 'English labels': satelliteLabels },
       { collapsed: options?.collapsed ?? false, position }
     )

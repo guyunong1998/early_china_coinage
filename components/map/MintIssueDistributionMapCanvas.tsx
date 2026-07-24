@@ -49,8 +49,8 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
       // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cyclosm, satelliteLabels } = buildBaseLayers(L)
-      cyclosm.addTo(map)
+      const { cawm, satelliteLabels } = buildBaseLayers(L)
+      cawm.addTo(map)
       satelliteLabels.addTo(map)
       addStaticMajorRivers(L, map)
 

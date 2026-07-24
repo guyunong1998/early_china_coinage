@@ -55,7 +55,7 @@ function dist(a: { x: number; y: number }, b: { x: number; y: number }) {
 export function TypologyViewer({
   src,
   manifest,
-  height = 620,
+  height = 420,
 }: {
   src: string
   manifest: TypologyViewerManifest
