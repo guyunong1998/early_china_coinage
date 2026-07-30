@@ -4,7 +4,7 @@ import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { buildMintDirectory, buildMintTypeLabels, mintCompleteness } from '@/lib/mint-directory'
 import { resolveMintNameZh } from '@/lib/mint-towns'
-import { computeMintStatsFromFinds, toMintPoints } from '@/lib/pointed-spade-data'
+import { computeMintStatsFromFinds, toMintPoints } from '@/lib/mint-stats'
 import { getCoinIssues, getFindsForHeatmap, getMints } from '@/lib/queries'
 
 export const metadata = {

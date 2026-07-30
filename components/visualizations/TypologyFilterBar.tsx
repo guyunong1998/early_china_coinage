@@ -17,8 +17,10 @@ import {
   getInscriptionOptions,
   getLevelOptions,
   optionLabel,
+  type HierarchyLevelOption,
   type InscriptionSourceRow,
   type TypologyFilterSelection,
+  type TypologyOptionCounts,
 } from '@/lib/typology-filter'
 import type { CoinTypeHierarchyRow } from '@/lib/types'
 
@@ -32,6 +34,10 @@ type TypologyFilterBarProps = {
    * museum-scoped stand-in (buildAnsInscriptionSource) on Museum
    * Collections — see InscriptionSourceRow's doc comment. */
   coinIssues: InscriptionSourceRow[]
+  /** Counts to show beside each option, e.g. "Coin (142)" — sites on Find
+   * Site, recorded specimen quantity on the Mint Town tabs (database and
+   * Museum Collections alike). See TypologyOptionCounts' doc comment. */
+  optionCounts?: TypologyOptionCounts
   compact?: boolean
 }
 
@@ -48,6 +54,7 @@ export function TypologyFilterBar({
   onChange,
   hierarchyRows,
   coinIssues,
+  optionCounts,
   compact = false,
 }: TypologyFilterBarProps) {
   const { lang, t } = useLanguage()
@@ -59,8 +66,11 @@ export function TypologyFilterBar({
   const level5Options = getLevelOptions(hierarchyRows, sel, 5)
   const inscriptionOptions = getInscriptionOptions(coinIssues, hierarchyRows, sel)
 
-  const toOptions = (opts: { value: string; label_zh: string; label_en: string }[]) =>
-    opts.map((o) => ({ value: o.value, label: optionLabel(o.label_en, o.label_zh, lang) }))
+  const toOptions = (opts: HierarchyLevelOption[], depth: 1 | 2 | 3 | 4 | 5) =>
+    opts.map((o) => {
+      const label = optionLabel(o.label_en, o.label_zh, lang)
+      return { value: o.value, label: optionCounts ? `${label} (${optionCounts.level(depth, o.value)})` : label }
+    })
 
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
@@ -68,14 +78,14 @@ export function TypologyFilterBar({
         <FilterSelect
           label={t(LEVEL_DICT_KEY[0])}
           value={sel.level1}
-          options={toOptions(level1Options)}
+          options={toOptions(level1Options, 1)}
           onChange={(v) => onChange({ ...emptyTypologySelection(), level1: v, inscriptionId: sel.inscriptionId })}
         />
         {sel.level1 && level2Options.length > 0 && (
           <FilterSelect
             label={t(LEVEL_DICT_KEY[1])}
             value={sel.level2}
-            options={toOptions(level2Options)}
+            options={toOptions(level2Options, 2)}
             onChange={(v) => onChange({ ...sel, level2: v, level3: '', level4: '', level5: '' })}
           />
         )}
@@ -83,7 +93,7 @@ export function TypologyFilterBar({
           <FilterSelect
             label={t(LEVEL_DICT_KEY[2])}
             value={sel.level3}
-            options={toOptions(level3Options)}
+            options={toOptions(level3Options, 3)}
             onChange={(v) => onChange({ ...sel, level3: v, level4: '', level5: '' })}
           />
         )}
@@ -91,7 +101,7 @@ export function TypologyFilterBar({
           <FilterSelect
             label={t(LEVEL_DICT_KEY[3])}
             value={sel.level4}
-            options={toOptions(level4Options)}
+            options={toOptions(level4Options, 4)}
             onChange={(v) => onChange({ ...sel, level4: v, level5: '' })}
           />
         )}
@@ -99,7 +109,7 @@ export function TypologyFilterBar({
           <FilterSelect
             label={t(LEVEL_DICT_KEY[4])}
             value={sel.level5}
-            options={toOptions(level5Options)}
+            options={toOptions(level5Options, 5)}
             onChange={(v) => onChange({ ...sel, level5: v })}
           />
         )}
@@ -107,10 +117,10 @@ export function TypologyFilterBar({
         <FilterSelect
           label={t('map.filter.inscription', { count: inscriptionOptions.length })}
           value={sel.inscriptionId}
-          options={inscriptionOptions.map((e) => ({
-            value: e.id,
-            label: formatInscriptionOptionLabel(e),
-          }))}
+          options={inscriptionOptions.map((e) => {
+            const label = formatInscriptionOptionLabel(e)
+            return { value: e.id, label: optionCounts ? `${label} (${optionCounts.inscription(e.id)})` : label }
+          })}
           onChange={(v) => onChange({ ...sel, inscriptionId: v })}
         />
       </div>

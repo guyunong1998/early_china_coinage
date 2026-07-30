@@ -467,9 +467,13 @@ export type MapVisCanvasProps = SitesCanvasProps | MintsCanvasProps
 
 export function MapVisCanvas(props: MapVisCanvasProps) {
   const { viewMode, densityLatLngs, height = '100%' } = props
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
+  const labelLayersRef = useRef<{
+    labelsEn: import('leaflet').Layer
+    labelsZh: import('leaflet').Layer
+  } | null>(null)
   const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
   const compareMarkersRef = useRef<Map<string, Marker>>(new Map())
@@ -691,7 +695,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl, addStaticMajorRivers } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addLayerControl, addStaticMajorRivers, setLabelLayerForLang } = await import(
+        '@/lib/map-layers'
+      )
       if (cancelled || !containerRef.current || mapRef.current) return
 
       const center: [number, number] = props.kind === 'sites' ? [35.8, 105.4] : [37.5, 112]
@@ -700,8 +706,10 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { cawm, satellite, satelliteLabels } = buildBaseLayers(L)
+      const { cawm, satellite, labelsEn, labelsZh } = buildBaseLayers(L)
       cawm.addTo(map)
+      labelLayersRef.current = { labelsEn, labelsZh }
+      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       // Full layer-switcher + river-mode controls are reserved for the
       // dedicated Map Visualizations pages (fullControls, default true),
@@ -711,10 +719,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       // rivers" baseline every other map on the site uses.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
       if (isMobile || props.fullControls === false) {
-        satelliteLabels.addTo(map)
         addStaticMajorRivers(L, map)
       } else {
-        addLayerControl(L, map, cawm, satellite, satelliteLabels, {
+        addLayerControl(L, map, cawm, satellite, {
           collapsed: true,
           position: 'bottomright',
         })
@@ -861,6 +868,18 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sitesForInit])
+
+  // Swap the place-name label layer whenever the language toggle changes —
+  // independent of the (heavier) init effect above so switching languages
+  // never rebuilds the whole map.
+  useEffect(() => {
+    const map = mapRef.current
+    const layers = labelLayersRef.current
+    if (!map || !layers) return
+    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
+      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
+    })
+  }, [lang])
 
   // Keep Leaflet sized correctly when the sidebar/map split changes.
   useEffect(() => {

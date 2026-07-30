@@ -10,7 +10,8 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { Map as LeafletMap } from 'leaflet'
+import type { Map as LeafletMap, Layer } from 'leaflet'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export type HoardMintOrigin = {
   mint_code?: string
@@ -46,15 +47,17 @@ function makeDot(role: string, size: number) {
 }
 
 export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
+  const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
+  const labelLayersRef = useRef<{ labelsEn: Layer; labelsZh: Layer } | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers, setLabelLayerForLang } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
@@ -64,9 +67,10 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
       // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cawm, satelliteLabels } = buildBaseLayers(L)
+      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
       cawm.addTo(map)
-      satelliteLabels.addTo(map)
+      labelLayersRef.current = { labelsEn, labelsZh }
+      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
       const bounds: [number, number][] = [[site.lat, site.lng]]
@@ -136,7 +140,21 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
       mapRef.current?.remove()
       mapRef.current = null
     }
+    // `lang` is deliberately omitted: the separate [lang] effect below swaps
+    // the label layer without rebuilding the whole map on toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [site.lat, site.lng, site.name_zh, site.site_code, mints])
+
+  // Swap the place-name label layer whenever the language toggle changes,
+  // without rebuilding the whole map.
+  useEffect(() => {
+    const map = mapRef.current
+    const layers = labelLayersRef.current
+    if (!map || !layers) return
+    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
+      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
+    })
+  }, [lang])
 
   return <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
 }

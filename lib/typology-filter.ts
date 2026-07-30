@@ -58,7 +58,7 @@ export function typologySelectionKey(sel: TypologyFilterSelection): string {
  * — narrow enough that a caller can pass either the real coin_issues
  * catalog (Find Site, the database Mint Town tab) or a synthesized,
  * ans_data-scoped stand-in (Museum Collections' buildAnsInscriptionSource in
- * lib/pointed-spade-data.ts) through the exact same functions. */
+ * lib/mint-stats.ts) through the exact same functions. */
 export type InscriptionSourceRow = Pick<
   CoinIssueDisplay,
   'inscription_id' | 'inscription' | 'inscription_en' | 'mint_zh' | 'coin_type_hierarchy_id'
@@ -291,6 +291,80 @@ export function getInscriptionOptions(
     })
   })
   return [...seen.values()].sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
+}
+
+/** Per-option counts for the type filter dropdowns — the "(N)" hint shown
+ * beside each level1..level5 and inscription option in TypologyFilterBar.
+ * `level(depth, value)` counts matches for the current selection's prefix
+ * up to `depth` with `value` at `depth` itself (deeper levels and
+ * inscription ignored); `inscription(id)` counts matches for the current
+ * full level selection plus that inscription. What "count" means (distinct
+ * sites, total specimens, ...) is up to whichever builder produced it — see
+ * buildTypologySiteCounts and buildTypologySpecimenCounts below, and
+ * buildAnsTypologySpecimenCounts in lib/mint-stats.ts for Museum
+ * Collections' specimen-based equivalent. */
+export type TypologyOptionCounts = {
+  level: (depth: 1 | 2 | 3 | 4 | 5, value: string) => number
+  inscription: (inscriptionId: string) => number
+}
+
+/** Builds a TypologyOptionCounts whose per-option number comes from
+ * `countMatches`, which receives the selection to match (level path plus
+ * optionally inscriptionId) and returns however many items match it. */
+function buildTypologyOptionCounts(
+  sel: TypologyFilterSelection,
+  countMatches: (matchSel: TypologyFilterSelection) => number
+): TypologyOptionCounts {
+  return {
+    level: (depth, value) => {
+      const levelSel = emptyTypologySelection()
+      for (let i = 0; i < depth - 1; i++) levelSel[LEVEL_KEYS[i]] = sel[LEVEL_KEYS[i]]
+      levelSel[LEVEL_KEYS[depth - 1]] = value
+      return countMatches(levelSel)
+    },
+    inscription: (inscriptionId) => countMatches({ ...sel, inscriptionId }),
+  }
+}
+
+/** Distinct find-site counts — used on Find Site, where "how many places"
+ * is the natural read of the map. */
+export function buildTypologySiteCounts(
+  finds: HeatmapFind[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
+): TypologyOptionCounts {
+  return buildTypologyOptionCounts(sel, (matchSel) => {
+    const matchedIds = getMatchingCoinIssueIds(coinIssues, hierarchyRows, matchSel)
+    if (!matchedIds) return 0
+    const sites = new Set<string>()
+    finds.forEach((f) => {
+      if (f.coin_issues_id && f.site_code && matchedIds.has(f.coin_issues_id)) sites.add(f.site_code)
+    })
+    return sites.size
+  })
+}
+
+/** Total recorded specimen quantity (summed across matching finds, via the
+ * same findQuantity fallback chain used everywhere else in this file) —
+ * used on the database Mint Town tab, where "how many coins/moulds of this
+ * type have been recorded" is more relevant than how many find sites they
+ * came from. */
+export function buildTypologySpecimenCounts(
+  finds: HeatmapFind[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
+): TypologyOptionCounts {
+  return buildTypologyOptionCounts(sel, (matchSel) => {
+    const matchedIds = getMatchingCoinIssueIds(coinIssues, hierarchyRows, matchSel)
+    if (!matchedIds) return 0
+    let total = 0
+    finds.forEach((f) => {
+      if (f.coin_issues_id && matchedIds.has(f.coin_issues_id)) total += findQuantity(f)
+    })
+    return total
+  })
 }
 
 /** Coin_issues.id values matching ANY entry (OR logic, for Points/Density

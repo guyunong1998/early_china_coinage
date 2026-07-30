@@ -21,7 +21,7 @@ import { useMemo, useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { getMintByNameZh } from '@/lib/mint-towns'
-import { ansCollectionUrl, type AnsSpecimen } from '@/lib/pointed-spade-data'
+import { ansCollectionUrl, type AnsSpecimen } from '@/lib/mint-stats'
 
 const MAX_RESULTS = 200
 

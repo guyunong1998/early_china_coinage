@@ -311,6 +311,7 @@ export const DICTIONARY = {
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
   'map.count': { en: '{count} georeferenced sites', zh: '{count} 个已定位遗址' },
+  'map.loading': { en: 'Loading map…', zh: '地图加载中…' },
   'map.filter.modeLabel': { en: 'Filter by', zh: '筛选方式' },
   'map.filter.modeLabelHint': {
     en: 'Choose whether to filter by coin type or by mint, then pick one — each point’s color shows what percentage of its coins match, and its size shows the total quantity found there.',

@@ -1,6 +1,6 @@
 import { fetchAllPages } from '@/lib/queries'
 import { supabase } from '@/lib/supabase'
-import type { AnsSpecimen } from '@/lib/pointed-spade-data'
+import type { AnsSpecimen } from '@/lib/mint-stats'
 
 type MintEmbed = { name_zh: string; name_en: string | null }
 type StateEmbed = { state_zh: string; state_en: string | null }
@@ -25,7 +25,7 @@ function one<T>(value: T | T[] | null | undefined): T | null {
  * Every specimen in the reconciled `public.ans_data` table (see
  * scripts/reconcile-ans-data.sql), with mint/state resolved via their FKs.
  * Powers the Museum Collections page: the mint-town map
- * (lib/pointed-spade-data.ts's computeAnsMintStats) and the accession-number
+ * (lib/mint-stats.ts's computeAnsMintStats) and the accession-number
  * search box both read from this same fetch.
  */
 export async function getAnsSpecimens(): Promise<AnsSpecimen[]> {

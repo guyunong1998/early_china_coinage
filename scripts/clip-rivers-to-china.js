@@ -1,7 +1,15 @@
 /**
  * One-off data-prep script: clips the Natural Earth 1:10m rivers dataset to
- * only the segments that fall within China's national boundary, then splits
- * into "major" (scalerank 0-3) and "minor" (scalerank 4-9) tiers.
+ * only the segments that fall within a generously buffered version of
+ * China's national boundary (BUFFER_KM below), then splits into "major"
+ * (scalerank 0-3) and "minor" (scalerank 4-9) tiers.
+ *
+ * The buffer is deliberate -- clipping tight to the exact border reads as an
+ * odd hard edge on a historical/archaeological map where the political
+ * boundary isn't the point (rivers like the Amur/Heilong Jiang, Mekong/
+ * Lancang, or Red River/Yuan Jiang should still trail off into Russia,
+ * Southeast Asia, etc. rather than snapping off exactly at the modern
+ * border), so this keeps a wide margin of cross-border river beyond it.
  *
  * Not part of the app build — run manually and commit the resulting files in
  * public/data/. Requires @turf/turf as a temporary devDependency.
@@ -9,9 +17,11 @@
 const fs = require('fs')
 const turf = require('@turf/turf')
 
+const BUFFER_KM = 800
+
 const riversRaw = JSON.parse(fs.readFileSync('temp_rivers_10m.json', 'utf8'))
 const chinaRaw = JSON.parse(fs.readFileSync('temp_china_boundary.json', 'utf8'))
-const chinaFeature = chinaRaw.features[0]
+const chinaFeature = turf.buffer(chinaRaw.features[0], BUFFER_KM, { units: 'kilometers' })
 
 function round(coords) {
   if (typeof coords[0] === 'number') {
@@ -79,9 +89,12 @@ function bboxOfCoords(geom) {
   walk(geom.coordinates)
   return [minLng, minLat, maxLng, maxLat]
 }
+// Padded well past China's own bbox by roughly BUFFER_KM (~7-8° of
+// latitude) so this rough pre-filter doesn't exclude anything the actual
+// buffered-polygon clip below would otherwise keep.
 function roughlyNearChina(f) {
   const [minLng, minLat, maxLng, maxLat] = bboxOfCoords(f.geometry)
-  return !(maxLng < 72 || minLng > 136 || maxLat < 15 || minLat > 54)
+  return !(maxLng < 62 || minLng > 146 || maxLat < 5 || minLat > 64)
 }
 
 const candidates = riversRaw.features.filter(roughlyNearChina)

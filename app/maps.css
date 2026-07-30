@@ -205,3 +205,28 @@
   z-index: 700;
   max-width: min(80vw, 420px);
 }
+
+/* Chinese place-name labels (lib/map-layers.ts's buildPlaceLabelsLayer) —
+   strips Leaflet's default tooltip chrome (bubble background, border, arrow)
+   down to plain text with a white halo, so it reads the same as the English
+   (Esri tile) label layer's plain basemap text rather than a popup bubble. */
+.leaflet-tooltip.place-label-tooltip {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-family: sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #262626;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 3px #fff;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.leaflet-tooltip.place-label-tooltip::before {
+  display: none;
+}

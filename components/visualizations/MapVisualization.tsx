@@ -49,6 +49,7 @@ import { getMintByNameZh } from '@/lib/mint-towns'
 import {
   ansCollectionUrl,
   buildAnsInscriptionSource,
+  buildAnsTypologySpecimenCounts,
   computeAnsMintStats,
   computeAnsMintTypeQuantities,
   computeMintStatsFromFinds,
@@ -56,8 +57,10 @@ import {
   toMintPoints,
   type AnsSpecimen,
   type HeatmapSource,
-} from '@/lib/pointed-spade-data'
+} from '@/lib/mint-stats'
 import {
+  buildTypologySiteCounts,
+  buildTypologySpecimenCounts,
   computeMintTypeQuantities,
   computeSiteTypeQuantities,
   describeTypologySelection,
@@ -67,6 +70,7 @@ import {
   typologySelectionKey,
   type InscriptionSourceRow,
   type TypologyFilterSelection,
+  type TypologyOptionCounts,
   type TypologySelectionEntry,
 } from '@/lib/typology-filter'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MapSite } from '@/lib/types'
@@ -362,6 +366,7 @@ function TypologyMultiSelect({
   onClear,
   hierarchyRows,
   coinIssues,
+  optionCounts,
 }: {
   staged: TypologyFilterSelection
   onStagedChange: (sel: TypologyFilterSelection) => void
@@ -372,6 +377,10 @@ function TypologyMultiSelect({
   onClear: () => void
   hierarchyRows: CoinTypeHierarchyRow[]
   coinIssues: InscriptionSourceRow[]
+  /** Counts shown beside each dropdown option — sites on Find Site,
+   * specimen quantity on the Mint Town tabs. See TypologyOptionCounts' doc
+   * comment in lib/typology-filter.ts. */
+  optionCounts?: TypologyOptionCounts
 }) {
   const { t } = useLanguage()
   const canAddAnother = hasTypologyFilter(staged) && !committedEntries.some((e) => e.key === typologySelectionKey(staged))
@@ -385,6 +394,7 @@ function TypologyMultiSelect({
           showInscriptionList
           hierarchyRows={hierarchyRows}
           coinIssues={coinIssues}
+          optionCounts={optionCounts}
           compact
         />
         <button
@@ -500,6 +510,11 @@ export function FindSpotsVisualization({
     remove: removeTypeEntry,
     clear: clearTypeEntries,
   } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
+
+  const typeOptionCounts = useMemo(
+    () => buildTypologySiteCounts(finds, coinIssues, hierarchyRows, stagedType),
+    [finds, coinIssues, hierarchyRows, stagedType]
+  )
 
   const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds), [coinIssues, finds])
   // initialMintNames (zh names, from a deep link) resolved to the mint_ids
@@ -676,16 +691,6 @@ export function FindSpotsVisualization({
     const href = `/visualizations/find-site${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
     return (
       <span key={tab.id} className="pointer-events-auto inline-flex shrink-0 items-center gap-1">
-        <Link
-          href={href}
-          className={`whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
-            isActive
-              ? 'border-brand bg-brand text-white'
-              : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
-          }`}
-        >
-          <T k={tab.key} /> ({precisionCounts[tab.id]})
-        </Link>
         {/* "All" is the one tab whose count needs explaining — it includes
             sites whose location is only known to county/city level, not an
             exact point, which is why it's larger than "Specified to site". */}
@@ -697,6 +702,16 @@ export function FindSpotsVisualization({
             ?
           </ClickHint>
         )}
+        <Link
+          href={href}
+          className={`whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
+            isActive
+              ? 'border-brand bg-brand text-white'
+              : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
+          }`}
+        >
+          <T k={tab.key} /> ({precisionCounts[tab.id]})
+        </Link>
       </span>
     )
   })
@@ -767,6 +782,7 @@ export function FindSpotsVisualization({
               onClear={clearTypeEntries}
               hierarchyRows={hierarchyRows}
               coinIssues={coinIssues}
+              optionCounts={typeOptionCounts}
             />
           )}
 
@@ -912,6 +928,11 @@ export function MintTownVisualization({
   } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
 
   const filterActive = typeEntries.length > 0
+
+  const typeOptionCounts = useMemo(
+    () => buildTypologySpecimenCounts(finds, coinIssues, hierarchyRows, stagedType),
+    [finds, coinIssues, hierarchyRows, stagedType]
+  )
 
   const matchedIds = useMemo(
     () => getMatchingCoinIssueIdsMulti(coinIssues, hierarchyRows, typeEntries),
@@ -1081,6 +1102,7 @@ export function MintTownVisualization({
             onClear={clearTypeEntries}
             hierarchyRows={hierarchyRows}
             coinIssues={coinIssues}
+            optionCounts={typeOptionCounts}
           />
 
           {mintPoints.length === 0 && (
@@ -1230,7 +1252,7 @@ function MuseumMapOverlay({
  * typology filter bar, and legend) on its Mint Town tab, except every mint
  * aggregate comes from public.ans_data specimens (lib/ans-museum-data.ts)
  * instead of database finds. See computeAnsMintStats / getMatchingAnsSpecimensMulti
- * in lib/pointed-spade-data.ts for how the two data sources diverge under
+ * in lib/mint-stats.ts for how the two data sources diverge under
  * the hood while sharing this same rendering. Its Search tab
  * (AccessionNumberSearch) looks up specimens by accession number instead.
  */
@@ -1267,6 +1289,11 @@ export function AnsMintTownVisualization({
     remove: removeTypeEntry,
     clear: clearTypeEntries,
   } = useTypologyMultiSelect(inscriptionSource, initialTypeSelections)
+
+  const typeOptionCounts = useMemo(
+    () => buildAnsTypologySpecimenCounts(specimens, hierarchyRows, stagedType),
+    [specimens, hierarchyRows, stagedType]
+  )
   // Order of selection (not of `specimens`) so each pick keeps its color
   // slot as later picks are added/removed around it. Keyed by ans_data.id —
   // catalog_number isn't unique (some specimens share an accession number).
@@ -1469,6 +1496,7 @@ export function AnsMintTownVisualization({
               onClear={clearTypeEntries}
               hierarchyRows={hierarchyRows}
               coinIssues={inscriptionSource}
+              optionCounts={typeOptionCounts}
             />
 
             {mintPoints.length === 0 && (

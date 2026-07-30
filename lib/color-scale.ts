@@ -16,11 +16,11 @@ const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: re
 // actual marker uses (this constant backs the legend swatch and popup bar,
 // which can't read a CSS custom property).
 export const NO_DATA_COLOR = '#5a5a5a'
-export const NO_DATA_ALPHA = 0.55
+export const NO_DATA_ALPHA = 0.4
 
 // Type is present in a context but quantities cannot be computed — full
 // opacity so it doesn't read as "less certain" than quantified sites.
-export const PRESENT_UNQUANTIFIED_COLOR = '#9caa4a'
+export const PRESENT_UNQUANTIFIED_COLOR = '#c05fae'
 
 // The site's only recorded coin (total quantity across all types = 1) is the
 // selected type — distinct from a large site that merely happens to be 100%

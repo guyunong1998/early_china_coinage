@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { HeatLayer, Map as LeafletMap, Marker } from 'leaflet'
+import type { HeatLayer, Map as LeafletMap, Marker, Layer } from 'leaflet'
 import type { MapSite } from '@/lib/types'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -61,11 +61,12 @@ function formatCoinTypeBilingual(value: string | null) {
 // ─── main component ────────────────────────────────────────────────────────
 
 export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
+  const labelLayersRef = useRef<{ labelsEn: Layer; labelsZh: Layer } | null>(null)
 
   // ── initialise map once ──
   useEffect(() => {
@@ -73,7 +74,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers } = await import('@/lib/map-layers')
+      const { buildBaseLayers, setLabelLayerForLang } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
 
       // Ensure leaflet.heat attaches to this Leaflet instance
@@ -87,9 +88,10 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       // Homepage teaser map: no layers-switcher or river-mode control widgets
       // (kept for the full map visualizations pages) — just the street tiles
       // plus the bilingual place-name overlay, always on.
-      const { cawm, satelliteLabels } = buildBaseLayers(L)
+      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
       cawm.addTo(map)
-      satelliteLabels.addTo(map)
+      labelLayersRef.current = { labelsEn, labelsZh }
+      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       const bounds: [number, number][] = []
       const densityLatLngs: [number, number, number][] = []
@@ -230,6 +232,17 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
     // at mount/navigation rather than updating live on toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sites])
+
+  // Swap the place-name label layer whenever the language toggle changes,
+  // without rebuilding the whole map or refetching boundary geometry.
+  useEffect(() => {
+    const map = mapRef.current
+    const layers = labelLayersRef.current
+    if (!map || !layers) return
+    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
+      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
+    })
+  }, [lang])
 
   return <div ref={containerRef} style={{ height: '360px', width: '100%' }} />
 }

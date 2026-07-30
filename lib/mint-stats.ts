@@ -1,14 +1,29 @@
 import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
-import { coinMatchesTypologyFilter, type InscriptionSourceRow, type TypologySelectionEntry } from '@/lib/typology-filter'
+import {
+  coinMatchesTypologyFilter,
+  emptyTypologySelection,
+  type InscriptionSourceRow,
+  type TypologyFilterSelection,
+  type TypologyOptionCounts,
+  type TypologySelectionEntry,
+} from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
+
+const LEVEL_KEYS: Array<keyof Pick<TypologyFilterSelection, 'level1' | 'level2' | 'level3' | 'level4' | 'level5'>> = [
+  'level1',
+  'level2',
+  'level3',
+  'level4',
+  'level5',
+]
 
 /** Which dataset a mint production heatmap is showing — only 'database'
  * exists today, but the type (and the toggle row using it) is kept so a
  * future second source is just another entry, not a UI rebuild. */
 export type HeatmapSource = 'database'
 
-export type PointedSpadeMintStat = {
+export type MintStat = {
   mint_zh: string
   mint_en: string | null
   mint_code: string | null
@@ -42,7 +57,7 @@ export function computeMintStatsFromFinds(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[],
   matchedIds: Set<string> | null
-): { mapped: PointedSpadeMintStat[]; unmapped: PointedSpadeMintStat[] } {
+): { mapped: MintStat[]; unmapped: MintStat[] } {
   const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
   const groups = new Map<
     string,
@@ -74,7 +89,7 @@ export function computeMintStatsFromFinds(
     if (insc) group.inscriptions.add(insc)
   })
 
-  const stats: PointedSpadeMintStat[] = [...groups.entries()]
+  const stats: MintStat[] = [...groups.entries()]
     .map(([mint_zh, g]) => {
       const town = getMintByNameZh(mint_zh)
       return {
@@ -105,7 +120,7 @@ export function computeMintStatsFromFinds(
 /** Reshapes mapped mint stats into the plain `MintPoint[]` MapVisCanvas
  * plots — shared so every "mint town map" (the Mint Town visualization tab,
  * the /mints overview page, ...) renders from the exact same point list. */
-export function toMintPoints(stats: PointedSpadeMintStat[]): MintPoint[] {
+export function toMintPoints(stats: MintStat[]): MintPoint[] {
   return stats.map((m) => ({
     mint_zh: m.mint_zh,
     mint_en: m.mint_en,
@@ -160,7 +175,7 @@ export function ansCollectionUrl(catalogNumber: string): string {
  */
 export function computeAnsMintStats(
   specimens: AnsSpecimen[]
-): { mapped: PointedSpadeMintStat[]; unmapped: PointedSpadeMintStat[] } {
+): { mapped: MintStat[]; unmapped: MintStat[] } {
   const groups = new Map<string, { coinCount: number; inscriptions: Set<string> }>()
 
   MINT_TOWNS.forEach((town) => {
@@ -180,7 +195,7 @@ export function computeAnsMintStats(
     if (insc) group.inscriptions.add(insc)
   })
 
-  const stats: PointedSpadeMintStat[] = [...groups.entries()]
+  const stats: MintStat[] = [...groups.entries()]
     .map(([mint_zh, g]) => {
       const town = getMintByNameZh(mint_zh)
       return {
@@ -229,6 +244,37 @@ export function getMatchingAnsSpecimensMulti(
       )
     )
   )
+}
+
+/** Per-option specimen counts for Museum Collections' type filter dropdowns
+ * — the "(N)" hint beside each level1..level5 and inscription option, the
+ * ans_data equivalent of buildTypologySpecimenCounts in typology-filter.ts.
+ * Counts matching specimen rows directly (each row is already one physical
+ * specimen) rather than summing a quantity field, since ans_data has none. */
+export function buildAnsTypologySpecimenCounts(
+  specimens: AnsSpecimen[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection
+): TypologyOptionCounts {
+  function countFor(matchSel: TypologyFilterSelection): number {
+    return specimens.filter((s) =>
+      coinMatchesTypologyFilter(
+        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
+        hierarchyRows,
+        matchSel
+      )
+    ).length
+  }
+
+  return {
+    level: (depth, value) => {
+      const levelSel = emptyTypologySelection()
+      for (let i = 0; i < depth - 1; i++) levelSel[LEVEL_KEYS[i]] = sel[LEVEL_KEYS[i]]
+      levelSel[LEVEL_KEYS[depth - 1]] = value
+      return countFor(levelSel)
+    },
+    inscription: (inscriptionId) => countFor({ ...sel, inscriptionId }),
+  }
 }
 
 /**

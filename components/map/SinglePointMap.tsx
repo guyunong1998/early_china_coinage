@@ -11,8 +11,9 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { Map as LeafletMap } from 'leaflet'
+import type { Map as LeafletMap, Layer } from 'leaflet'
 import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 // Solid form of --accent-rgb (app/globals.css) — the same hue
 // .map-dot-single-point used at 0.6 opacity, but a dropped pin is always
@@ -34,8 +35,10 @@ export default function SinglePointMap({
   height = '320px',
   zoom = 12,
 }: SinglePointMapProps) {
+  const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
+  const labelLayersRef = useRef<{ labelsEn: Layer; labelsZh: Layer } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -44,7 +47,7 @@ export default function SinglePointMap({
       const { default: L } = await import('leaflet')
       if (cancelled || !containerRef.current || mapInstanceRef.current) return
 
-      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers, setLabelLayerForLang } = await import('@/lib/map-layers')
 
       const map = L.map(containerRef.current, { zoomControl: true }).setView([lat, lng], zoom)
       mapInstanceRef.current = map
@@ -52,9 +55,10 @@ export default function SinglePointMap({
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
       // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cawm, satelliteLabels } = buildBaseLayers(L)
+      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
       cawm.addTo(map)
-      satelliteLabels.addTo(map)
+      labelLayersRef.current = { labelsEn, labelsZh }
+      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
       L.marker([lat, lng], {
@@ -77,7 +81,21 @@ export default function SinglePointMap({
       mapInstanceRef.current?.remove()
       mapInstanceRef.current = null
     }
+    // `lang` is deliberately omitted: the separate [lang] effect below swaps
+    // the label layer without rebuilding the whole map on toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, label, zoom])
+
+  // Swap the place-name label layer whenever the language toggle changes,
+  // without rebuilding the whole map.
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    const layers = labelLayersRef.current
+    if (!map || !layers) return
+    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
+      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
+    })
+  }, [lang])
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />
 }
