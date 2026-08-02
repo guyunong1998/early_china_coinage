@@ -295,6 +295,14 @@ create table public.coin_issues (
   state_id uuid null,
   inscription_id uuid null,
   coin_type_hierarchy_id uuid null,
+  -- Chinese-only free text carried over from the now-dropped
+  -- deprecated_coin_types table (see scripts/merge-deprecated-coin-types.sql)
+  -- -- a fallback for rows where mint_id/state_id/inscription_id are still
+  -- null, since those normalized joins would otherwise return nothing.
+  legacy_type text null,
+  legacy_inscription text null,
+  legacy_mint text null,
+  legacy_state text null,
   constraint coin_issues_pkey primary key (id),
   constraint coin_issues_coin_type_hierarchy_id_fkey foreign KEY (coin_type_hierarchy_id) references coin_type_hierarchy (id) on delete set null,
   constraint coin_issues_inscription_id_fkey foreign KEY (inscription_id) references inscriptions (id) on delete set null,

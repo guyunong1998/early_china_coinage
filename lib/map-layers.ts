@@ -181,24 +181,17 @@ function addRiverModeControl(
 }
 
 export function buildBaseLayers(L: LeafletNS) {
-  // The default (and only) base layer across the site — Stadia's Stamen
-  // Terrain Background tiles (hillshaded terrain, no labels), a better fit
-  // for a historical/archaeological atlas than a modern street map.
-  // `ext` isn't in Leaflet's TileLayerOptions type, but the tile URL
-  // template above interpolates it just like z/x/y — going through this
-  // untyped variable (rather than an inline literal) sidesteps the excess-
-  // property check TS would otherwise raise on that unknown option.
-  const stamenTerrainOptions: import('leaflet').TileLayerOptions & { ext: string } = {
-    minZoom: 0,
-    maxZoom: 18,
+  // The default (and only) base layer across the site — the Consortium of
+  // Ancient World Mappers' hillshaded terrain basemap, a better fit for a
+  // historical/archaeological atlas than a modern street map. Its own tiles
+  // only go up to zoom 11 (maxNativeZoom); maxZoom stays high so Leaflet
+  // just upscales the last tile instead of leaving deep zooms blank.
+  const cawm = L.tileLayer('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png', {
     attribution:
-      '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    ext: 'png',
-  }
-  const cawm = L.tileLayer(
-    'https://tiles.stadiamaps.com/tiles/stamen_terrain_background/{z}/{x}/{y}{r}.{ext}',
-    stamenTerrainOptions
-  )
+      'Basemap © <a href="https://cawm.lib.uiowa.edu">Consortium of Ancient World Mappers</a>',
+    maxZoom: 19,
+    maxNativeZoom: 11,
+  })
 
   const satellite = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -208,6 +201,16 @@ export function buildBaseLayers(L: LeafletNS) {
       maxZoom: 19,
     }
   )
+
+  // CyclOSM — a modern OpenStreetMap-derived basemap, offered as a third
+  // alternative alongside the hillshaded terrain and satellite base layers.
+  // Carries its own place-name/road labels, so it's used as-is rather than
+  // paired with the labelsEn/labelsZh overlays above.
+  const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+    attribution:
+      'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.cyclosm.org">CyclOSM</a> hosted by <a href="https://openstreetmap.fr">OpenStreetMap France</a>',
+    maxZoom: 20,
+  })
 
   // Transparent English/romanized place-name overlay (Esri's reference
   // layer). Neither base layer (the Stamen terrain background nor the
@@ -229,7 +232,7 @@ export function buildBaseLayers(L: LeafletNS) {
   // same plain "dot + text" look as the English layer, no road clutter.
   const labelsZh = buildPlaceLabelsLayer(L)
 
-  return { cawm, satellite, labelsEn, labelsZh }
+  return { cawm, satellite, cyclosm, labelsEn, labelsZh }
 }
 
 /**
@@ -293,6 +296,7 @@ export function addLayerControl(
   map: import('leaflet').Map,
   cawm: import('leaflet').TileLayer,
   satellite: import('leaflet').TileLayer,
+  cyclosm: import('leaflet').TileLayer,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
   const position = options?.position ?? 'topright'
@@ -301,17 +305,15 @@ export function addLayerControl(
     .layers(
       // CAWM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
-      { 'Ancient World Map': cawm, Satellite: satellite },
+      { 'Ancient World Map': cawm, Satellite: satellite, CyclOSM: cyclosm },
       {},
       { collapsed: options?.collapsed ?? false, position }
     )
     .addTo(map)
 
-  // River-mode panel temporarily disabled (rivers off by default) — may come
-  // back later, so left commented rather than removed.
-  // const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson')
-  // const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  // addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
+  const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson')
+  const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
+  addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
 }
 
 /**
@@ -321,9 +323,5 @@ export function addLayerControl(
  * reference layer with no way to toggle it off.
  */
 export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
-  // Rivers temporarily disabled (off by default) — may come back later, so
-  // left commented rather than removed.
-  // buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
-  void L
-  void map
+  buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
 }

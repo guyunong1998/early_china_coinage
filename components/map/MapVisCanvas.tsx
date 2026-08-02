@@ -706,7 +706,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { cawm, satellite, labelsEn, labelsZh } = buildBaseLayers(L)
+      const { cawm, satellite, cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
       cawm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
@@ -721,7 +721,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       if (isMobile || props.fullControls === false) {
         addStaticMajorRivers(L, map)
       } else {
-        addLayerControl(L, map, cawm, satellite, {
+        addLayerControl(L, map, cawm, satellite, cyclosm, {
           collapsed: true,
           position: 'bottomright',
         })
