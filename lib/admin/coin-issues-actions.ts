@@ -1,10 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertDevOnly } from '@/lib/admin/guard'
+import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
 import { coinIssueSchema } from '@/lib/admin/schemas'
 import { COIN_ISSUE_FIELDS, flattenCoinIssue, type CoinIssueEmbed } from '@/lib/queries'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { ActionState } from '@/lib/admin/types'
 import type { CoinIssueDisplay } from '@/lib/types'
 
@@ -14,12 +13,13 @@ export async function updateCoinIssue(
   _prev: ActionState<CoinIssueDisplay>,
   formData: FormData
 ): Promise<ActionState<CoinIssueDisplay>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = coinIssueSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   const { id, ...rest } = parsed.data
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('coin_issues')
     .update(rest)
     .eq('id', id)

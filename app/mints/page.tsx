@@ -3,7 +3,7 @@ import { AddMintSection } from '@/components/mints/AddMintSection'
 import { MintListClient } from '@/components/mints/MintListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import { buildMintDirectory, buildMintTypeLabels, mintCompleteness } from '@/lib/mint-directory'
 import { resolveMintNameZh } from '@/lib/mint-towns'
 import { computeMintStatsFromFinds, toMintPoints } from '@/lib/mint-stats'
@@ -21,6 +21,7 @@ export default async function MintsPage() {
   // filter, no ANS toggle) — one source of truth so the two look identical.
   const [dbMints, finds, coinIssues] = await Promise.all([getMints(), getFindsForHeatmap(), getCoinIssues()])
   const mints = buildMintDirectory(dbMints)
+  const authorized = await isAuthorized()
 
   const { mapped, unmapped } = computeMintStatsFromFinds(finds, coinIssues, null)
   const mintPoints = toMintPoints(mapped)
@@ -69,7 +70,7 @@ export default async function MintsPage() {
           <T k="mints.townsDocumented" vars={{ count: mints.length }} />
         </p>
         <div className="mt-3">
-          <AddMintSection isDevMode={isDevMode()} />
+          <AddMintSection isDevMode={authorized} />
         </div>
       </div>
 

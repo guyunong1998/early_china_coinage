@@ -2,9 +2,8 @@
 
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
-import { assertDevOnly } from '@/lib/admin/guard'
+import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
 import { createSourceLinkSchema } from '@/lib/admin/schemas'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { ActionState } from '@/lib/admin/types'
 import type { SourceLink } from '@/lib/types'
 
@@ -21,12 +20,13 @@ export async function createSourceLink(
   _prev: ActionState<SourceLink>,
   formData: FormData
 ): Promise<ActionState<SourceLink>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = createSourceLinkSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   const source_link_code = `SL_ADMIN_${randomUUID()}`
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('source_links')
     .insert({ ...parsed.data, source_link_code })
     .select('*')
@@ -38,8 +38,9 @@ export async function createSourceLink(
 }
 
 export async function deleteSourceLink(id: string): Promise<ActionState<null>> {
-  assertDevOnly()
-  const { error } = await supabaseAdmin.from('source_links').delete().eq('id', id)
+  await assertAuthorized()
+  const db = await getWriteClient()
+  const { error } = await db.from('source_links').delete().eq('id', id)
   if (error) return { ok: false, formError: error.message }
 
   revalidateSourceLinks()

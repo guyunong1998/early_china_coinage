@@ -8,7 +8,7 @@ import { CoinTypeImages } from '@/components/coin-types/CoinTypeImages'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import {
@@ -41,13 +41,10 @@ const LEVEL_LABEL_KEY: Record<CoinTypeLevel, DictionaryKey> = {
   level5: 'map.filter.l4',
 }
 
-export async function generateStaticParams() {
-  const hierarchyRows = await getCoinTypeHierarchy()
-  // Slugs/labels/parents don't depend on coinIssues — only states/mints/
-  // inscriptions dedup does, which generateStaticParams doesn't need.
-  const nodes = buildCoinTypeNodes(hierarchyRows, [])
-  return nodes.map((n) => ({ slug: n.slug }))
-}
+// No generateStaticParams: this page now reads the caller's Supabase session
+// (via isAuthorized(), for the edit UI) on every render, which is a dynamic
+// API and can't be resolved at build time — Next renders each slug on
+// request instead. notFound() below still 404s unknown slugs correctly.
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
@@ -76,8 +73,9 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
 
   const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum, node.slug)
 
+  const authorized = await isAuthorized()
   // Only needed to populate the coin-issue editing comboboxes, so skip in prod.
-  const [mints, states, inscriptions] = isDevMode()
+  const [mints, states, inscriptions] = authorized
     ? await Promise.all([getMints(), getStates(), getInscriptions()])
     : [[], [], []]
   const mintOptions: ComboOption[] = mints.map((m) => ({ value: m.id, label: m.name_zh, searchText: m.name_en ?? '' }))
@@ -215,7 +213,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             ownHierarchyId={node.ownHierarchyId}
             descriptionZh={node.description_zh}
             descriptionEn={node.description_en}
-            isDevMode={isDevMode()}
+            isDevMode={authorized}
             noDescriptionLabel={<T k="coinTypeDetail.noDescription" />}
           />
         </div>
@@ -238,7 +236,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             <div className="overflow-x-auto">
               <CoinIssuesTable
                 issues={matchedCoinIssues}
-                isDevMode={isDevMode()}
+                isDevMode={authorized}
                 mintOptions={mintOptions}
                 stateOptions={stateOptions}
                 inscriptionOptions={inscriptionOptions}

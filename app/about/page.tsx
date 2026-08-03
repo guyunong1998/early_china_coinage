@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { AuthStatus } from '@/components/auth/AuthStatus'
 import { DataCard } from '@/components/ui/DataCard'
 import { T } from '@/components/i18n/T'
 
@@ -131,6 +132,8 @@ export default function AboutPage() {
           </div>
         </DataCard>
       </div>
+
+      <AuthStatus />
     </div>
   )
 }

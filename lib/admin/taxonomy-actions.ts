@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertDevOnly } from '@/lib/admin/guard'
+import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
 import { coinTypeHierarchyDescriptionSchema, coinTypeHierarchySchema, inscriptionSchema, stateSchema } from '@/lib/admin/schemas'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { ActionState } from '@/lib/admin/types'
 import type { CoinTypeHierarchyRow, Inscription, State } from '@/lib/types'
 
@@ -15,14 +14,15 @@ const HIERARCHY_FIELDS =
  * has a unique constraint) and re-selects the existing row instead of
  * erroring. */
 export async function createState(_prev: ActionState<State>, formData: FormData): Promise<ActionState<State>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = stateSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
-  const { data, error } = await supabaseAdmin.from('states').insert(parsed.data).select('id, state_zh, state_en').single()
+  const { data, error } = await db.from('states').insert(parsed.data).select('id, state_zh, state_en').single()
   if (error) {
     if (error.code === '23505') {
-      const { data: existing, error: selectError } = await supabaseAdmin
+      const { data: existing, error: selectError } = await db
         .from('states')
         .select('id, state_zh, state_en')
         .eq('state_zh', parsed.data.state_zh)
@@ -46,12 +46,13 @@ export async function createInscription(
   _prev: ActionState<Inscription>,
   formData: FormData
 ): Promise<ActionState<Inscription>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = inscriptionSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   if (parsed.data.inscription_zh) {
-    const { data: existing, error: selectError } = await supabaseAdmin
+    const { data: existing, error: selectError } = await db
       .from('inscriptions')
       .select('id, inscription_zh, inscription_en')
       .eq('inscription_zh', parsed.data.inscription_zh)
@@ -60,7 +61,7 @@ export async function createInscription(
     if (existing) return { ok: true, data: existing, message: 'An inscription with this text already exists — using it.' }
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('inscriptions')
     .insert(parsed.data)
     .select('id, inscription_zh, inscription_en')
@@ -76,16 +77,17 @@ export async function createCoinTypeHierarchy(
   _prev: ActionState<CoinTypeHierarchyRow>,
   formData: FormData
 ): Promise<ActionState<CoinTypeHierarchyRow>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = coinTypeHierarchySchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
-  const { data, error } = await supabaseAdmin.from('coin_type_hierarchy').insert(parsed.data).select(HIERARCHY_FIELDS).single()
+  const { data, error } = await db.from('coin_type_hierarchy').insert(parsed.data).select(HIERARCHY_FIELDS).single()
   if (error) {
     if (error.code === '23505') {
       // .eq(col, null) doesn't match NULL rows in PostgREST — use .is() for
       // any level that's null so the lookup mirrors the unique constraint.
-      let query = supabaseAdmin.from('coin_type_hierarchy').select(HIERARCHY_FIELDS)
+      let query = db.from('coin_type_hierarchy').select(HIERARCHY_FIELDS)
       for (const level of ['level1_zh', 'level2_zh', 'level3_zh', 'level4_zh', 'level5_zh'] as const) {
         const value = parsed.data[level]
         query = value == null ? query.is(level, null) : query.eq(level, value)
@@ -109,12 +111,13 @@ export async function updateCoinTypeHierarchyDescription(
   _prev: ActionState<CoinTypeHierarchyRow>,
   formData: FormData
 ): Promise<ActionState<CoinTypeHierarchyRow>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = coinTypeHierarchyDescriptionSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   const { id, ...rest } = parsed.data
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('coin_type_hierarchy')
     .update(rest)
     .eq('id', id)

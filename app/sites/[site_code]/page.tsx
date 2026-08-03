@@ -8,7 +8,7 @@ import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
 import { LabelHint } from '@/components/ui/LabelHint'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { formatCoordinates, formatNumber } from '@/lib/format'
@@ -178,6 +178,7 @@ export default async function SitePage({ params }: PageProps) {
   const site = await getSite(site_code)
   if (!site) notFound()
 
+  const authorized = await isAuthorized()
   const summary = await getSiteMapSummary(site_code)
   const contexts = await getSiteContexts(site_code)
   const finds = await getSiteFinds(contexts.map((c) => c.context_code))
@@ -191,7 +192,7 @@ export default async function SitePage({ params }: PageProps) {
 
   const sources = await getSources(sourceCodes)
   // Only needed to populate the find-editing combobox, so skip the fetch in prod.
-  const coinIssues = isDevMode() ? await getCoinIssues() : []
+  const coinIssues = authorized ? await getCoinIssues() : []
 
   // Structured citations (source_links), distinct from the legacy freetext
   // source_code fields resolved above.
@@ -368,7 +369,7 @@ export default async function SitePage({ params }: PageProps) {
         </div>
       )}
 
-      {isDevMode() && (
+      {authorized && (
         <div className="mt-6">
           <DataCard title="Site Record (dev only)">
             <SiteRecordSection site={site} />
@@ -382,7 +383,7 @@ export default async function SitePage({ params }: PageProps) {
           contexts={contexts}
           finds={finds}
           sources={sources}
-          isDevMode={isDevMode()}
+          isDevMode={authorized}
           coinIssues={coinIssues}
           structuredSourceLinks={structuredSourceLinks}
           sourcesByCode={sourcesByCode}

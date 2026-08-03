@@ -1,10 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertDevOnly } from '@/lib/admin/guard'
+import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
 import { contextSchema, findSchema, siteSchema } from '@/lib/admin/schemas'
 import { COIN_ISSUE_FIELDS, flattenCoinIssue, type CoinIssueEmbed } from '@/lib/queries'
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { ActionState } from '@/lib/admin/types'
 import type { Context, Find, Site } from '@/lib/types'
 
@@ -28,12 +27,13 @@ function revalidateSite(siteCode: string) {
 // ── sites ────────────────────────────────────────────────────────────────
 
 export async function updateSite(_prev: ActionState<Site>, formData: FormData): Promise<ActionState<Site>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = siteSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   const { site_code, ...rest } = parsed.data
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('sites')
     .update(rest)
     .eq('site_code', site_code)
@@ -49,13 +49,14 @@ export async function updateSite(_prev: ActionState<Site>, formData: FormData): 
 // ── contexts ─────────────────────────────────────────────────────────────
 
 export async function createContext(_prev: ActionState<Context>, formData: FormData): Promise<ActionState<Context>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = contextSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
   // parsed.data.id is undefined on create (contextSchema's id is .optional())
   // and JSON.stringify drops undefined-valued keys, so no need to strip it.
-  const { data, error } = await supabaseAdmin.from('contexts').insert(parsed.data).select('*').single()
+  const { data, error } = await db.from('contexts').insert(parsed.data).select('*').single()
   if (error) return { ok: false, formError: error.message }
 
   revalidateSite(parsed.data.site_code)
@@ -63,13 +64,14 @@ export async function createContext(_prev: ActionState<Context>, formData: FormD
 }
 
 export async function updateContext(_prev: ActionState<Context>, formData: FormData): Promise<ActionState<Context>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = contextSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
   if (!parsed.data.id) return { ok: false, formError: 'Missing context id.' }
 
   const { id, ...rest } = parsed.data
-  const { data, error } = await supabaseAdmin.from('contexts').update(rest).eq('id', id).select('*').single()
+  const { data, error } = await db.from('contexts').update(rest).eq('id', id).select('*').single()
   if (error) return { ok: false, formError: error.message }
 
   revalidateSite(parsed.data.site_code)
@@ -77,8 +79,9 @@ export async function updateContext(_prev: ActionState<Context>, formData: FormD
 }
 
 export async function deleteContext(id: string, siteCode: string): Promise<ActionState<null>> {
-  assertDevOnly()
-  const { error } = await supabaseAdmin.from('contexts').delete().eq('id', id)
+  await assertAuthorized()
+  const db = await getWriteClient()
+  const { error } = await db.from('contexts').delete().eq('id', id)
   if (error) return { ok: false, formError: error.message }
 
   revalidateSite(siteCode)
@@ -88,11 +91,12 @@ export async function deleteContext(id: string, siteCode: string): Promise<Actio
 // ── finds ────────────────────────────────────────────────────────────────
 
 export async function createFind(_prev: ActionState<Find>, formData: FormData): Promise<ActionState<Find>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = findSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('finds')
     .insert(parsed.data)
     .select(`*, coin_issues(${COIN_ISSUE_FIELDS})`)
@@ -104,13 +108,14 @@ export async function createFind(_prev: ActionState<Find>, formData: FormData): 
 }
 
 export async function updateFind(_prev: ActionState<Find>, formData: FormData): Promise<ActionState<Find>> {
-  assertDevOnly()
+  await assertAuthorized()
+  const db = await getWriteClient()
   const parsed = findSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
   if (!parsed.data.id) return { ok: false, formError: 'Missing find id.' }
 
   const { id, ...rest } = parsed.data
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('finds')
     .update(rest)
     .eq('id', id)
@@ -123,8 +128,9 @@ export async function updateFind(_prev: ActionState<Find>, formData: FormData): 
 }
 
 export async function deleteFind(id: string): Promise<ActionState<null>> {
-  assertDevOnly()
-  const { error } = await supabaseAdmin.from('finds').delete().eq('id', id)
+  await assertAuthorized()
+  const db = await getWriteClient()
+  const { error } = await db.from('finds').delete().eq('id', id)
   if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/sites/[site_code]', 'page')

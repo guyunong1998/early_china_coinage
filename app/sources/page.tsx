@@ -1,5 +1,5 @@
 import { SourcesListClient } from '@/components/sources/SourcesListClient'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
 import { getAllSourceLinks, getAllSources } from '@/lib/queries'
 
@@ -11,6 +11,7 @@ export const metadata = {
 export default async function SourcesPage() {
   const [sources, links] = await Promise.all([getAllSources(), getAllSourceLinks()])
   const resolved = await resolveSourceLinkTargets(links)
+  const authorized = await isAuthorized()
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -22,7 +23,7 @@ export default async function SourcesPage() {
         </p>
       </div>
 
-      <SourcesListClient initialSources={sources} initialLinks={links} initialResolved={resolved} isDevMode={isDevMode()} />
+      <SourcesListClient initialSources={sources} initialLinks={links} initialResolved={resolved} isDevMode={authorized} />
     </div>
   )
 }

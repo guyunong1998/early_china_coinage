@@ -7,7 +7,7 @@ import { MintRecordSection } from '@/components/mints/MintRecordSection'
 import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import { getMintDossierByCode } from '@/lib/mint-dossiers'
 import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
 import { getMintFindspotsData, getMints } from '@/lib/queries'
@@ -32,6 +32,7 @@ export default async function MintDetailPage({ params }: PageProps) {
   const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints), mint_code)
   if (!mint) notFound()
   const rawMint = dbMints.find((m) => m.id === mint.db_id)
+  const authorized = await isAuthorized()
 
   const distribution = await getMintFindspotsData(mint.name_zh).catch(() => ({
     sites: [],
@@ -196,7 +197,7 @@ export default async function MintDetailPage({ params }: PageProps) {
           from (and hidden in production, unlike) the merged panels above,
           which blend in lib/mint-dossiers.ts content that isn't stored in
           Supabase — showing this in prod would just duplicate them. */}
-      {rawMint && isDevMode() && (
+      {rawMint && authorized && (
         <section className="panel mt-6 overflow-hidden">
           <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             Database Record (dev only)
