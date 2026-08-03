@@ -695,9 +695,13 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addLayerControl, addStaticMajorRivers, setLabelLayerForLang } = await import(
-        '@/lib/map-layers'
-      )
+      const {
+        buildBaseLayers,
+        addLayerControl,
+        addStaticMajorRivers,
+        addStaticRoutes,
+        setLabelLayerForLang,
+      } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
 
       const center: [number, number] = props.kind === 'sites' ? [35.8, 105.4] : [37.5, 112]
@@ -706,22 +710,24 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       mapRef.current = map
       L.control.zoom({ position: 'topright' }).addTo(map)
 
-      const { cawm, satellite, cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      const baseLayers = buildBaseLayers(L)
+      const { cyclosm, labelsEn, labelsZh } = baseLayers
       cyclosm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
-      // Full layer-switcher + river-mode controls are reserved for the
-      // dedicated Map Visualizations pages (fullControls, default true),
-      // desktop only — on mobile, or wherever this canvas is embedded
-      // elsewhere with fullControls={false} (e.g. the /mints overview map),
-      // it drops back to the same "just the bilingual labels + static major
-      // rivers" baseline every other map on the site uses.
+      // The layer control is reserved for the dedicated Map Visualizations
+      // pages (fullControls, default true), desktop only — on mobile, or
+      // wherever this canvas is embedded elsewhere with fullControls={false}
+      // (e.g. the /mints overview map), it drops back to the same "just the
+      // bilingual labels + static major rivers and routes" baseline every
+      // other map on the site uses.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
       if (isMobile || props.fullControls === false) {
         addStaticMajorRivers(L, map)
+        addStaticRoutes(L, map)
       } else {
-        addLayerControl(L, map, cawm, satellite, cyclosm, {
+        addLayerControl(L, map, baseLayers, {
           collapsed: true,
           position: 'bottomright',
         })

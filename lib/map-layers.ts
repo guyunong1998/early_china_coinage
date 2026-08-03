@@ -106,78 +106,170 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
   return group
 }
 
-type RiverMode = 'off' | 'major' | 'minor' | 'all'
-
-const RIVER_MODES: { mode: RiverMode; label: string }[] = [
-  { mode: 'off', label: 'Off' },
-  { mode: 'major', label: 'Major rivers' },
-  { mode: 'minor', label: 'Minor rivers' },
-  { mode: 'all', label: 'All rivers' },
-]
-
 /**
- * Adds a small standalone control that switches between showing no rivers,
- * only the major river network, only minor tributaries, or both together.
+ * Historical route network + its named nodes, converted from the route0180 /
+ * Node shapefiles by scripts/convert-routes-shapefile.mjs.
+ *
+ * Each `routelevel` gets its own cartographic line style:
+ *   1 (trunk)     — double line: a thick casing with a thinner light line
+ *                   drawn down its middle, reading as two parallel lines.
+ *   2 (secondary) — single solid line.
+ *   3 (tertiary)  — dashed line.
+ *
+ * The routes arrive as many short, separately-digitised segments that meet
+ * end to end, so drawing each segment's full stack (halo → casing → inner)
+ * one after another would let a neighbour's halo/inner paint over the segment
+ * before it and leave a visible seam or stub at every junction. Instead each
+ * part of the stack lives in its own pane, so *all* halos are painted, then
+ * *all* casings, and so on — junctions fuse into continuous lines.
  */
-function addRiverModeControl(
+type RouteProps = { routelevel?: number | null }
+type RouteNodeProps = { id?: number | null; name?: string | null }
+
+const ROUTE_COLOR = '#b45309'
+const ROUTE_HALO_COLOR = '#fff7ed'
+const ROUTE_NODE_COLOR = '#7c2d12'
+
+/** Pane name → z-index, in paint order. Above Leaflet's overlayPane (400),
+ *  below its markerPane (600) so find-site coin markers stay on top. */
+const ROUTE_PANES = {
+  halo: 402,
+  trunkCasing: 403,
+  trunkInner: 404,
+  line: 405,
+  nodes: 406,
+} as const
+
+const ROUTE_DASH = '7 5'
+
+function ensurePane(map: import('leaflet').Map, name: string, zIndex: number) {
+  const pane = map.getPane(name) ?? map.createPane(name)
+  pane.style.zIndex = String(zIndex)
+  return name
+}
+
+function buildRoutesLayer(
   L: LeafletNS,
   map: import('leaflet').Map,
-  majorRivers: import('leaflet').LayerGroup,
-  minorRivers: import('leaflet').LayerGroup,
-  defaultMode: RiverMode = 'major',
-  position: import('leaflet').ControlPosition = 'topright'
+  linesUrl = '/data/routes.geojson',
+  nodesUrl = '/data/route-nodes.geojson'
 ) {
-  function applyMode(mode: RiverMode) {
-    map.removeLayer(majorRivers)
-    map.removeLayer(minorRivers)
-    if (mode === 'major' || mode === 'all') majorRivers.addTo(map)
-    if (mode === 'minor' || mode === 'all') minorRivers.addTo(map)
+  const group = L.layerGroup()
+
+  const panes = {
+    halo: ensurePane(map, 'routes-halo', ROUTE_PANES.halo),
+    trunkCasing: ensurePane(map, 'routes-trunk-casing', ROUTE_PANES.trunkCasing),
+    trunkInner: ensurePane(map, 'routes-trunk-inner', ROUTE_PANES.trunkInner),
+    line: ensurePane(map, 'routes-line', ROUTE_PANES.line),
+    nodes: ensurePane(map, 'routes-nodes', ROUTE_PANES.nodes),
   }
 
-  const RiverControl = L.Control.extend({
-    options: { position },
-    onAdd() {
-      const container = L.DomUtil.create('div', 'leaflet-bar river-mode-control')
-      container.style.background = 'white'
-      container.style.padding = '6px 10px'
-      container.style.fontSize = '12px'
-      container.style.fontFamily = 'sans-serif'
-      container.style.lineHeight = '1.7'
-      container.style.color = '#333'
-      container.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)'
+  fetch(linesUrl)
+    .then((res) => res.json())
+    .then((geojson: import('geojson').FeatureCollection) => {
+      type RouteFeature = import('geojson').Feature<import('geojson').Geometry, RouteProps>
 
-      const title = document.createElement('div')
-      title.textContent = 'Rivers'
-      title.style.fontWeight = '600'
-      title.style.marginBottom = '4px'
-      container.appendChild(title)
-
-      RIVER_MODES.forEach(({ mode, label }) => {
-        const row = document.createElement('label')
-        row.style.display = 'block'
-        row.style.cursor = 'pointer'
-        row.style.whiteSpace = 'nowrap'
-
-        const input = document.createElement('input')
-        input.type = 'radio'
-        input.name = 'river-mode'
-        input.value = mode
-        input.checked = mode === defaultMode
-        input.style.marginRight = '5px'
-        input.addEventListener('change', () => applyMode(mode))
-
-        row.appendChild(input)
-        row.appendChild(document.createTextNode(label))
-        container.appendChild(row)
+      const atLevel = (level: number) => ({
+        ...geojson,
+        features: geojson.features.filter(
+          (f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level
+        ),
       })
 
-      L.DomEvent.disableClickPropagation(container)
-      return container
-    },
-  })
+      const tooltip = (feature: RouteFeature, layer: import('leaflet').Layer) => {
+        const level = feature.properties?.routelevel
+        if (level == null) return
+        layer.bindTooltip(`Route · level ${level}`, { sticky: true, className: 'river-tooltip' })
+      }
 
-  new RiverControl().addTo(map)
-  applyMode(defaultMode)
+      // Level 1 — halo, then casing, then the light inner line. Round caps on
+      // the casing let abutting segments blend; the inner line uses butt caps
+      // so it can never spill past the casing it sits inside.
+      const trunk = atLevel(1)
+      L.geoJSON(trunk, {
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
+      }).addTo(group)
+      L.geoJSON(trunk, {
+        pane: panes.trunkCasing,
+        style: { color: ROUTE_COLOR, weight: 7, opacity: 1, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: tooltip,
+      }).addTo(group)
+      L.geoJSON(trunk, {
+        pane: panes.trunkInner,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 3, opacity: 1, lineCap: 'butt', lineJoin: 'round' },
+      }).addTo(group)
+
+      // Level 2 — plain solid line.
+      const secondary = atLevel(2)
+      L.geoJSON(secondary, {
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
+      }).addTo(group)
+      L.geoJSON(secondary, {
+        pane: panes.line,
+        style: { color: ROUTE_COLOR, weight: 2.6, opacity: 1, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: tooltip,
+      }).addTo(group)
+
+      // Level 3 — dashed. Its halo carries the same dash pattern, otherwise a
+      // solid white line would show through the gaps.
+      const tertiary = atLevel(3)
+      L.geoJSON(tertiary, {
+        pane: panes.halo,
+        interactive: false,
+        style: {
+          color: ROUTE_HALO_COLOR,
+          weight: 4.4,
+          opacity: 0.9,
+          dashArray: ROUTE_DASH,
+          lineCap: 'butt',
+        },
+      }).addTo(group)
+      L.geoJSON(tertiary, {
+        pane: panes.line,
+        style: {
+          color: ROUTE_COLOR,
+          weight: 2,
+          opacity: 1,
+          dashArray: ROUTE_DASH,
+          lineCap: 'butt',
+        },
+        onEachFeature: tooltip,
+      }).addTo(group)
+    })
+    .catch(() => {
+      // Route overlay is non-essential — fail silently.
+    })
+
+  fetch(nodesUrl)
+    .then((res) => res.json())
+    .then((geojson) => {
+      L.geoJSON<RouteNodeProps>(geojson, {
+        pane: panes.nodes,
+        pointToLayer: (_feature, latlng) =>
+          L.circleMarker(latlng, {
+            pane: panes.nodes,
+            radius: 3,
+            color: ROUTE_HALO_COLOR,
+            weight: 1.2,
+            fillColor: ROUTE_NODE_COLOR,
+            fillOpacity: 1,
+          }),
+        onEachFeature: (feature, layer) => {
+          const name = feature.properties?.name
+          if (name) layer.bindTooltip(name, { direction: 'top', className: 'river-tooltip' })
+        },
+      }).addTo(group)
+    })
+    .catch(() => {
+      // Node overlay is non-essential — fail silently.
+    })
+
+  return group
 }
 
 export function buildBaseLayers(L: LeafletNS) {
@@ -213,6 +305,16 @@ export function buildBaseLayers(L: LeafletNS) {
     maxZoom: 20,
   })
 
+  // Plain OpenStreetMap Carto — CyclOSM above is also OSM data, but its
+  // cycling-oriented styling pushes roads and paths forward; this is the
+  // standard rendering, for reading present-day place names and admin
+  // boundaries straight.
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:
+      'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  })
+
   // Transparent English/romanized place-name overlay (Esri's reference
   // layer). Neither base layer (the Stamen terrain background nor the
   // satellite imagery) carries any place labels of its own, so one of these
@@ -233,8 +335,10 @@ export function buildBaseLayers(L: LeafletNS) {
   // same plain "dot + text" look as the English layer, no road clutter.
   const labelsZh = buildPlaceLabelsLayer(L)
 
-  return { cawm, satellite, cyclosm, labelsEn, labelsZh }
+  return { cawm, satellite, cyclosm, osm, labelsEn, labelsZh }
 }
+
+export type BaseLayers = ReturnType<typeof buildBaseLayers>
 
 /**
  * Builds the Chinese place-label layer from the static list in
@@ -284,45 +388,60 @@ export function setLabelLayerForLang(
 }
 
 /**
- * Full interactive chrome: the Ancient World Map/Satellite base-layer
- * switcher, plus the Off/Major/Minor/All river-mode control. Reserved for
- * the dedicated Map Visualizations pages (desktop only — see
+ * Full interactive chrome, as a single control: the basemap switcher over
+ * the toggleable overlays (the two river tiers and the route network), so
+ * everything the user can turn on or off lives in one box. Reserved for the
+ * dedicated Map Visualizations pages (desktop only — see
  * `addStaticMajorRivers` below for every other map, and for all maps on
  * mobile screens). The place-name label layer isn't part of this control —
  * it's always on, following the language toggle (`setLabelLayerForLang`),
  * not a manual overlay checkbox.
+ *
+ * The river tiers are two independent checkboxes rather than the
+ * Off/Major/Minor/All radio group they replaced: unticking both is "off",
+ * ticking both is "all", so no combination was lost by folding them in here.
  */
 export function addLayerControl(
   L: LeafletNS,
   map: import('leaflet').Map,
-  cawm: import('leaflet').TileLayer,
-  satellite: import('leaflet').TileLayer,
-  cyclosm: import('leaflet').TileLayer,
+  layers: BaseLayers,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
+  const { cawm, satellite, cyclosm, osm } = layers
   const position = options?.position ?? 'topright'
+
+  const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
+  const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
+  const routes = buildRoutesLayer(L, map).addTo(map)
 
   L.control
     .layers(
       // CyclOSM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
-      { CyclOSM: cyclosm, 'Ancient World Map': cawm, Satellite: satellite },
-      {},
+      { CyclOSM: cyclosm, 'Ancient World Map': cawm, Satellite: satellite, OpenStreetMap: osm },
+      {
+        'Major rivers': majorRivers,
+        'Minor rivers': minorRivers,
+        'Routes & nodes': routes,
+      },
       { collapsed: options?.collapsed ?? false, position }
     )
     .addTo(map)
-
-  const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson')
-  const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  addRiverModeControl(L, map, majorRivers, minorRivers, 'major', position)
 }
 
 /**
  * Every map outside the dedicated Map Visualizations pages (and every map on
- * mobile screens, including those pages): no layer-switcher or river-mode
- * controls at all — just the major river network, always on, as a fixed
- * reference layer with no way to toggle it off.
+ * mobile screens, including those pages): no layer control at all — just the
+ * major river network, always on, as a fixed reference layer with no way to
+ * toggle it off.
  */
 export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
+}
+
+/** The route network as a fixed layer, for the same no-controls maps that get
+ *  `addStaticMajorRivers` — otherwise routes would vanish entirely below the
+ *  768px breakpoint, where the layer control isn't built. */
+export function addStaticRoutes(L: LeafletNS, map: import('leaflet').Map) {
+  buildRoutesLayer(L, map).addTo(map)
 }
