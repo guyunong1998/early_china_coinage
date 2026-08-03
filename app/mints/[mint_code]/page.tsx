@@ -4,12 +4,14 @@ import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
 import { MintRecordSection } from '@/components/mints/MintRecordSection'
+import { CitationsSection } from '@/components/sources/CitationsSection'
 import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
 import { isAuthorized } from '@/lib/admin/guard'
+import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
 import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
-import { getImages, getMintFindspotsData, getMints } from '@/lib/queries'
+import { getImages, getMintFindspotsData, getMints, getSourceLinksForMint, getSources } from '@/lib/queries'
 
 type PageProps = {
   params: Promise<{ mint_code: string }>
@@ -45,6 +47,13 @@ export default async function MintDetailPage({ params }: PageProps) {
 
   const descriptionZh = mint.description_zh
   const descriptionEn = mint.description_en || null
+
+  const mintSourceLinks = await getSourceLinksForMint(mint_code)
+  const [mintSources, mintResolvedTargets] = await Promise.all([
+    getSources(mintSourceLinks.map((l) => l.source_code)),
+    resolveSourceLinkTargets(mintSourceLinks),
+  ])
+  const mintSourcesByCode = new Map(mintSources.map((s) => [s.source_code, s]))
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -165,11 +174,6 @@ export default async function MintDetailPage({ params }: PageProps) {
               ⚠ {mint.location_note}
             </p>
           )}
-          {mint.citation && (
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">Citation:</span> {mint.citation}
-            </p>
-          )}
         </div>
       </section>
 
@@ -231,24 +235,44 @@ export default async function MintDetailPage({ params }: PageProps) {
       {/* Placeholder checklist for incomplete records */}
       <MintPlaceholder mint={mint} />
 
-      {/* References — mint.sources_unlinked, raw citation strings not yet
-          matched to a public.sources row (see mints.sources_unlinked). */}
+      {/* Sources & Citations — structured source_links on top, mint's own
+          legacy freetext (sources_unlinked + citation) at the bottom. */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mintDetail.references" />
         </div>
         <div className="p-5">
-          {mint.sources_unlinked.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              <T k="mintDetail.noReferences" />
-            </p>
-          ) : (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
-              {mint.sources_unlinked.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          )}
+          <CitationsSection
+            targetType="mint"
+            targetCode={mint_code}
+            targetLabel={`${mint.name_zh} (${mint.name_en})`}
+            initialLinks={mintSourceLinks}
+            sourcesByCode={mintSourcesByCode}
+            resolvedTargets={mintResolvedTargets}
+            isDevMode={authorized}
+            legacy={
+              mint.sources_unlinked.length === 0 && !mint.citation ? (
+                <p className="text-sm text-gray-500">
+                  <T k="mintDetail.noReferences" />
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {mint.sources_unlinked.length > 0 && (
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+                      {mint.sources_unlinked.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {mint.citation && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">Citation:</span> {mint.citation}
+                    </p>
+                  )}
+                </div>
+              )
+            }
+          />
         </div>
       </section>
 

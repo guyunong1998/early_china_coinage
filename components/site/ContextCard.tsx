@@ -140,7 +140,6 @@ const BLANK_CONTEXT: Context = {
   period_en: null,
   description_zh: null,
   description_en: null,
-  source_code: null,
   note_zh: null,
   note_en: null,
 }

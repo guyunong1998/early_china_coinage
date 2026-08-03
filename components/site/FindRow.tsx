@@ -27,7 +27,6 @@ const BLANK_FIND: Find = {
   id: '',
   find_code: '',
   context_code: '',
-  source_code: null,
   presence: true,
   quantity_total: null,
   quantity_min: null,

@@ -551,6 +551,18 @@ export async function getSourceLinksForSite(
   return [...siteLinks, ...contextLinks, ...findLinks]
 }
 
+/** source_links scoped to one mint — no child records to also pull in
+ * (unlike a site's contexts/finds), so a single scoped query is enough. */
+export async function getSourceLinksForMint(mintCode: string): Promise<SourceLink[]> {
+  const { data, error } = await supabase
+    .from('source_links')
+    .select('*')
+    .eq('target_type', 'mint')
+    .eq('target_code', mintCode)
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getStates(): Promise<State[]> {
   return fetchAllPages<State>((from, to) =>
     supabase.from('states').select('id, state_zh, state_en').order('state_zh').range(from, to)

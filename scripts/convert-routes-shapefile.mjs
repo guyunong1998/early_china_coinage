@@ -17,6 +17,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as shapefile from 'shapefile'
+import { snapNodesToRoutes } from './route-node-snap.mjs'
 
 /**
  * The routes are digitised as many short segments whose shared junctions were
@@ -142,30 +143,26 @@ function writeGeoJson(filename, features) {
 }
 
 const routes = await readShapefile('route0180')
-writeGeoJson(
-  'routes.geojson',
-  weldAndMerge(
-    routes.features
-      .filter((f) => f.geometry?.type === 'LineString')
-      .map((f) => ({
-        type: 'Feature',
-        properties: { routelevel: Number(f.properties?.routelevel) || 2 },
-        geometry: f.geometry,
-      }))
-  )
-)
-
-const nodes = await readShapefile('Node')
-writeGeoJson(
-  'route-nodes.geojson',
-  nodes.features
-    .filter((f) => f.geometry?.type === 'Point')
+const mergedRoutes = weldAndMerge(
+  routes.features
+    .filter((f) => f.geometry?.type === 'LineString')
     .map((f) => ({
       type: 'Feature',
-      properties: {
-        id: f.properties?.id ?? null,
-        name: f.properties?.Name ?? f.properties?.name ?? null,
-      },
+      properties: { routelevel: Number(f.properties?.routelevel) || 2 },
       geometry: f.geometry,
     }))
 )
+writeGeoJson('routes.geojson', mergedRoutes)
+
+const nodes = await readShapefile('Node')
+const nodeFeatures = nodes.features
+  .filter((f) => f.geometry?.type === 'Point')
+  .map((f) => ({
+    type: 'Feature',
+    properties: {
+      id: f.properties?.id ?? null,
+      name: f.properties?.Name ?? f.properties?.name ?? null,
+    },
+    geometry: f.geometry,
+  }))
+writeGeoJson('route-nodes.geojson', snapNodesToRoutes(nodeFeatures, mergedRoutes))

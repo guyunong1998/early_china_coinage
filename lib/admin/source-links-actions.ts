@@ -10,6 +10,7 @@ import type { SourceLink } from '@/lib/types'
 function revalidateSourceLinks() {
   revalidatePath('/sources')
   revalidatePath('/sites/[site_code]', 'page')
+  revalidatePath('/mints/[mint_code]', 'page')
 }
 
 /** source_link_code isn't user-supplied — existing rows follow a

@@ -4,11 +4,10 @@ import { useMemo, useState } from 'react'
 import { ContextCard } from '@/components/site/ContextCard'
 import { CoinTypePieChart, type PieChild, type PieGroup } from '@/components/site/CoinTypePieChart'
 import { FindRow } from '@/components/site/FindRow'
-import { SourceLinksSection } from '@/components/site/SourceLinksSection'
+import { CitationsSection } from '@/components/sources/CitationsSection'
 import { Tabs } from '@/components/ui/Tabs'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
-import { displayValue } from '@/lib/format'
 import type { CoinIssueDisplay, Context, Find, Source, SourceLink } from '@/lib/types'
 
 function findQuantity(find: Find) {
@@ -132,7 +131,6 @@ type SiteDetailTabsProps = {
   siteCode: string
   contexts: Context[]
   finds: Find[]
-  sources: Source[]
   isDevMode: boolean
   coinIssues?: CoinIssueDisplay[]
   structuredSourceLinks?: SourceLink[]
@@ -164,7 +162,6 @@ export function SiteDetailTabs({
   siteCode,
   contexts: initialContexts,
   finds: initialFinds,
-  sources,
   isDevMode,
   coinIssues = [],
   structuredSourceLinks = [],
@@ -352,57 +349,6 @@ export function SiteDetailTabs({
     </div>
   )
 
-  // ── References tab ───────────────────────────────────────────────────────
-  const uniqueSources = useMemo(() => {
-    const map = new Map<string, Source>()
-    sources.forEach((source) => {
-      if (!map.has(source.source_code)) {
-        map.set(source.source_code, source)
-      }
-    })
-    return [...map.values()]
-  }, [sources])
-
-  const referencesContent = (
-    <div className="space-y-4">
-      {uniqueSources.length === 0 ? (
-        <p className="text-sm italic text-gray-500">No bibliographic sources linked yet.</p>
-      ) : (
-        uniqueSources.map((source, index) => (
-          <article key={source.source_code} className="panel-record-item p-4 text-sm">
-            <p className="text-xs font-semibold text-brand">
-              [{index + 1}] {source.source_code}
-            </p>
-            <p className="mt-1 leading-6 text-gray-800">
-              {source.citation_zh ??
-                `${displayValue(source.author_zh, '')}${source.author_zh ? '：' : ''}${displayValue(
-                  source.title_zh,
-                  '—'
-                )}`}
-            </p>
-            {source.title_en && (
-              <p className="mt-1 leading-6 italic text-gray-500">{source.title_en}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              {displayValue(source.publication_zh)}
-              {source.year ? ` (${source.year})` : ''}
-              {source.page ? `, p. ${source.page}` : ''}
-            </p>
-            {source.url && (
-              <a
-                href={source.url}
-                className="mt-2 inline-block text-brand hover:underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {source.url}
-              </a>
-            )}
-          </article>
-        ))
-      )}
-    </div>
-  )
 
   return (
     <div className="space-y-3">
@@ -432,13 +378,14 @@ export function SiteDetailTabs({
         tabs={[
           { id: 'contexts', label: `Contexts (${filteredContexts.length})`, content: contextsContent },
           { id: 'finds', label: `Finds (${filteredFinds.length})`, content: findsContent },
-          { id: 'references', label: `References (${uniqueSources.length})`, content: referencesContent },
           {
             id: 'source-links',
             label: `Sources & Citations (${structuredSourceLinks.length})`,
             content: (
-              <SourceLinksSection
-                siteCode={siteCode}
+              <CitationsSection
+                targetType="site"
+                targetCode={siteCode}
+                targetLabel={siteCode}
                 initialLinks={structuredSourceLinks}
                 sourcesByCode={sourcesByCode}
                 resolvedTargets={resolvedTargets}

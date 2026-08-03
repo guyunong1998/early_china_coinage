@@ -30,14 +30,6 @@ type PageProps = {
   params: Promise<{ site_code: string }>
 }
 
-function splitSourceCodes(raw: string | null | undefined): string[] {
-  if (!raw) return []
-  return raw
-    .split(/[、,，;；|]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
 const UNKNOWN_MINT_TOKENS = ['未知', '不详', '无', '—', '-', 'n/a', 'na', 'unknown', '']
 
 function findQuantity(find: Find) {
@@ -214,19 +206,9 @@ export default async function SitePage({ params }: PageProps) {
   const finds = await getSiteFinds(contexts.map((c) => c.context_code))
   const mints = (await getMints()).map(toMintInfo)
 
-  // Support multiple refs stored in one field, e.g. "SRC001;SRC002"
-  const sourceCodes = [
-    ...splitSourceCodes(site.source_code),
-    ...contexts.flatMap((c) => splitSourceCodes(c.source_code)),
-    ...finds.flatMap((f) => splitSourceCodes(f.source_code)),
-  ]
-
-  const sources = await getSources(sourceCodes)
   // Only needed to populate the find-editing combobox, so skip the fetch in prod.
   const coinIssues = authorized ? await getCoinIssues() : []
 
-  // Structured citations (source_links), distinct from the legacy freetext
-  // source_code fields resolved above.
   const structuredSourceLinks = await getSourceLinksForSite(
     site_code,
     contexts.map((c) => c.context_code),
@@ -413,7 +395,6 @@ export default async function SitePage({ params }: PageProps) {
           siteCode={site_code}
           contexts={contexts}
           finds={finds}
-          sources={sources}
           isDevMode={authorized}
           coinIssues={coinIssues}
           structuredSourceLinks={structuredSourceLinks}

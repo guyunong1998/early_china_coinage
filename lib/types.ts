@@ -41,7 +41,6 @@ export type Site = MapSite & {
   period_en: string | null
   description_zh: string | null
   description_en: string | null
-  source_code: string | null
   note_zh: string | null
   note_en: string | null
   created_at: string
@@ -60,7 +59,6 @@ export type Context = {
   period_en: string | null
   description_zh: string | null
   description_en: string | null
-  source_code: string | null
   note_zh: string | null
   note_en: string | null
 }
@@ -119,7 +117,6 @@ export type Find = {
   id: string
   find_code: string
   context_code: string
-  source_code: string | null
   presence: boolean | null
   quantity_total: number | null
   quantity_min: number | null
@@ -249,7 +246,7 @@ export type SourceLink = {
   id: string
   source_link_code: string
   source_code: string
-  target_type: 'site' | 'context' | 'find' | 'coin_item'
+  target_type: 'site' | 'context' | 'find' | 'coin_item' | 'mint'
   target_code: string
   page: string | null
   note_zh: string | null

@@ -44,6 +44,7 @@ export async function resolveSourceLinkTargets(
     context: [...new Set(links.filter((l) => l.target_type === 'context').map((l) => l.target_code))],
     find: [...new Set(links.filter((l) => l.target_type === 'find').map((l) => l.target_code))],
     coin_item: [...new Set(links.filter((l) => l.target_type === 'coin_item').map((l) => l.target_code))],
+    mint: [...new Set(links.filter((l) => l.target_type === 'mint').map((l) => l.target_code))],
   }
 
   if (codesByType.site.length > 0) {
@@ -119,6 +120,20 @@ export async function resolveSourceLinkTargets(
       result.set(key('coin_item', row.coin_item_code), {
         label: row.description_zh ? `${row.coin_item_code} · ${row.description_zh}` : row.coin_item_code,
         href: `/sites/${context.site_code}`,
+      })
+    })
+  }
+
+  if (codesByType.mint.length > 0) {
+    const rows = await fetchInBatches(codesByType.mint, async (batch) => {
+      const { data, error } = await supabase.from('mints').select('mint_code, name_zh').in('mint_code', batch)
+      if (error) throw error
+      return data ?? []
+    })
+    rows.forEach((row) => {
+      result.set(key('mint', row.mint_code), {
+        label: row.name_zh ? `${row.mint_code} · ${row.name_zh}` : row.mint_code,
+        href: `/mints/${row.mint_code}`,
       })
     })
   }

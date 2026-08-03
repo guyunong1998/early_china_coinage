@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { deleteSourceLink } from '@/lib/admin/source-links-actions'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
@@ -10,23 +10,37 @@ import { AddSourceLinkForm } from '@/components/sources/AddSourceLinkForm'
 import { ConfirmDeleteButton } from '@/components/edit/ConfirmDeleteButton'
 
 /**
- * The site detail page's "Sources & Citations" tab — structured, per-record
- * citations from source_links (site/context/find scoped to this site),
- * distinct from the existing "References" tab, which is driven by the
- * legacy freetext source_code field and stays as-is.
+ * Combined "Sources & Citations" box, shared by the site and mint detail
+ * pages: structured, per-record citations from source_links on top (add/
+ * delete, dev-only), and whatever legacy freetext citations still exist for
+ * this record at the bottom. The legacy content is caller-supplied since its
+ * shape differs per record type — sites/contexts/finds have a single
+ * delimited `source_code` string, mints have a `sources_unlinked` array
+ * plus a separate `citation` string.
  */
-export function SourceLinksSection({
-  siteCode,
+export function CitationsSection({
+  targetType,
+  targetCode,
+  targetLabel,
   initialLinks,
   sourcesByCode,
   resolvedTargets,
   isDevMode,
+  legacy,
 }: {
-  siteCode: string
+  targetType: SourceLink['target_type']
+  targetCode: string
+  targetLabel: string
   initialLinks: SourceLink[]
   sourcesByCode: Map<string, Source>
   resolvedTargets: Map<string, ResolvedTarget>
   isDevMode: boolean
+  /** The record's own legacy/unlinked citation content, rendered below the
+   * structured list — omitted entirely once a record type has no legacy
+   * citation source left (e.g. sites/contexts/finds, whose freetext
+   * source_code column was retired once every value had a proper
+   * source_links row). */
+  legacy?: ReactNode
 }) {
   const [links, setLinks] = useState(initialLinks)
   const [adding, setAdding] = useState(false)
@@ -45,9 +59,9 @@ export function SourceLinksSection({
         <div>
           {adding ? (
             <AddSourceLinkForm
-              defaultTargetType="site"
-              defaultTargetCode={siteCode}
-              defaultTargetLabel={siteCode}
+              defaultTargetType={targetType}
+              defaultTargetCode={targetCode}
+              defaultTargetLabel={targetLabel}
               onCreated={(link) => {
                 setLinks((prev) => [...prev, link])
                 setAdding(false)
@@ -109,6 +123,15 @@ export function SourceLinksSection({
             </article>
           )
         })
+      )}
+
+      {legacy != null && (
+        <div className="border-t border-gray-100 pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Legacy / unlinked references
+          </p>
+          {legacy}
+        </div>
       )}
     </div>
   )

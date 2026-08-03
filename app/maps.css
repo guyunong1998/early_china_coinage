@@ -242,3 +242,14 @@
 .leaflet-tooltip.place-label-tooltip::before {
   display: none;
 }
+
+/* Leaflet's SVG renderer makes every interactive path (river/route lines,
+   circle markers, etc.) focusable for keyboard accessibility. Clicking one
+   moves focus to it, and without this the browser's default focus ring
+   renders as a rectangle around the path's full bounding box (e.g. a route's
+   entire bend) rather than tracing the line itself — far more distracting
+   than helpful for a fully custom-styled map. Leaflet's own CSS doesn't
+   suppress this, so it's done here. */
+.leaflet-interactive:focus {
+  outline: none;
+}

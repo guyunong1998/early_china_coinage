@@ -209,7 +209,7 @@ export const sourceLinkSchema = z.object({
   id: z.string().uuid().optional(),
   source_link_code: requiredText,
   source_code: requiredText,
-  target_type: z.enum(['site', 'context', 'find', 'coin_item']),
+  target_type: z.enum(['site', 'context', 'find', 'coin_item', 'mint']),
   target_code: requiredText,
   page: optionalText,
   note_zh: optionalText,

@@ -15,6 +15,7 @@ const TARGET_TYPES: { value: TargetType; label: string }[] = [
   { value: 'context', label: 'Context' },
   { value: 'find', label: 'Find' },
   { value: 'coin_item', label: 'Coin item' },
+  { value: 'mint', label: 'Mint' },
 ]
 
 const INITIAL: ActionState<SourceLink> = {

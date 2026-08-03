@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 
-export type TargetType = 'site' | 'context' | 'find' | 'coin_item'
+export type TargetType = 'site' | 'context' | 'find' | 'coin_item' | 'mint'
 
 const RESULT_LIMIT = 20
 
@@ -51,6 +51,21 @@ export async function searchTargets(targetType: TargetType, query: string): Prom
       return (data ?? []).map((r) => ({
         value: r.coin_item_code,
         label: r.description_zh ? `${r.coin_item_code} · ${r.description_zh}` : r.coin_item_code,
+      }))
+    }
+    case 'mint': {
+      // mint_code is a generated URL slug, not a natural business code like
+      // the other target types' — still the right join key since it's what
+      // resolveSourceLinkTargets uses to build /mints/[mint_code] hrefs.
+      const { data, error } = await supabase
+        .from('mints')
+        .select('mint_code, name_zh, name_en')
+        .or(`mint_code.ilike.${q},name_zh.ilike.${q},name_en.ilike.${q}`)
+        .limit(RESULT_LIMIT)
+      if (error) throw error
+      return (data ?? []).map((r) => ({
+        value: r.mint_code,
+        label: `${r.mint_code} · ${r.name_zh ?? r.name_en ?? ''}`,
       }))
     }
   }
