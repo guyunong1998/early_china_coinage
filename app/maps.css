@@ -118,12 +118,11 @@
 }
 
 /* MintIssueDistributionMapCanvas.tsx (mint town page's issued-coin
-   distribution map): the mint's own center marker, and each findspot. */
-.map-dot-mint-center {
-  background: var(--map-dot-special);
-}
+   distribution map): each findspot dot. Fully opaque, matching the mint's
+   own dropped-pin marker (always opaque -- see dropPinHtml's doc comment)
+   so every marker on this map reads as the same solid yellow. */
 .map-dot-mint-issue-site {
-  background: var(--map-dot-fill);
+  background: #eda100;
 }
 
 /* MintsOverviewMap.tsx (all mint towns overview). */

@@ -155,8 +155,11 @@ export const findSchema = z.object({
   quantity_estimated: optionalNumber,
   quantity_is_estimated: z.preprocess((v) => v === 'true' || v === true, z.boolean()),
   total_weight_g: optionalNumber,
-  quantity_note_zh: optionalText,
-  quantity_note_en: optionalText,
+  // Not surfaced in the compact find edit row — omittable so an absent
+  // field leaves the existing DB value alone instead of nulling it (same
+  // pattern as coinIssueSchema's note_zh/note_en below).
+  quantity_note_zh: omittableText,
+  quantity_note_en: omittableText,
   description_zh: optionalText,
   description_en: optionalText,
   note_zh: optionalText,

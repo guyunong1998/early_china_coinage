@@ -414,6 +414,14 @@ export function addLayerControl(
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
   const routes = buildRoutesLayer(L, map).addTo(map)
 
+  // Leaflet's layer control inserts each key as raw innerHTML, so "Routes &
+  // nodes" can carry its own hover-title explanation (a native tooltip, not
+  // the app's usual ClickHint popover — this control is plain Leaflet DOM,
+  // not React) the same dotted-underline look every other in-app hint uses.
+  const routesLabel =
+    '<span title="Ancient trade-route network and its named nodes, from the Tang dynasty (description may change)." ' +
+    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes &amp; nodes</span>'
+
   L.control
     .layers(
       // CyclOSM (already the active base layer when this control is built —
@@ -422,7 +430,7 @@ export function addLayerControl(
       {
         'Major rivers': majorRivers,
         'Minor rivers': minorRivers,
-        'Routes & nodes': routes,
+        [routesLabel]: routes,
       },
       { collapsed: options?.collapsed ?? false, position }
     )

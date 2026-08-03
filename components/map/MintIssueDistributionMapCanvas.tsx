@@ -12,6 +12,7 @@
 
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap, Layer } from 'leaflet'
+import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { MapSite } from '@/lib/types'
 
@@ -25,11 +26,18 @@ type MintIssueDistributionMapCanvasProps = {
   sites: MapSite[]
 }
 
-// Marker look (size + role color) comes from app/maps.css — `.map-dot-mint-
-// center` / `.map-dot-mint-issue-site` — no inline styles.
+// Findspot marker look comes from app/maps.css's `.map-dot-mint-issue-site`
+// — no inline styles.
 function makeDot(role: string, size: number) {
   return `<div class="map-dot map-dot-size-${size} ${role}"></div>`
 }
+
+// Same yellow used for ratioToColor's low-end ramp stop (lib/color-scale.ts)
+// — both the mint's dropped pin and the findspot dots share this one color,
+// fully opaque (a dropped pin is always opaque regardless -- see
+// dropPinHtml's own doc comment -- and .map-dot-mint-issue-site below is
+// deliberately solid, not the translucent 0.6-alpha most map-dot roles use).
+const MINT_ISSUE_YELLOW = '#eda100'
 
 export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistributionMapCanvasProps) {
   const { lang } = useLanguage()
@@ -60,13 +68,15 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
 
       const bounds: [number, number][] = [[mint.lat, mint.lng]]
 
-      // Mint center marker
+      // Mint center marker — a dropped pin, since this map only ever shows
+      // exactly one mint (see dropPinHtml's own doc comment / SinglePointMap).
       L.marker([mint.lat, mint.lng], {
         icon: L.divIcon({
           className: '',
-          html: makeDot('map-dot-mint-center', 18),
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
+          html: dropPinHtml(MINT_ISSUE_YELLOW),
+          iconSize: [PIN_WIDTH, PIN_HEIGHT],
+          iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+          popupAnchor: [0, -PIN_HEIGHT],
         }),
       })
         .addTo(map)

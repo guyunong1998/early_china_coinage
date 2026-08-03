@@ -26,14 +26,16 @@ export function StateQuickCreateForm({
   return (
     <form action={formAction} className="space-y-3">
       <ActionFormStatus state={state} />
-      <div>
-        <FieldLabel>State (zh)</FieldLabel>
-        <input name="state_zh" required autoFocus className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>State (en)</FieldLabel>
-        <input name="state_en" className={fieldInputClass} />
-      </div>
+      <fieldset disabled={pending} className="space-y-3">
+        <div>
+          <FieldLabel>State (zh)</FieldLabel>
+          <input name="state_zh" required autoFocus className={fieldInputClass} />
+        </div>
+        <div>
+          <FieldLabel>State (en)</FieldLabel>
+          <input name="state_en" className={fieldInputClass} />
+        </div>
+      </fieldset>
       <div className="flex gap-2">
         <button
           type="submit"
@@ -44,8 +46,9 @@ export function StateQuickCreateForm({
         </button>
         <button
           type="button"
+          disabled={pending}
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
           Cancel
         </button>

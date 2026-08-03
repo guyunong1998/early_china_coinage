@@ -30,6 +30,19 @@ function findSide(accNum: string, side: 'obv' | 'rev'): string | null {
   return file ? `/images/type_imgs/${encodeURIComponent(file)}` : null
 }
 
+/** Some specimens (mostly casting moulds) only have a single representative
+ * photo, not an obverse/reverse pair — saved as a bare `{accNum}.ext` file.
+ * Shown in the obverse slot. Only matches when no `.obv`/`.rev` file exists
+ * for the same accNum, so a real pair always wins. */
+function findBareImage(accNum: string): string | null {
+  const lower = accNum.toLowerCase()
+  const file = listTypeImageFiles().find((f) => {
+    const fl = f.toLowerCase()
+    return fl.startsWith(`${lower}.`) && !fl.startsWith(`${lower}.obv`) && !fl.startsWith(`${lower}.rev`)
+  })
+  return file ? `/images/type_imgs/${encodeURIComponent(file)}` : null
+}
+
 /**
  * Hand-picked single-icon (not obverse/reverse — these are stylized line-art
  * shapes, not specimen photos) stand-ins for a handful of broad category
@@ -62,7 +75,7 @@ export function getCoinTypeImagePaths(
   fallbackKey?: string | null
 ): CoinTypeImagePaths {
   const primary: CoinTypeImagePaths = accNum
-    ? { obverseSrc: findSide(accNum, 'obv'), reverseSrc: findSide(accNum, 'rev') }
+    ? { obverseSrc: findSide(accNum, 'obv') ?? findBareImage(accNum), reverseSrc: findSide(accNum, 'rev') }
     : EMPTY_PATHS
   if (primary.obverseSrc || primary.reverseSrc) return primary
   if (!fallbackKey) return primary
@@ -70,5 +83,8 @@ export function getCoinTypeImagePaths(
   const generic = findGenericIcon(fallbackKey)
   if (generic) return { obverseSrc: generic, reverseSrc: null }
 
-  return { obverseSrc: findSide(fallbackKey, 'obv'), reverseSrc: findSide(fallbackKey, 'rev') }
+  return {
+    obverseSrc: findSide(fallbackKey, 'obv') ?? findBareImage(fallbackKey),
+    reverseSrc: findSide(fallbackKey, 'rev'),
+  }
 }

@@ -75,8 +75,12 @@ function ContextFields({ ctx }: { ctx: Partial<Context> }) {
         <textarea name="description_en" defaultValue={ctx.description_en ?? ''} rows={2} className={fieldInputClass} />
       </div>
       <div className="sm:col-span-2">
-        <FieldLabel>Note</FieldLabel>
+        <FieldLabel>Note (zh)</FieldLabel>
         <textarea name="note_zh" defaultValue={ctx.note_zh ?? ''} rows={2} className={fieldInputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <FieldLabel>Note (en)</FieldLabel>
+        <textarea name="note_en" defaultValue={ctx.note_en ?? ''} rows={2} className={fieldInputClass} />
       </div>
     </div>
   )

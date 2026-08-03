@@ -4,6 +4,7 @@ import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/map/HoardMintOriginsMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { SiteRecordSection } from '@/components/site/SiteRecordSection'
+import { ClickHint } from '@/components/ui/ClickHint'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
 import { LabelHint } from '@/components/ui/LabelHint'
@@ -23,7 +24,7 @@ import {
   getSourceLinksForSite,
   getSources,
 } from '@/lib/queries'
-import type { Find, MintInfo } from '@/lib/types'
+import type { Find, MapSite, MintInfo } from '@/lib/types'
 
 type PageProps = {
   params: Promise<{ site_code: string }>
@@ -154,6 +155,31 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
   )
 }
 
+/** Union of the site's populated coin_type_hierarchy levels (level1..level5 —
+ * Coin/Mould, Category, Type, Subtype, Variant), deduped and flattened into
+ * one bilingual list — the level split is a taxonomy implementation detail,
+ * not something a site's classification summary needs to spell out row by
+ * row. */
+function mergeLevelTypes(summary: MapSite | null): { zh: string | null; en: string | null } {
+  const zhLists = [
+    summary?.level1_types_zh,
+    summary?.level2_types_zh,
+    summary?.level3_types_zh,
+    summary?.level4_types_zh,
+    summary?.level5_types_zh,
+  ]
+  const enLists = [
+    summary?.level1_types_en,
+    summary?.level2_types_en,
+    summary?.level3_types_en,
+    summary?.level4_types_en,
+    summary?.level5_types_en,
+  ]
+  const zh = [...new Set(zhLists.flatMap((s) => (s ? s.split('、') : [])))]
+  const en = [...new Set(enLists.flatMap((s) => (s ? s.split('、') : [])))]
+  return { zh: zh.length ? zh.join('、') : null, en: en.length ? en.join(', ') : null }
+}
+
 // ── row component ─────────────────────────────────────────────────────────
 
 function Row({
@@ -236,6 +262,7 @@ export default async function SitePage({ params }: PageProps) {
       : []
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
+  const classification = mergeLevelTypes(summary)
 
   const mintOrigins =
     summary?.lat != null && summary.lng != null ? buildMintOrigins(finds, mints) : null
@@ -314,7 +341,7 @@ export default async function SitePage({ params }: PageProps) {
           {/* Keep description area visible: prefer remark, fallback to description */}
           <div className="mt-4 border-t border-gray-100 pt-3 text-sm">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Description / 描述
+              <T k="site.descriptionLabel" />
             </p>
             {biBlock(infoTextZh, infoTextEn)}
           </div>
@@ -322,19 +349,15 @@ export default async function SitePage({ params }: PageProps) {
       </div>
 
       <div className="mt-6">
-        <DataCard title="Record Classification">
+        <DataCard title={<T k="site.classification.title" />}>
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
-              <Row labelKey="map.filter.l0">{bi(summary?.level1_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l1">{bi(summary?.level2_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l2">{bi(summary?.level3_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l3">{bi(summary?.level4_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l4">{bi(summary?.level5_types_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, null)}</Row>
+              <Row labelKey="site.row.classification">{bi(classification.zh, classification.en)}</Row>
+              <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, summary?.inscriptions_en)}</Row>
             </dl>
             <dl>
-              <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.mints">{bi(summary?.mints_zh, null)}</Row>
+              <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, summary?.states_en)}</Row>
+              <Row labelKey="siteTabs.row.mints">{bi(summary?.mints_zh, summary?.mints_en)}</Row>
               <Row labelKey="siteTabs.row.precision" hintKey="siteTabs.row.precisionHint">
                 {formatNumber(site.precision_level ?? summary?.precision_level)}
               </Row>
@@ -358,16 +381,19 @@ export default async function SitePage({ params }: PageProps) {
                 mints={mintOrigins.matched}
               />
               <p className="text-xs text-gray-500">
-                Teal marker: this findspot. Red markers: mint towns that issued coins found here, connected
-                by dashed lines.
+                <T k="site.mintOrigins.caption" />
               </p>
             </div>
             {mintOrigins.unmatched.length > 0 && (
               <p className="mt-3 text-xs text-gray-500">
-                Mint location not yet mapped for:{' '}
-                {mintOrigins.unmatched
-                  .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
-                  .join('、')}
+                <ClickHint
+                  hint={mintOrigins.unmatched
+                    .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
+                    .join('、')}
+                  className="cursor-help underline decoration-dotted decoration-gray-400 underline-offset-2"
+                >
+                  <T k="site.mintOrigins.unmapped" vars={{ count: mintOrigins.unmatched.length }} /> ⓘ
+                </ClickHint>
               </p>
             )}
           </DataCard>

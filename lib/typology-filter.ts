@@ -63,14 +63,33 @@ export type InscriptionSourceRow = Pick<
   'inscription_id' | 'inscription' | 'inscription_en' | 'mint_zh' | 'coin_type_hierarchy_id'
 >
 
-/** Human-readable label for a staged selection: its level path (if any),
- * plus its inscription's zh text (if any) — whichever parts are set. */
-export function describeTypologySelection(sel: TypologyFilterSelection, coinIssues: InscriptionSourceRow[]): string {
-  const path = [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5].filter(Boolean)
-  let label = path.join(' › ')
+/** Human-readable, bilingual label for a staged selection: the deepest
+ * selected level's own name (not the full level1..level5 breadcrumb — that
+ * hierarchy-depth split is an implementation detail, not something a chip
+ * needs to spell out), plus its inscription (if any) — also bilingual. Both
+ * getLevelOptions and selectionPath are defined further down this file but
+ * usable here regardless (function declarations are hoisted). */
+export function describeTypologySelection(
+  sel: TypologyFilterSelection,
+  coinIssues: InscriptionSourceRow[],
+  hierarchyRows: CoinTypeHierarchyRow[]
+): string {
+  const path = selectionPath(sel)
+  let label = ''
+  if (path.length > 0) {
+    const depth = path.length as 1 | 2 | 3 | 4 | 5
+    const zh = path[path.length - 1]
+    const option = getLevelOptions(hierarchyRows, sel, depth).find((o) => o.value === zh)
+    const en = option?.label_en
+    label = en && en !== zh ? `${zh} · ${en}` : zh
+  }
   if (sel.inscriptionId) {
-    const inscription = coinIssues.find((c) => c.inscription_id === sel.inscriptionId)?.inscription
-    if (inscription) label = label ? `${label} · ${inscription}` : inscription
+    const coin = coinIssues.find((c) => c.inscription_id === sel.inscriptionId)
+    if (coin?.inscription) {
+      const en = coin.inscription_en
+      const inscriptionLabel = en && en !== coin.inscription ? `${coin.inscription} · ${en}` : coin.inscription
+      label = label ? `${label} · ${inscriptionLabel}` : inscriptionLabel
+    }
   }
   return label
 }

@@ -60,18 +60,20 @@ export function CoinTypeHierarchyQuickCreateForm({
     <form action={formAction} className="space-y-3">
       <ActionFormStatus state={state} />
       <p className="text-xs text-gray-500">Fill in as many levels as apply — most nodes only use the first 2–3.</p>
-      {LEVEL_NAMES.map(({ level, name }) => (
-        <div key={level} className="grid grid-cols-2 gap-2">
-          <div>
-            <FieldLabel>{`Level ${level} – ${name} (zh)`}</FieldLabel>
-            <input name={`level${level}_zh`} autoFocus={level === 1} className={fieldInputClass} />
+      <fieldset disabled={pending} className="space-y-3">
+        {LEVEL_NAMES.map(({ level, name }) => (
+          <div key={level} className="grid grid-cols-2 gap-2">
+            <div>
+              <FieldLabel>{`Level ${level} – ${name} (zh)`}</FieldLabel>
+              <input name={`level${level}_zh`} autoFocus={level === 1} className={fieldInputClass} />
+            </div>
+            <div>
+              <FieldLabel>{`Level ${level} – ${name} (en)`}</FieldLabel>
+              <input name={`level${level}_en`} className={fieldInputClass} />
+            </div>
           </div>
-          <div>
-            <FieldLabel>{`Level ${level} – ${name} (en)`}</FieldLabel>
-            <input name={`level${level}_en`} className={fieldInputClass} />
-          </div>
-        </div>
-      ))}
+        ))}
+      </fieldset>
       <div className="flex gap-2">
         <button
           type="submit"
@@ -82,8 +84,9 @@ export function CoinTypeHierarchyQuickCreateForm({
         </button>
         <button
           type="button"
+          disabled={pending}
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
           Cancel
         </button>

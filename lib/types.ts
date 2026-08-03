@@ -22,9 +22,17 @@ export type MapSite = {
   level3_types_zh: string | null
   level4_types_zh: string | null
   level5_types_zh: string | null
+  level1_types_en: string | null
+  level2_types_en: string | null
+  level3_types_en: string | null
+  level4_types_en: string | null
+  level5_types_en: string | null
   inscriptions: string | null
   states_zh: string | null
   mints_zh: string | null
+  inscriptions_en: string | null
+  states_en: string | null
+  mints_en: string | null
 }
 
 export type Site = MapSite & {
@@ -123,6 +131,7 @@ export type Find = {
   description_zh: string | null
   description_en: string | null
   note_zh: string | null
+  note_en: string | null
   coin_issues: CoinIssueDisplay | null
 }
 

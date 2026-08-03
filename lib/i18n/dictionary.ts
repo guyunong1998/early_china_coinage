@@ -226,7 +226,17 @@ export const DICTIONARY = {
   'site.row.period': { en: 'Period', zh: '时期' },
   'site.row.findRecords': { en: 'Find records', zh: '出土记录数' },
   'site.row.totalCoins': { en: 'Total coins', zh: '钱币总数' },
-  'site.descriptionLabel': { en: 'Description / 描述', zh: '描述 / Description' },
+  'site.descriptionLabel': { en: 'Description', zh: '描述' },
+  'site.row.classification': { en: 'Classification', zh: '分类' },
+  'site.classification.title': { en: 'Record Classification', zh: '记录分类' },
+  'site.mintOrigins.caption': {
+    en: 'Pin: this findspot. Dots: mint towns that issued coins found here, connected by dashed lines.',
+    zh: '大头针：此发现地点。圆点：铸造此处钱币的铸地，以虚线相连。',
+  },
+  'site.mintOrigins.unmapped': {
+    en: '{count} mint location(s) not yet mapped',
+    zh: '{count} 处铸地位置尚未标注',
+  },
 
   // ── site detail tabs ──────────────────────────────────────────────────
   'siteTabs.context.label': { en: 'Context:', zh: '出土单位：' },
@@ -407,8 +417,8 @@ export const DICTIONARY = {
   'map.compare.mintKindLabel': { en: 'Mint: ', zh: '铸地：' },
   'map.compare.typeKindLabel': { en: 'Type: ', zh: '类型：' },
   'map.legend.densityHint': {
-    en: 'Brighter / redder where matching sites cluster; weighted by share.',
-    zh: '匹配遗址越集中、占比越高，颜色越亮越红。',
+    en: 'Coin count, scaled from the lowest to highest currently shown — yellow is fewest, red is most.',
+    zh: '按当前显示范围内的钱币数量最低到最高缩放——黄色最少，红色最多。',
   },
   'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
@@ -465,6 +475,10 @@ export const DICTIONARY = {
   'mintDetail.row.coinTypes': { en: 'Coin types', zh: '币种' },
   'mintDetail.row.inscriptions': { en: 'Inscriptions', zh: '铭文' },
   'mintDetail.row.coinsAndSites': { en: 'Coins / find sites', zh: '钱币数／出土遗址数' },
+  'mintDetail.issueDistribution.caption': {
+    en: 'Pin: mint location. Dots: findspots where coins issued by this mint were found.',
+    zh: '大头针：铸地位置。圆点：出土此铸地钱币的发现地点。',
+  },
 
   // ── coin types list + detail pages ───────────────────────────────────
   'coinTypeList.searchPlaceholder': { en: 'Search by name, state…', zh: '按名称、诸侯国搜索…' },

@@ -154,12 +154,13 @@ function MapExplanation({ viewMode }: { viewMode: ViewMode }) {
   )
 }
 
-function DensityLegend() {
+function DensityLegend({ range }: { range: DensityRange }) {
   return (
     <>
       <span className="font-semibold uppercase tracking-wide text-gray-500">
         <T k="map.legend.density" />
       </span>
+      <span className="tabular-nums text-gray-500">{range?.min ?? '—'}</span>
       <span
         className="inline-block h-2 w-28 rounded-sm"
         style={{
@@ -167,6 +168,7 @@ function DensityLegend() {
             'linear-gradient(90deg, #f0d56a 0%, #e39a2b 40%, #d04a1c 65%, #a01515 85%, #6e0c0c 100%)',
         }}
       />
+      <span className="tabular-nums text-gray-500">{range?.max ?? '—'}</span>
       <span className="text-gray-500">
         <T k="map.legend.densityHint" />
       </span>
@@ -237,7 +239,11 @@ function CompareLegend({
  * once, like any other useState initializer; a later-changing prop doesn't
  * re-seed already-mounted state.
  */
-function buildInitialTypologyState(coinIssues: InscriptionSourceRow[], initialSelections: TypologyFilterSelection[]) {
+function buildInitialTypologyState(
+  coinIssues: InscriptionSourceRow[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  initialSelections: TypologyFilterSelection[]
+) {
   const order: string[] = []
   const slotById = new Map<string, number>()
   const selByKey = new Map<string, TypologyFilterSelection>()
@@ -249,14 +255,18 @@ function buildInitialTypologyState(coinIssues: InscriptionSourceRow[], initialSe
     order.push(key)
     slotById.set(key, order.length - 1)
     selByKey.set(key, sel)
-    labelByKey.set(key, describeTypologySelection(sel, coinIssues))
+    labelByKey.set(key, describeTypologySelection(sel, coinIssues, hierarchyRows))
   })
   return { order, slotById, selByKey, labelByKey }
 }
 
-function useTypologyMultiSelect(coinIssues: InscriptionSourceRow[], initialSelections: TypologyFilterSelection[] = []) {
+function useTypologyMultiSelect(
+  coinIssues: InscriptionSourceRow[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  initialSelections: TypologyFilterSelection[] = []
+) {
   const [staged, setStagedRaw] = useState<TypologyFilterSelection>(emptyTypologySelection())
-  const [initial] = useState(() => buildInitialTypologyState(coinIssues, initialSelections))
+  const [initial] = useState(() => buildInitialTypologyState(coinIssues, hierarchyRows, initialSelections))
   const [order, setOrder] = useState<string[]>(initial.order)
   const [slotById, setSlotById] = useState<Map<string, number>>(initial.slotById)
   const [selByKey, setSelByKey] = useState<Map<string, TypologyFilterSelection>>(initial.selByKey)
@@ -306,8 +316,11 @@ function useTypologyMultiSelect(coinIssues: InscriptionSourceRow[], initialSelec
 
   const entries = useMemo<TypologySelectionEntry[]>(() => {
     if (!stagedKey || order.includes(stagedKey)) return committedEntries
-    return [...committedEntries, { key: stagedKey, sel: staged, label: describeTypologySelection(staged, coinIssues) }]
-  }, [committedEntries, stagedKey, order, staged, coinIssues])
+    return [
+      ...committedEntries,
+      { key: stagedKey, sel: staged, label: describeTypologySelection(staged, coinIssues, hierarchyRows) },
+    ]
+  }, [committedEntries, stagedKey, order, staged, coinIssues, hierarchyRows])
 
   function addAnother() {
     if (!stagedKey || stagedSlot === null) return
@@ -315,7 +328,7 @@ function useTypologyMultiSelect(coinIssues: InscriptionSourceRow[], initialSelec
       setOrder((prev) => [...prev, stagedKey])
       setSlotById((prev) => new Map(prev).set(stagedKey, stagedSlot))
       setSelByKey((prev) => new Map(prev).set(stagedKey, staged))
-      setLabelByKey((prev) => new Map(prev).set(stagedKey, describeTypologySelection(staged, coinIssues)))
+      setLabelByKey((prev) => new Map(prev).set(stagedKey, describeTypologySelection(staged, coinIssues, hierarchyRows)))
     }
     setStaged(emptyTypologySelection())
   }
@@ -448,24 +461,53 @@ const PRECISION_TABS: Array<{ id: PrecisionFilter; key: DictionaryKey }> = [
   { id: 'city', key: 'search.precision.city' },
 ]
 
-/** Same intensity curve used for both Find Site and Mint Town density mode —
- * shared here since the density point list is computed by this orchestrator
- * for both tabs. */
-function heatIntensity(state: SiteHeatState, totalQty: number): number | null {
+/** The raw coin count a site/mint contributes to the density heat layer —
+ * null excludes it entirely (no record of the selected type/mint at all).
+ * `unquantified` (present but no usable count) is also excluded from the
+ * weighted scale rather than guessed at, since there's no real number to
+ * min-max against. Shared here since the density point list is computed by
+ * this orchestrator for both the Find Site and Mint Town tabs. */
+function heatWeight(state: SiteHeatState, totalQty: number): number | null {
   switch (state.kind) {
-    case 'no-filter': {
-      if (totalQty <= 0) return 0.35
-      return Math.min(1, 0.35 + Math.log10(totalQty + 1) / 4)
-    }
-    case 'no-data':
-      return null
-    case 'unquantified':
-      return 0.4
+    case 'no-filter':
     case 'pure':
-      return 1
+      return totalQty
+    case 'no-data':
+    case 'unquantified':
+      return null
     case 'ratio':
-      return Math.max(0.08, state.ratio)
+      return state.matchedQty
   }
+}
+
+/** Lowest visible intensity on the gradient — keeps the min-weight point a
+ * pale yellow dot instead of literally invisible (leaflet.heat treats 0 as
+ * no contribution at all). */
+const DENSITY_FLOOR = 0.15
+
+export type DensityRange = { min: number; max: number } | null
+
+/** Min-max normalizes raw per-point weights (see heatWeight) to the [0, 1]
+ * intensities leaflet.heat expects, and returns the actual min/max weight
+ * so the legend can label what its yellow and red ends mean in coin counts
+ * — this is the "min maxed" heat scale: color reflects this view's own
+ * data range, not a fixed/arbitrary curve. Points with a null or zero
+ * weight are dropped (nothing to show on the heat layer for them). */
+function buildDensityLayer(
+  points: { lat: number; lng: number; weight: number | null }[]
+): { latLngs: [number, number, number][]; range: DensityRange } {
+  const weighted = points.filter(
+    (p): p is { lat: number; lng: number; weight: number } => p.weight != null && p.weight > 0
+  )
+  if (weighted.length === 0) return { latLngs: [], range: null }
+
+  const min = Math.min(...weighted.map((p) => p.weight))
+  const max = Math.max(...weighted.map((p) => p.weight))
+  const latLngs: [number, number, number][] = weighted.map((p) => {
+    const intensity = max === min ? 1 : DENSITY_FLOOR + (1 - DENSITY_FLOOR) * ((p.weight - min) / (max - min))
+    return [p.lat, p.lng, intensity]
+  })
+  return { latLngs, range: { min, max } }
 }
 
 export function FindSpotsVisualization({
@@ -512,7 +554,7 @@ export function FindSpotsVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
+  } = useTypologyMultiSelect(coinIssues, hierarchyRows, initialTypeSelections)
 
   const typeOptionCounts = useMemo(
     () => buildTypologySiteCounts(finds, coinIssues, hierarchyRows, stagedType),
@@ -569,16 +611,14 @@ export function FindSpotsVisualization({
     return { foundCount, totalCount: sites.length }
   }, [siteStates, sites])
 
-  const densityLatLngs = useMemo(() => {
-    const points: [number, number, number][] = []
-    sites.forEach((site) => {
-      if (site.lat == null || site.lng == null) return
-      const state: SiteHeatState = siteStates?.get(site.site_code) ?? { kind: 'no-filter' }
-      const intensity = heatIntensity(state, site.total_quantity_for_map ?? 0)
-      if (intensity == null) return
-      points.push([site.lat, site.lng, intensity])
-    })
-    return points
+  const density = useMemo(() => {
+    const points = sites
+      .filter((site): site is typeof site & { lat: number; lng: number } => site.lat != null && site.lng != null)
+      .map((site) => {
+        const state: SiteHeatState = siteStates?.get(site.site_code) ?? { kind: 'no-filter' }
+        return { lat: site.lat, lng: site.lng, weight: heatWeight(state, site.total_quantity_for_map ?? 0) }
+      })
+    return buildDensityLayer(points)
   }, [sites, siteStates])
 
   // Filtering by mint: plot each selected mint town's own location too, one
@@ -727,7 +767,7 @@ export function FindSpotsVisualization({
         mode={mode}
         siteStates={siteStates}
         viewMode={viewMode}
-        densityLatLngs={densityLatLngs}
+        densityLatLngs={density.latLngs}
         filterActive={filterActive}
         showNoData={showNoData}
         pins={pins}
@@ -896,7 +936,7 @@ export function FindSpotsVisualization({
               </label>
             </>
           )}
-          {viewMode === 'density' && <DensityLegend />}
+          {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>
       )}
     </div>
@@ -938,7 +978,7 @@ export function MintTownVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(coinIssues, initialTypeSelections)
+  } = useTypologyMultiSelect(coinIssues, hierarchyRows, initialTypeSelections)
 
   const filterActive = typeEntries.length > 0
 
@@ -1002,15 +1042,12 @@ export function MintTownVisualization({
     return states
   }, [matchedIds, matchedStats, totalStats])
 
-  const densityLatLngs = useMemo(() => {
-    const points: [number, number, number][] = []
-    mintPoints.forEach((mint) => {
+  const density = useMemo(() => {
+    const points = mintPoints.map((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      const intensity = heatIntensity(state, mint.totalQty)
-      if (intensity == null) return
-      points.push([mint.lat, mint.lng, intensity])
+      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, mint.totalQty) }
     })
-    return points
+    return buildDensityLayer(points)
   }, [mintPoints, mintStates])
 
   const foundInSummary = useMemo(() => {
@@ -1073,7 +1110,7 @@ export function MintTownVisualization({
         mintPoints={mintPoints}
         mintStates={mintStates}
         viewMode={viewMode}
-        densityLatLngs={densityLatLngs}
+        densityLatLngs={density.latLngs}
         showNoData={showNoData}
         comparePoints={comparePoints}
       />
@@ -1191,7 +1228,7 @@ export function MintTownVisualization({
               </label>
             </>
           )}
-          {viewMode === 'density' && <DensityLegend />}
+          {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>
       )}
     </div>
@@ -1313,7 +1350,7 @@ export function AnsMintTownVisualization({
     addAnother: addAnotherTypeEntry,
     remove: removeTypeEntry,
     clear: clearTypeEntries,
-  } = useTypologyMultiSelect(inscriptionSource, initialTypeSelections)
+  } = useTypologyMultiSelect(inscriptionSource, hierarchyRows, initialTypeSelections)
 
   const typeOptionCounts = useMemo(
     () => buildAnsTypologySpecimenCounts(specimens, hierarchyRows, stagedType),
@@ -1408,15 +1445,12 @@ export function AnsMintTownVisualization({
     return states
   }, [matchedSpecimens, matchedStats, totalStats])
 
-  const densityLatLngs = useMemo(() => {
-    const points: [number, number, number][] = []
-    mintPoints.forEach((mint) => {
+  const density = useMemo(() => {
+    const points = mintPoints.map((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      const intensity = heatIntensity(state, mint.totalQty)
-      if (intensity == null) return
-      points.push([mint.lat, mint.lng, intensity])
+      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, mint.totalQty) }
     })
-    return points
+    return buildDensityLayer(points)
   }, [mintPoints, mintStates])
 
   const foundInSummary = useMemo(() => {
@@ -1476,7 +1510,7 @@ export function AnsMintTownVisualization({
         mintPoints={mintPoints}
         mintStates={mintStates}
         viewMode={viewMode}
-        densityLatLngs={densityLatLngs}
+        densityLatLngs={density.latLngs}
         pins={pins}
         comparePoints={comparePoints}
       />
@@ -1514,6 +1548,9 @@ export function AnsMintTownVisualization({
                 k="visualizations.mintsPlotted"
                 vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
               />
+            </p>
+            <p className="text-sm text-gray-700">
+              <T k="visualizations.stats.specimens" vars={{ count: specimens.length }} />
             </p>
             <TypologyMultiSelect
               staged={stagedType}
@@ -1592,7 +1629,7 @@ export function AnsMintTownVisualization({
               </span>
             </>
           )}
-          {viewMode === 'density' && <DensityLegend />}
+          {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>
       )}
     </div>

@@ -17,7 +17,7 @@ import type {
 } from '@/lib/types'
 
 const MAP_SITE_FIELDS =
-  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, inscriptions, states_zh, mints_zh'
+  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, level1_types_en, level2_types_en, level3_types_en, level4_types_en, level5_types_en, inscriptions, states_zh, mints_zh, inscriptions_en, states_en, mints_en'
 
 export type SearchSite = MapSite & { period_zh: string | null; period_en: string | null }
 
@@ -231,9 +231,17 @@ function siteRowToMapSite(row: SitePrecisionRow): MapSite {
     level3_types_zh: null,
     level4_types_zh: null,
     level5_types_zh: null,
+    level1_types_en: null,
+    level2_types_en: null,
+    level3_types_en: null,
+    level4_types_en: null,
+    level5_types_en: null,
     inscriptions: null,
     states_zh: null,
     mints_zh: null,
+    inscriptions_en: null,
+    states_en: null,
+    mints_en: null,
   }
 }
 
