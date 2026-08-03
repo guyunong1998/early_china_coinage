@@ -20,19 +20,22 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
-import { getMintByNameZh } from '@/lib/mint-towns'
+import { findMintByNameZh } from '@/lib/mint-directory'
 import { ansCollectionUrl, type AnsSpecimen } from '@/lib/mint-stats'
+import type { MintInfo } from '@/lib/types'
 
 const MAX_RESULTS = 200
 
 export function AccessionNumberSearch({
   specimens,
+  mints,
   selectedKeys,
   selectedSpecimens,
   onToggle,
   onClear,
 }: {
   specimens: AnsSpecimen[]
+  mints: MintInfo[]
   /** Selected specimen ids (ans_data.id, NOT catalog_number — the live table
    * has specimens sharing an accession number), for quickly checking a
    * result row's state. */
@@ -124,8 +127,8 @@ export function AccessionNumberSearch({
               const catalogNumber = s.catalog_number
               const isSelected = selectedKeys.has(s.id)
               const selectionColor = colorById.get(s.id)
-              const town = s.mint_zh ? getMintByNameZh(s.mint_zh) : undefined
-              const isMapped = town?.lat != null
+              const mint = s.mint_zh ? findMintByNameZh(mints, s.mint_zh) : undefined
+              const isMapped = mint?.lat != null
               return (
                 <li key={s.id} className="flex items-start gap-2 px-2 py-2 text-sm">
                   <input
@@ -168,8 +171,8 @@ export function AccessionNumberSearch({
                       {s.mint_zh && (
                         <span>
                           <T k="museum.search.mintLabel" />{' '}
-                          {town?.mint_code ? (
-                            <Link href={`/mints/${town.mint_code}`} className="text-brand hover:underline">
+                          {mint?.mint_code ? (
+                            <Link href={`/mints/${mint.mint_code}`} className="text-brand hover:underline">
                               {s.mint_zh}
                             </Link>
                           ) : (

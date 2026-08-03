@@ -88,7 +88,7 @@ export function CoinTypeCard({
           {node.states.map((s) => (
             <span
               key={s.state_zh}
-              className={`rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(s.state_en)}`}
+              className={`rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(s.state_zh)}`}
             >
               {lang === 'zh' ? s.state_zh : s.state_en}
             </span>

@@ -39,13 +39,13 @@ import {
 import { computeSiteHeatStates } from '@/lib/context-heatmap'
 import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
+import { findMintByNameZh } from '@/lib/mint-directory'
 import {
   buildMintFilterOptions,
   computeSiteMintQuantities,
   formatMintOptionLabel,
   getMatchingCoinIssueIdsByMints,
 } from '@/lib/mint-filter'
-import { getMintByNameZh } from '@/lib/mint-towns'
 import {
   ansCollectionUrl,
   buildAnsInscriptionSource,
@@ -73,7 +73,7 @@ import {
   type TypologyOptionCounts,
   type TypologySelectionEntry,
 } from '@/lib/typology-filter'
-import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MapSite } from '@/lib/types'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MapSite, MintInfo } from '@/lib/types'
 
 /* ── shared filter-panel pieces ─────────────────────────────────────────── */
 
@@ -473,6 +473,7 @@ export function FindSpotsVisualization({
   coinIssues,
   hierarchyRows,
   finds,
+  mints,
   currentPrecision,
   precisionCounts,
   initialMode,
@@ -484,6 +485,7 @@ export function FindSpotsVisualization({
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
   finds: HeatmapFind[]
+  mints: MintInfo[]
   /** Precision (site/county/city) links re-fetch sites server-side via
    * searchParams, so the page filters `sites` and hands down only the
    * current value + counts — the links themselves render here. */
@@ -500,6 +502,7 @@ export function FindSpotsVisualization({
   const { t } = useLanguage()
   const [mode, setMode] = useState<FilterMode>(initialMode ?? 'type')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
+  const [showNoData, setShowNoData] = useState(true)
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -516,7 +519,7 @@ export function FindSpotsVisualization({
     [finds, coinIssues, hierarchyRows, stagedType]
   )
 
-  const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds), [coinIssues, finds])
+  const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds, mints), [coinIssues, finds, mints])
   // initialMintNames (zh names, from a deep link) resolved to the mint_ids
   // useSelectionColors actually keys by — computed once at mount, same as
   // the initializer it feeds.
@@ -585,20 +588,20 @@ export function FindSpotsVisualization({
     if (mode !== 'mint') return []
     return mintFilters.flatMap((mintId) => {
       const opt = mintOptions.find((m) => m.mint_id === mintId)
-      const town = opt?.mint_zh ? getMintByNameZh(opt.mint_zh) : undefined
-      if (town?.lat == null || town?.lng == null) return []
+      const mint = opt?.mint_zh ? findMintByNameZh(mints, opt.mint_zh) : undefined
+      if (mint?.lat == null || mint?.lng == null) return []
       return [
         {
           key: mintId,
-          lat: town.lat,
-          lng: town.lng,
+          lat: mint.lat,
+          lng: mint.lng,
           color: mintColorByValue.get(mintId) ?? SELECTION_COLORS[0],
-          label: `${town.name_zh}${town.name_en ? ` (${town.name_en})` : ''}`,
-          href: town.mint_code ? `/mints/${town.mint_code}` : undefined,
+          label: `${mint.name_zh}${mint.name_en ? ` (${mint.name_en})` : ''}`,
+          href: mint.mint_code ? `/mints/${mint.mint_code}` : undefined,
         },
       ]
     })
-  }, [mode, mintFilters, mintOptions, mintColorByValue])
+  }, [mode, mintFilters, mintOptions, mintColorByValue, mints])
 
   // Compare view: one point per (site, mint) or (site, type) that has a
   // nonzero matching quantity, colored by that group's identity color —
@@ -726,6 +729,7 @@ export function FindSpotsVisualization({
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
         filterActive={filterActive}
+        showNoData={showNoData}
         pins={pins}
         comparePoints={comparePoints}
       />
@@ -877,13 +881,19 @@ export function FindSpotsVisualization({
                 />
                 <T k="heatmap.legend.presentNoCount" />
               </span>
-              <span className="flex items-center gap-1">
+              <label className="flex cursor-pointer items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showNoData}
+                  onChange={(e) => setShowNoData(e.target.checked)}
+                  className="accent-brand"
+                />
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
                 />
                 <T k="heatmap.legend.noData" />
-              </span>
+              </label>
             </>
           )}
           {viewMode === 'density' && <DensityLegend />}
@@ -899,12 +909,14 @@ export function MintTownVisualization({
   finds,
   coinIssues,
   hierarchyRows,
+  mints,
   initialViewMode,
   initialTypeSelections,
 }: {
   finds: HeatmapFind[]
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
+  mints: MintInfo[]
   /** Pre-built filter state for a deep link — see FindSpotsVisualization's
    * matching props. */
   initialViewMode?: ViewMode
@@ -916,6 +928,7 @@ export function MintTownVisualization({
   // another entry in `options` below, not a UI rebuild.
   const [source, setSource] = useState<HeatmapSource>('database')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
+  const [showNoData, setShowNoData] = useState(true)
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -942,12 +955,15 @@ export function MintTownVisualization({
   // Every known mint town's full totals, regardless of the active filter —
   // this is both the plotted point list (always complete, like Find Site's
   // site list) and the "typical information" source for popups.
-  const totalStats = useMemo(() => computeMintStatsFromFinds(finds, coinIssues, null), [finds, coinIssues])
+  const totalStats = useMemo(
+    () => computeMintStatsFromFinds(finds, coinIssues, null, mints),
+    [finds, coinIssues, mints]
+  )
   // The same aggregation narrowed to the active filter, used only to read
   // off each mint's matched coin count.
   const matchedStats = useMemo(
-    () => computeMintStatsFromFinds(finds, coinIssues, matchedIds),
-    [finds, coinIssues, matchedIds]
+    () => computeMintStatsFromFinds(finds, coinIssues, matchedIds, mints),
+    [finds, coinIssues, matchedIds, mints]
   )
 
   const mintPoints = useMemo(() => toMintPoints(totalStats.mapped), [totalStats])
@@ -1058,6 +1074,7 @@ export function MintTownVisualization({
         mintStates={mintStates}
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
+        showNoData={showNoData}
         comparePoints={comparePoints}
       />
 
@@ -1159,13 +1176,19 @@ export function MintTownVisualization({
                 />
                 <T k="map.legend.singleFind" />
               </span>
-              <span className="flex items-center gap-1">
+              <label className="flex cursor-pointer items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showNoData}
+                  onChange={(e) => setShowNoData(e.target.checked)}
+                  className="accent-brand"
+                />
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
                 />
                 <T k="heatmap.legend.noData" />
-              </span>
+              </label>
             </>
           )}
           {viewMode === 'density' && <DensityLegend />}
@@ -1260,12 +1283,14 @@ export function AnsMintTownVisualization({
   specimens,
   coinIssues,
   hierarchyRows,
+  mints,
   initialViewMode,
   initialTypeSelections,
 }: {
   specimens: AnsSpecimen[]
   coinIssues: CoinIssueDisplay[]
   hierarchyRows: CoinTypeHierarchyRow[]
+  mints: MintInfo[]
   /** Pre-built filter state for a deep link — see FindSpotsVisualization's
    * matching props. */
   initialViewMode?: ViewMode
@@ -1328,20 +1353,20 @@ export function AnsMintTownVisualization({
   const pins = useMemo<PinPoint[]>(
     () =>
       selectedSpecimens.flatMap(({ specimen, color }) => {
-        const town = specimen.mint_zh ? getMintByNameZh(specimen.mint_zh) : undefined
-        if (town?.lat == null || town?.lng == null) return []
+        const mint = specimen.mint_zh ? findMintByNameZh(mints, specimen.mint_zh) : undefined
+        if (mint?.lat == null || mint?.lng == null) return []
         return [
           {
             key: specimen.id,
-            lat: town.lat,
-            lng: town.lng,
+            lat: mint.lat,
+            lng: mint.lng,
             color,
             label: specimen.catalog_number ?? specimen.id,
             href: specimen.catalog_number ? ansCollectionUrl(specimen.catalog_number) : undefined,
           },
         ]
       }),
-    [selectedSpecimens]
+    [selectedSpecimens, mints]
   )
 
   const matchedSpecimens = useMemo(
@@ -1349,8 +1374,11 @@ export function AnsMintTownVisualization({
     [specimens, hierarchyRows, typeEntries]
   )
 
-  const totalStats = useMemo(() => computeAnsMintStats(specimens), [specimens])
-  const matchedStats = useMemo(() => computeAnsMintStats(matchedSpecimens ?? []), [matchedSpecimens])
+  const totalStats = useMemo(() => computeAnsMintStats(specimens, mints), [specimens, mints])
+  const matchedStats = useMemo(
+    () => computeAnsMintStats(matchedSpecimens ?? [], mints),
+    [matchedSpecimens, mints]
+  )
 
   const mintPoints = useMemo(() => toMintPoints(totalStats.mapped), [totalStats])
 
@@ -1457,6 +1485,7 @@ export function AnsMintTownVisualization({
         {tab === 'search' ? (
           <AccessionNumberSearch
             specimens={specimens}
+            mints={mints}
             selectedKeys={selectedKeys}
             selectedSpecimens={selectedSpecimens}
             onToggle={toggleSelected}

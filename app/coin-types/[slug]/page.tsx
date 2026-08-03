@@ -8,6 +8,7 @@ import { CoinTypeImages } from '@/components/coin-types/CoinTypeImages'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
+import { LabelHint } from '@/components/ui/LabelHint'
 import { isAuthorized } from '@/lib/admin/guard'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
@@ -298,7 +299,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
       {/* Typology hierarchy — accordion, expanded down to this node */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeDetail.hierarchy" />
+          <LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />
         </div>
         <div className="p-4 pl-8">
           <TypologyTree nodes={nodes} currentSlug={node.slug} />

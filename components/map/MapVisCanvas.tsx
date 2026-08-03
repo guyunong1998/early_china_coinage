@@ -345,7 +345,8 @@ function applyHeatMarkerStyle(
   pointOpacity: number,
   inDensity: boolean,
   popupHtml: string,
-  hidden = false
+  hidden = false,
+  showNoData = true
 ) {
   if (hidden) {
     marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
@@ -354,6 +355,12 @@ function applyHeatMarkerStyle(
   }
 
   const state = toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty)
+
+  if (!showNoData && state.kind === 'no-data') {
+    marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
+    marker.setOpacity(0)
+    return
+  }
   const isStaticNoData = !inDensity && state.kind === 'no-data'
   const color = inDensity
     ? state.kind === 'no-data'
@@ -433,6 +440,9 @@ type SitesCanvasProps = {
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
   filterActive: boolean
+  /** Whether to show sites/mints whose active filter matches none of their
+   * coins (the grey "No data" legend swatch) — default true. */
+  showNoData?: boolean
   /** User-selected points (Find Site's "by mint" multiselect) — see PinPoint. */
   pins?: PinPoint[]
   /** Compare view's per-(site, mint) points — see ComparePoint. Only
@@ -453,6 +463,8 @@ type MintsCanvasProps = {
   mintStates: Map<string, SiteHeatState> | null
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
+  /** See SitesCanvasProps.showNoData. */
+  showNoData?: boolean
   /** User-selected points (Museum Collections search) — see PinPoint. */
   pins?: PinPoint[]
   /** Compare view's per-(mint, group) points — see ComparePoint. Only
@@ -497,6 +509,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const sitesForInit = props.kind === 'sites' ? props.sites : null
   const pins = props.pins ?? []
   const comparePoints = props.comparePoints ?? []
+  const showNoData = props.showNoData ?? true
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -535,7 +548,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             pointOpacity,
             inDensity,
             buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t),
-            inCompare
+            inCompare,
+            showNoData
           )
         })
       } else {
@@ -555,7 +569,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             pointOpacity,
             inDensity,
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
-            inCompare
+            inCompare,
+            showNoData
           )
         })
       }
@@ -682,7 +697,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs])
+  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs, showNoData])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,

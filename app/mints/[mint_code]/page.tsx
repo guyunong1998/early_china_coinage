@@ -8,9 +8,8 @@ import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
 import { isAuthorized } from '@/lib/admin/guard'
-import { getMintDossierByCode } from '@/lib/mint-dossiers'
 import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
-import { getMintFindspotsData, getMints } from '@/lib/queries'
+import { getImages, getMintFindspotsData, getMints } from '@/lib/queries'
 
 type PageProps = {
   params: Promise<{ mint_code: string }>
@@ -22,19 +21,19 @@ export async function generateMetadata({ params }: PageProps) {
   if (!mint) return { title: 'Not found' }
   return {
     title: `${mint.name_zh} ${mint.name_en} | Mint Town Locations`,
-    description: mint.db_description_zh ?? mint.description_en,
+    description: mint.description_zh ?? mint.description_en,
   }
 }
 
 export default async function MintDetailPage({ params }: PageProps) {
   const { mint_code } = await params
-  const dbMints = await getMints()
-  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints), mint_code)
+  const [dbMints, images] = await Promise.all([getMints(), getImages()])
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints, images), mint_code)
   if (!mint) notFound()
-  const rawMint = dbMints.find((m) => m.id === mint.db_id)
+  const rawMint = dbMints.find((m) => m.id === mint.id)
   const authorized = await isAuthorized()
 
-  const distribution = await getMintFindspotsData(mint.name_zh).catch(() => ({
+  const distribution = await getMintFindspotsData(mint.id).catch(() => ({
     sites: [],
     typeOptions: [],
     siteTypeKeys: {},
@@ -43,10 +42,9 @@ export default async function MintDetailPage({ params }: PageProps) {
     totalCoinCount: 0,
     siteCount: 0,
   }))
-  const dossier = getMintDossierByCode(mint_code)
 
-  const descriptionZh = mint.db_description_zh ?? dossier?.description_zh ?? null
-  const descriptionEn = mint.description_en || dossier?.description_en || null
+  const descriptionZh = mint.description_zh
+  const descriptionEn = mint.description_en || null
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -78,7 +76,7 @@ export default async function MintDetailPage({ params }: PageProps) {
                 value={
                   mint.lat != null && mint.lng != null
                     ? `${mint.lat.toFixed(6)}, ${mint.lng.toFixed(6)}`
-                    : 'Not established in source document'
+                    : 'Not yet established'
                 }
               />
             </dl>
@@ -129,9 +127,7 @@ export default async function MintDetailPage({ params }: PageProps) {
                 value={
                   distribution.typeLabels.length > 0
                     ? distribution.typeLabels.map((t) => (t.en ? `${t.zh} (${t.en})` : t.zh)).join('、')
-                    : mint.coin_types.length > 0
-                      ? mint.coin_types.join(', ')
-                      : '—'
+                    : '—'
                 }
               />
               <DetailRow
@@ -147,10 +143,7 @@ export default async function MintDetailPage({ params }: PageProps) {
         </section>
       </div>
 
-      {/* Description — Supabase mints table takes priority; the local
-          dossier (lib/mint-dossiers.ts) fills in gaps and supplies the
-          location note / coin-types-from-document / source-doc lines it
-          alone carries. */}
+      {/* Description — straight from the mints table. */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mintDetail.description" />
@@ -160,18 +153,16 @@ export default async function MintDetailPage({ params }: PageProps) {
           {descriptionEn ? (
             <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
           ) : (
-            <p className="text-sm italic text-gray-400">
-              No English description available yet in the source document.
-            </p>
+            <p className="text-sm italic text-gray-400">No English description recorded yet.</p>
           )}
           {!descriptionZh && !descriptionEn && (
             <p className="text-sm italic text-gray-400">
               No description recorded yet for this mint town.
             </p>
           )}
-          {dossier?.location_note && (
+          {mint.location_note && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded">
-              ⚠ {dossier.location_note}
+              ⚠ {mint.location_note}
             </p>
           )}
           {mint.citation && (
@@ -179,24 +170,10 @@ export default async function MintDetailPage({ params }: PageProps) {
               <span className="font-semibold">Citation:</span> {mint.citation}
             </p>
           )}
-          {dossier?.coin_types && dossier.coin_types.length > 0 && (
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">Coin types (from document):</span>{' '}
-              {dossier.coin_types.join(', ')}
-            </p>
-          )}
-          {dossier?.source_doc && (
-            <p className="text-xs text-gray-400">
-              Source: <span className="font-mono">{dossier.source_doc}</span>
-            </p>
-          )}
         </div>
       </section>
 
-      {/* Database record — the raw `mints` table row, dev-only. Kept distinct
-          from (and hidden in production, unlike) the merged panels above,
-          which blend in lib/mint-dossiers.ts content that isn't stored in
-          Supabase — showing this in prod would just duplicate them. */}
+      {/* Database record — the raw `mints` table row, dev-only. */}
       {rawMint && authorized && (
         <section className="panel mt-6 overflow-hidden">
           <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
@@ -240,7 +217,7 @@ export default async function MintDetailPage({ params }: PageProps) {
       </section>
 
       {/* Maps & Images */}
-      {mint.images && mint.images.length > 0 && (
+      {mint.images.length > 0 && (
         <section className="panel mt-6 overflow-hidden">
           <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             <T k="mintDetail.mapsImages" />
@@ -254,64 +231,33 @@ export default async function MintDetailPage({ params }: PageProps) {
       {/* Placeholder checklist for incomplete records */}
       <MintPlaceholder mint={mint} />
 
-      {/* References — combines mint.references + dossier.references */}
-      {(() => {
-        const mintRefs = mint.references
-        const dossierRefs = dossier?.references ?? []
-        const hasAny = mintRefs.length > 0 || dossierRefs.length > 0
-        return (
-          <section className="panel mt-6 overflow-hidden">
-            <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-              <T k="mintDetail.references" />
-            </div>
-            <div className="p-5">
-              {!hasAny ? (
-                <p className="text-sm text-gray-500">
-                  <T k="mintDetail.noReferences" />
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {mintRefs.map((ref, i) => (
-                    <div key={i} className="text-sm">
-                      <p className="leading-6 text-gray-800">{ref.citation_zh}</p>
-                      {ref.citation_en && (
-                        <p className="mt-1 leading-6 italic text-gray-500">{ref.citation_en}</p>
-                      )}
-                      {ref.url && (
-                        <a href={ref.url} className="mt-1 inline-block text-brand hover:underline">
-                          {ref.url}
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                  {dossierRefs.length > 0 && (
-                    <div>
-                      {mintRefs.length > 0 && (
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Additional references (from research document)
-                        </p>
-                      )}
-                      <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
-                        {dossierRefs.map((r) => (
-                          <li key={r}>{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
-        )
-      })()}
+      {/* References — mint.sources_unlinked, raw citation strings not yet
+          matched to a public.sources row (see mints.sources_unlinked). */}
+      <section className="panel mt-6 overflow-hidden">
+        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
+          <T k="mintDetail.references" />
+        </div>
+        <div className="p-5">
+          {mint.sources_unlinked.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              <T k="mintDetail.noReferences" />
+            </p>
+          ) : (
+            <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+              {mint.sources_unlinked.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
 
       {/* Editing note */}
       <p className="mt-4 text-xs text-gray-400">
-        Geolocation, description, and citation now come from the{' '}
-        <code className="font-mono">mints</code> table in Supabase. To add supplementary content not
-        yet in Supabase (images, additional references, coin types, location notes), edit{' '}
-        <code className="font-mono">lib/mint-dossiers.ts</code> / <code className="font-mono">lib/mint-towns.ts</code>{' '}
-        and place image files under <code className="font-mono">public/images/mints/</code>.
+        Everything on this page — description, geolocation, citation, state, modern location,
+        location note, images, and references — comes from the{' '}
+        <code className="font-mono">mints</code> / <code className="font-mono">images</code> tables
+        in Supabase.
       </p>
     </div>
   )

@@ -4,6 +4,7 @@ import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
 import { FullTypologyTree } from '@/components/coin-types/TypologyTree'
 import { TypologyViewer } from '@/components/coin-types/TypologyViewer'
 import { T } from '@/components/i18n/T'
+import { LabelHint } from '@/components/ui/LabelHint'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
 import { getCoinTypeImagePaths, type CoinTypeImagePaths } from '@/lib/coin-images'
 import { DEMO_VISUALIZATIONS, demoHref } from '@/lib/demo-visualizations'
@@ -96,7 +97,7 @@ export default async function CoinTypesPage() {
             this sits beside the map card. */}
         <div className="p-4 flex flex-col border-t border-brand/15 lg:border-l lg:border-t-0">
           <div className="panel-header px-4 py-3 text-sm font-bold uppercase tracking-wide">
-            <T k="coinTypeDetail.hierarchy" />
+            <LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />
           </div>
           <div className="scrollbar min-h-[460px] overflow-y-auto p-5 pl-8 lg:max-h-[460px] lg:flex-1">
             <FullTypologyTree nodes={nodes} />

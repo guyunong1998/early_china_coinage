@@ -1,4 +1,3 @@
-import { resolveMintNameZh } from '@/lib/mint-towns'
 import { splitCsv } from '@/lib/format'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
@@ -427,8 +426,8 @@ export function computeSiteTypeQuantities(
 }
 
 /** Per-mint, per-selection-entry coin quantities for Compare mode — outer
- * key is the resolved mint zh name, inner key is entry.key. Used by the
- * database Mint Town tab's "by type" Compare view. */
+ * key is the mint's zh name, inner key is entry.key. Used by the database
+ * Mint Town tab's "by type" Compare view. */
 export function computeMintTypeQuantities(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[],
@@ -441,9 +440,8 @@ export function computeMintTypeQuantities(
   finds.forEach((find) => {
     if (!find.coin_issues_id) return
     const coinIssue = coinIssueById.get(find.coin_issues_id)
-    const mintRaw = coinIssue?.mint_zh?.trim()
-    if (!mintRaw) return
-    const mintZh = resolveMintNameZh(mintRaw)
+    const mintZh = coinIssue?.mint_zh?.trim()
+    if (!mintZh) return
     const qty = findQuantity(find)
     if (qty <= 0) return
     entries.forEach((entry) => {

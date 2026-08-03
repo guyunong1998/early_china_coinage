@@ -301,6 +301,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             const href = buildHref({ precision: tab.id === 'all' ? undefined : tab.id })
             return (
               <span key={tab.id} className="inline-flex items-center gap-1">
+                {tab.id === 'all' && <PrecisionAllHint />}
                 <Link
                   href={href}
                   className={`rounded border px-3 py-1.5 text-sm transition ${
@@ -311,7 +312,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 >
                   <T k={tab.key} /> ({tab.count})
                 </Link>
-                {tab.id === 'all' && <PrecisionAllHint />}
               </span>
             )
           })}

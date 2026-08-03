@@ -30,6 +30,17 @@ const omittableText = z.preprocess(
 
 const requiredText = z.string().trim().min(1, 'Required')
 
+/** A textarea edited one entry per line, parsed to a text[] column — blank
+ * lines dropped. Used for mints.sources_unlinked: deleting a line removes
+ * that unlinked citation on save. */
+const textLines = z.preprocess((v) => {
+  if (typeof v !== 'string') return []
+  return v
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}, z.array(z.string()))
+
 // ── mints ────────────────────────────────────────────────────────────────
 
 export const mintSchema = z.object({
@@ -42,6 +53,12 @@ export const mintSchema = z.object({
   description_zh: optionalText,
   description_en: optionalText,
   citation: optionalText,
+  state_id: optionalUuid,
+  modern_location_zh: optionalText,
+  modern_location_en: optionalText,
+  location_note: optionalText,
+  sources_unlinked: textLines,
+  alternative_names: textLines,
 })
 
 export const createMintSchema = mintSchema.omit({ id: true })

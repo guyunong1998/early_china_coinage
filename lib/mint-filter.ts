@@ -1,5 +1,5 @@
-import { getMintByNameZh } from '@/lib/mint-towns'
-import type { CoinIssueDisplay, HeatmapFind } from '@/lib/types'
+import { findMintByNameZh } from '@/lib/mint-directory'
+import type { CoinIssueDisplay, HeatmapFind, MintInfo } from '@/lib/types'
 
 /** coin_issues.id -> mint_id, the join every mint aggregation here needs
  * since `finds` only carries coin_issues_id, not mint_id directly. */
@@ -31,8 +31,14 @@ export type MintFilterOption = {
 }
 
 /** Mint options grounded in live coin_issues.mint_id — no alias table needed,
- * since coin_issues already resolved each coin to a single mints row. */
-export function buildMintFilterOptions(coinIssues: CoinIssueDisplay[], finds: HeatmapFind[]): MintFilterOption[] {
+ * since coin_issues already resolved each coin to a single mints row.
+ * `mints` only fills in name_en/state/coordinates on the rare row where the
+ * coin_issues join itself came back null for that field. */
+export function buildMintFilterOptions(
+  coinIssues: CoinIssueDisplay[],
+  finds: HeatmapFind[],
+  mints: MintInfo[]
+): MintFilterOption[] {
   const groups = new Map<
     string,
     {
@@ -56,12 +62,12 @@ export function buildMintFilterOptions(coinIssues: CoinIssueDisplay[], finds: He
       return
     }
 
-    const town = zh ? getMintByNameZh(zh) : undefined
+    const mint = zh ? findMintByNameZh(mints, zh) : undefined
     groups.set(coin.mint_id, {
-      mint_zh: zh || town?.name_zh || '',
-      mint_en: town?.name_en ?? coin.mint_en ?? null,
-      state_zh: town?.state_zh ?? coin.state_zh ?? null,
-      state_en: town?.state_en ?? coin.state_en ?? null,
+      mint_zh: zh || mint?.name_zh || '',
+      mint_en: mint?.name_en ?? coin.mint_en ?? null,
+      state_zh: mint?.state_zh ?? coin.state_zh ?? null,
+      state_en: mint?.state_en ?? coin.state_en ?? null,
       coinTypeCount: 1,
     })
   })
@@ -85,7 +91,7 @@ export function buildMintFilterOptions(coinIssues: CoinIssueDisplay[], finds: He
       state_en: g.state_en,
       coinTypeCount: g.coinTypeCount,
       siteCount: siteCodesByMint.get(mint_id)?.size ?? 0,
-      hasCoordinates: getMintByNameZh(g.mint_zh)?.lat != null,
+      hasCoordinates: findMintByNameZh(mints, g.mint_zh)?.lat != null,
     }))
     .sort((a, b) => a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
 }

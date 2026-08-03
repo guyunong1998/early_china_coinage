@@ -12,9 +12,10 @@ import { isAuthorized } from '@/lib/admin/guard'
 import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { formatCoordinates, formatNumber } from '@/lib/format'
-import { getMintByNameZh } from '@/lib/mint-towns'
+import { findMintByNameZh, toMintInfo } from '@/lib/mint-directory'
 import {
   getCoinIssues,
+  getMints,
   getSite,
   getSiteContexts,
   getSiteFinds,
@@ -22,7 +23,7 @@ import {
   getSourceLinksForSite,
   getSources,
 } from '@/lib/queries'
-import type { Find } from '@/lib/types'
+import type { Find, MintInfo } from '@/lib/types'
 
 type PageProps = {
   params: Promise<{ site_code: string }>
@@ -61,7 +62,10 @@ type MintOriginGroup = {
 }
 
 /** Group a site's finds by the mint that issued each coin, for the "Coin Mint Origins" map. */
-function buildMintOrigins(finds: Find[]): {
+function buildMintOrigins(
+  finds: Find[],
+  mints: MintInfo[]
+): {
   matched: HoardMintOrigin[]
   unmatched: MintOriginGroup[]
 } {
@@ -91,14 +95,14 @@ function buildMintOrigins(finds: Find[]): {
   const unmatched: MintOriginGroup[] = []
 
   groups.forEach((group) => {
-    const mintTown = getMintByNameZh(group.mint_zh)
-    if (mintTown && mintTown.lat != null && mintTown.lng != null) {
+    const mint = findMintByNameZh(mints, group.mint_zh)
+    if (mint && mint.lat != null && mint.lng != null) {
       matched.push({
-        mint_code: mintTown.mint_code,
+        mint_code: mint.mint_code,
         mint_zh: group.mint_zh,
-        mint_en: group.mint_en ?? mintTown.name_en,
-        lat: mintTown.lat,
-        lng: mintTown.lng,
+        mint_en: group.mint_en ?? mint.name_en,
+        lat: mint.lat,
+        lng: mint.lng,
         quantity: group.quantity,
         findCount: group.findCount,
         coinTypes: [...group.coinTypes],
@@ -182,6 +186,7 @@ export default async function SitePage({ params }: PageProps) {
   const summary = await getSiteMapSummary(site_code)
   const contexts = await getSiteContexts(site_code)
   const finds = await getSiteFinds(contexts.map((c) => c.context_code))
+  const mints = (await getMints()).map(toMintInfo)
 
   // Support multiple refs stored in one field, e.g. "SRC001;SRC002"
   const sourceCodes = [
@@ -233,7 +238,7 @@ export default async function SitePage({ params }: PageProps) {
   const infoTextEn = site.note_en?.trim() || site.description_en
 
   const mintOrigins =
-    summary?.lat != null && summary.lng != null ? buildMintOrigins(finds) : null
+    summary?.lat != null && summary.lng != null ? buildMintOrigins(finds, mints) : null
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

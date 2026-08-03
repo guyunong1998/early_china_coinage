@@ -4,10 +4,9 @@ import { MintListClient } from '@/components/mints/MintListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { isAuthorized } from '@/lib/admin/guard'
-import { buildMintDirectory, buildMintTypeLabels, mintCompleteness } from '@/lib/mint-directory'
-import { resolveMintNameZh } from '@/lib/mint-towns'
+import { buildMintDirectory, buildMintTypeLabels, mintCompleteness, toMintInfo } from '@/lib/mint-directory'
 import { computeMintStatsFromFinds, toMintPoints } from '@/lib/mint-stats'
-import { getCoinIssues, getFindsForHeatmap, getMints } from '@/lib/queries'
+import { getCoinIssues, getFindsForHeatmap, getImages, getMints } from '@/lib/queries'
 
 export const metadata = {
   title: 'Mint Town Locations | Early Chinese Coin Finds',
@@ -19,11 +18,16 @@ export const revalidate = 3600
 export default async function MintsPage() {
   // Same points list the Mint Town map visualization shows by default (no
   // filter, no ANS toggle) — one source of truth so the two look identical.
-  const [dbMints, finds, coinIssues] = await Promise.all([getMints(), getFindsForHeatmap(), getCoinIssues()])
-  const mints = buildMintDirectory(dbMints)
+  const [dbMints, finds, coinIssues, images] = await Promise.all([
+    getMints(),
+    getFindsForHeatmap(),
+    getCoinIssues(),
+    getImages(),
+  ])
+  const mints = buildMintDirectory(dbMints, images)
   const authorized = await isAuthorized()
 
-  const { mapped, unmapped } = computeMintStatsFromFinds(finds, coinIssues, null)
+  const { mapped, unmapped } = computeMintStatsFromFinds(finds, coinIssues, null, dbMints.map(toMintInfo))
   const mintPoints = toMintPoints(mapped)
 
   // Coin/site counts for the list cards below — covers every documented
@@ -35,9 +39,8 @@ export default async function MintsPage() {
     statsByMint[stat.mint_zh] = { coinCount: stat.coinCount, siteCount: stat.siteCount }
   })
 
-  // Bilingual coin-type tags per mint, computed live from coin_issues —
-  // replaces the static dossier's English-only MintTown.coin_types wherever
-  // live data exists (see buildMintTypeLabels' doc comment).
+  // Bilingual coin-type tags per mint, computed live from coin_issues (see
+  // buildMintTypeLabels' doc comment).
   const typesByMint = Object.fromEntries(buildMintTypeLabels(coinIssues))
 
   // Distinct catalogued coin_issues per mint (the "Number of issues" sort
@@ -47,16 +50,14 @@ export default async function MintsPage() {
   coinIssues.forEach((c) => {
     const mintZh = c.mint_zh?.trim()
     if (!mintZh) return
-    const resolved = resolveMintNameZh(mintZh)
-    issuesByMint[resolved] = (issuesByMint[resolved] ?? 0) + 1
+    issuesByMint[mintZh] = (issuesByMint[mintZh] ?? 0) + 1
   })
 
   // "Completion of information" sort option — how many of a mint's
   // documentable fields are actually filled in (see mintCompleteness).
   const completenessByMint: Record<string, number> = {}
   mints.forEach((mint) => {
-    const hasCoinTypes = (typesByMint[mint.name_zh]?.length ?? 0) > 0 || mint.coin_types.length > 0
-    completenessByMint[mint.name_zh] = mintCompleteness(mint, hasCoinTypes)
+    completenessByMint[mint.name_zh] = mintCompleteness(mint)
   })
 
   return (

@@ -161,12 +161,73 @@ export type Mint = {
   description_zh: string | null
   description_en: string | null
   citation: string | null
+  state_id: string | null
+  modern_location_zh: string | null
+  modern_location_en: string | null
+  location_note: string | null
+  /** FK ids into public.images, resolved to actual rows by lib/mint-directory.ts. */
+  image_ids: string[]
+  /** Raw citation strings from the dossier not yet linked to a public.sources
+   * row — a manual-verification queue, not a finished bibliography. */
+  sources_unlinked: string[]
+  /** Stable /mints/[mint_code] URL slug — generated once (lib/admin/mints-actions.ts's
+   * generateMintCode) and not meant to be hand-edited casually since it's load-bearing for routing. */
+  mint_code: string
+  /** Other names/spellings this mint is known by in older sources (e.g. 邯郸
+   * was also inscribed as 甘丹) — a search/display cross-reference only.
+   * coin_issues.mint_id / ans_data.mint_id are proper foreign keys, so
+   * matching a find to a mint never depends on this field. */
+  alternative_names: string[]
 }
 
 export type State = {
   id: string
   state_zh: string
   state_en: string | null
+}
+
+/** Flattened, display-ready mint info — the shape most consumers actually
+ * want (a flat state_zh/state_en instead of a nested join, lat/lng instead
+ * of latitude/longitude), built from a live `mints` row by
+ * lib/mint-directory.ts's toMintInfo. Replaces the old static MintTown type
+ * that used to come from lib/mint-towns.ts. */
+export type MintInfo = {
+  id: string
+  mint_code: string
+  name_zh: string
+  name_en: string
+  state_zh: string
+  state_en: string
+  modern_location_en: string
+  modern_location_zh: string | null
+  lat: number | null
+  lng: number | null
+  alternative_names: string[]
+}
+
+export type MintImage = {
+  /** Public asset path, e.g. /images/mints/anyi-plan.png. */
+  src: string
+  caption?: string
+  credit?: string
+}
+
+export type ImageRecord = {
+  id: string
+  /** Path relative to public/images/, e.g. "mints/anyi-plan.png". */
+  filename: string
+  source_id: string | null
+  /** One-off credit/URL, used instead of source_id when the source isn't
+   * worth cataloguing in public.sources. */
+  source_text: string | null
+  caption_zh: string | null
+  caption_en: string | null
+  note_zh: string | null
+  note_en: string | null
+  sources:
+    | { citation_zh: string | null; citation_en: string | null; url: string | null }
+    | { citation_zh: string | null; citation_en: string | null; url: string | null }[]
+    | null
 }
 
 export type Inscription = {

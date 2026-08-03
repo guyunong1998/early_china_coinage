@@ -20,6 +20,14 @@ const INITIAL: ActionState<Mint> = {
     description_zh: null,
     description_en: null,
     citation: null,
+    state_id: null,
+    modern_location_zh: null,
+    modern_location_en: null,
+    location_note: null,
+    image_ids: [],
+    sources_unlinked: [],
+    mint_code: '',
+    alternative_names: [],
   },
 }
 

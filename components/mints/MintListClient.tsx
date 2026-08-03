@@ -5,8 +5,7 @@ import { useMemo, useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import type { MintTypeLabel } from '@/lib/mint-directory'
-import type { MintTown } from '@/lib/mint-towns'
+import type { MintDirectoryEntry, MintTypeLabel } from '@/lib/mint-directory'
 import { stateTagColor } from '@/lib/state-colors'
 
 type MintStats = { coinCount: number; siteCount: number }
@@ -22,12 +21,12 @@ const SORT_OPTIONS: { value: SortOption; labelKey: DictionaryKey }[] = [
 ]
 
 function sortMints(
-  mints: MintTown[],
+  mints: MintDirectoryEntry[],
   sort: SortOption,
   statsByMint: Record<string, MintStats>,
   issuesByMint: Record<string, number>,
   completenessByMint: Record<string, number>
-): MintTown[] {
+): MintDirectoryEntry[] {
   if (sort === 'name') return mints
   const sorted = [...mints]
   switch (sort) {
@@ -47,27 +46,24 @@ function sortMints(
   return sorted
 }
 
-/** Searches the list actually being displayed (`all`), not the static
- * MINT_TOWNS dossier list — `all` may include DB-only mints with no
- * dossier entry, which would otherwise be unsearchable. Matches against
- * whichever coin-type labels are actually shown on the card: the live
- * bilingual ones from `typesByMint` where available, else the static
- * dossier's English-only `coin_types`. */
-function filterMints(mints: MintTown[], typesByMint: Record<string, MintTypeLabel[]>, query: string): MintTown[] {
+/** Searches the list actually being displayed (`all`), which now already
+ * covers every mint in the database. Matches against the live bilingual
+ * coin-type labels from `typesByMint` (computed from coin_issues; see
+ * lib/mint-directory.ts's buildMintTypeLabels), and against
+ * alternative_names (historical spellings a researcher might search for). */
+function filterMints(mints: MintDirectoryEntry[], typesByMint: Record<string, MintTypeLabel[]>, query: string): MintDirectoryEntry[] {
   const q = query.trim().toLowerCase()
   if (!q) return mints
   return mints.filter((m) => {
     const liveTypes = typesByMint[m.name_zh]
-    const typeMatch =
-      liveTypes && liveTypes.length > 0
-        ? liveTypes.some((t) => t.zh.includes(q) || (t.en ?? '').toLowerCase().includes(q))
-        : m.coin_types.some((t) => t.toLowerCase().includes(q))
+    const typeMatch = liveTypes?.some((t) => t.zh.includes(q) || (t.en ?? '').toLowerCase().includes(q)) ?? false
     return (
       m.name_en.toLowerCase().includes(q) ||
       m.name_zh.includes(q) ||
       m.state_en.toLowerCase().includes(q) ||
       m.state_zh.includes(q) ||
       m.modern_location_en.toLowerCase().includes(q) ||
+      m.alternative_names.some((alt) => alt.includes(q)) ||
       typeMatch
     )
   })
@@ -80,11 +76,10 @@ export function MintListClient({
   issuesByMint = {},
   completenessByMint = {},
 }: {
-  all: MintTown[]
+  all: MintDirectoryEntry[]
   statsByMint?: Record<string, MintStats>
   /** Bilingual coin-type labels per mint, computed live from coin_issues
-   * (lib/mint-directory.ts's buildMintTypeLabels) — preferred over the
-   * static, English-only `MintTown.coin_types` wherever available. */
+   * (lib/mint-directory.ts's buildMintTypeLabels). */
   typesByMint?: Record<string, MintTypeLabel[]>
   /** Distinct catalogued coin_issues per mint (lib/mint-directory.ts's
    * consumer in app/mints/page.tsx) — the "Number of issues" sort option. */
@@ -153,7 +148,7 @@ export function MintListClient({
                     {mint.name_zh} <span className="text-sm font-normal text-gray-500">({mint.name_en})</span>
                   </h2>
                   <span
-                    className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(mint.state_en)}`}
+                    className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${stateTagColor(mint.state_zh)}`}
                   >
                     {lang === 'zh' ? mint.state_zh : mint.state_en}
                   </span>
@@ -170,30 +165,14 @@ export function MintListClient({
                 )}
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {liveTypes && liveTypes.length > 0
-                    ? liveTypes.map((type) => (
-                        <span
-                          key={type.zh}
-                          className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
-                        >
-                          {lang === 'zh' || !type.en ? type.zh : type.en}
-                        </span>
-                      ))
-                    : // mint.coin_types is a hand-transcribed, English-only
-                      // local dossier field (lib/mint-towns.ts) with no
-                      // Chinese counterpart — styled/tagged distinctly from
-                      // the bilingual, database-sourced tags above so it
-                      // never reads as translated when the page is in
-                      // Chinese (see lib/mint-directory.ts's buildMintTypeLabels).
-                      mint.coin_types.map((type) => (
-                        <span
-                          key={type}
-                          title={t('mintList.localDataTag')}
-                          className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-500"
-                        >
-                          {type}
-                        </span>
-                      ))}
+                  {liveTypes?.map((type) => (
+                    <span
+                      key={type.zh}
+                      className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
+                    >
+                      {lang === 'zh' || !type.en ? type.zh : type.en}
+                    </span>
+                  ))}
                   {mint.description_en.length <= 60 && (
                     <span className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-400">
                       <T k="mintList.inPreparation" />

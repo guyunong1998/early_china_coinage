@@ -28,6 +28,14 @@ const INITIAL: ActionState<CoinTypeHierarchyRow> = {
   },
 }
 
+const LEVEL_NAMES = [
+  { level: 1, name: 'Coin/Mould' },
+  { level: 2, name: 'Category' },
+  { level: 3, name: 'Type' },
+  { level: 4, name: 'Subtype' },
+  { level: 5, name: 'Variant' },
+] as const
+
 function hierarchyLabel(row: CoinTypeHierarchyRow): string {
   return [row.level1_zh, row.level2_zh, row.level3_zh, row.level4_zh, row.level5_zh].filter(Boolean).join(' › ')
 }
@@ -52,14 +60,14 @@ export function CoinTypeHierarchyQuickCreateForm({
     <form action={formAction} className="space-y-3">
       <ActionFormStatus state={state} />
       <p className="text-xs text-gray-500">Fill in as many levels as apply — most nodes only use the first 2–3.</p>
-      {([1, 2, 3, 4, 5] as const).map((level) => (
+      {LEVEL_NAMES.map(({ level, name }) => (
         <div key={level} className="grid grid-cols-2 gap-2">
           <div>
-            <FieldLabel>{`Level ${level} (zh)`}</FieldLabel>
+            <FieldLabel>{`Level ${level} – ${name} (zh)`}</FieldLabel>
             <input name={`level${level}_zh`} autoFocus={level === 1} className={fieldInputClass} />
           </div>
           <div>
-            <FieldLabel>{`Level ${level} (en)`}</FieldLabel>
+            <FieldLabel>{`Level ${level} – ${name} (en)`}</FieldLabel>
             <input name={`level${level}_en`} className={fieldInputClass} />
           </div>
         </div>

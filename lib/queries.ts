@@ -1,5 +1,4 @@
 import { splitCsv } from '@/lib/format'
-import { getMintNameVariants } from '@/lib/mint-towns'
 import { supabase } from '@/lib/supabase'
 import type {
   CoinIssueDisplay,
@@ -8,6 +7,7 @@ import type {
   DatabaseStats,
   Find,
   HeatmapFind,
+  ImageRecord,
   Inscription,
   MapSite,
   Site,
@@ -555,6 +555,18 @@ export async function getInscriptions(): Promise<Inscription[]> {
   )
 }
 
+export async function getImages(): Promise<ImageRecord[]> {
+  return fetchAllPages<ImageRecord>((from, to) =>
+    supabase
+      .from('images')
+      .select(
+        'id, filename, source_id, source_text, caption_zh, caption_en, note_zh, note_en, sources(citation_zh, citation_en, url)'
+      )
+      .order('filename')
+      .range(from, to)
+  )
+}
+
 export type MintRow = {
   id: string
   name_zh: string
@@ -565,13 +577,24 @@ export type MintRow = {
   description_zh: string | null
   description_en: string | null
   citation: string | null
+  modern_location_zh: string | null
+  modern_location_en: string | null
+  location_note: string | null
+  state_id: string | null
+  states: { state_zh: string; state_en: string | null } | { state_zh: string; state_en: string | null }[] | null
+  image_ids: string[]
+  sources_unlinked: string[]
+  mint_code: string
+  alternative_names: string[]
 }
 
 export async function getMints(): Promise<MintRow[]> {
   return fetchAllPages<MintRow>((from, to) =>
     supabase
       .from('mints')
-      .select('id, name_zh, name_en, precision_level, latitude, longitude, description_zh, description_en, citation')
+      .select(
+        'id, name_zh, name_en, precision_level, latitude, longitude, description_zh, description_en, citation, modern_location_zh, modern_location_en, location_note, state_id, states(state_zh, state_en), image_ids, sources_unlinked, mint_code, alternative_names'
+      )
       .order('name_zh')
       .range(from, to)
   )
@@ -628,8 +651,8 @@ export type MintFindspotsData = {
    * whether a find has been recorded for it yet. */
   inscriptions: { zh: string; en: string | null }[]
   /** Distinct coin-type labels catalogued for this mint in coin_issues
-   * (deepest populated hierarchy level, minor falling back to major) —
-   * bilingual, unlike the static dossier's English-only MintTown.coin_types. */
+   * (deepest populated hierarchy level, minor falling back to major),
+   * bilingual. */
   typeLabels: { zh: string; en: string | null }[]
   /** Total coin quantity across all finds attributed to this mint. */
   totalCoinCount: number
@@ -674,24 +697,17 @@ function buildTypeLabel(coin: {
 }
 
 /** Returns mint-issued coin findspots based on finds+coin_issues in current DB.
- * `mintZh` is resolved to a live `mints.id` (via known name variants) before
- * querying — coin_issues links to mints by id, not by text. */
-export async function getMintFindspotsData(mintZh: string): Promise<MintFindspotsData> {
-  if (!mintZh) return EMPTY_MINT_FINDSPOTS_DATA
-
-  const variants = getMintNameVariants(mintZh)
-  const { data: mintRows, error: mintError } = await supabase.from('mints').select('id').in('name_zh', variants)
-
-  if (mintError) throw mintError
-  const mintIds = (mintRows ?? []).map((row) => row.id)
-  if (mintIds.length === 0) return EMPTY_MINT_FINDSPOTS_DATA
+ * Takes the mint's own `mints.id` directly — coin_issues.mint_id is a real
+ * foreign key, so no name/variant matching is needed to find it. */
+export async function getMintFindspotsData(mintId: string): Promise<MintFindspotsData> {
+  if (!mintId) return EMPTY_MINT_FINDSPOTS_DATA
 
   const { data: mintedIssueRows, error: coinError } = await supabase
     .from('coin_issues')
     .select(
       'id, coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
     )
-    .in('mint_id', mintIds)
+    .eq('mint_id', mintId)
 
   if (coinError) throw coinError
   if (!mintedIssueRows || mintedIssueRows.length === 0) {
