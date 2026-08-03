@@ -3,17 +3,23 @@ import { notFound } from 'next/navigation'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/map/HoardMintOriginsMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
+import { SiteRecordSection } from '@/components/site/SiteRecordSection'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
+import { LabelHint } from '@/components/ui/LabelHint'
 import { T } from '@/components/i18n/T'
+import { isDevMode } from '@/lib/admin/guard'
+import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { formatCoordinates, formatNumber } from '@/lib/format'
 import { getMintByNameZh } from '@/lib/mint-towns'
 import {
+  getCoinIssues,
   getSite,
   getSiteContexts,
   getSiteFinds,
   getSiteMapSummary,
+  getSourceLinksForSite,
   getSources,
 } from '@/lib/queries'
 import type { Find } from '@/lib/types'
@@ -146,11 +152,19 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
 
 // ── row component ─────────────────────────────────────────────────────────
 
-function Row({ labelKey, children }: { labelKey: DictionaryKey; children: React.ReactNode }) {
+function Row({
+  labelKey,
+  hintKey,
+  children,
+}: {
+  labelKey: DictionaryKey
+  hintKey?: DictionaryKey
+  children: React.ReactNode
+}) {
   return (
     <div className="grid grid-cols-[140px_1fr] gap-3 border-b border-gray-100 py-2 last:border-b-0">
       <dt className="text-right text-sm font-semibold text-gray-700">
-        <T k={labelKey} />
+        {hintKey ? <LabelHint labelKey={labelKey} hintKey={hintKey} /> : <T k={labelKey} />}
       </dt>
       <dd className="text-sm text-gray-800">{children}</dd>
     </div>
@@ -176,6 +190,21 @@ export default async function SitePage({ params }: PageProps) {
   ]
 
   const sources = await getSources(sourceCodes)
+  // Only needed to populate the find-editing combobox, so skip the fetch in prod.
+  const coinIssues = isDevMode() ? await getCoinIssues() : []
+
+  // Structured citations (source_links), distinct from the legacy freetext
+  // source_code fields resolved above.
+  const structuredSourceLinks = await getSourceLinksForSite(
+    site_code,
+    contexts.map((c) => c.context_code),
+    finds.map((f) => f.find_code)
+  )
+  const [structuredSources, resolvedTargets] = await Promise.all([
+    getSources(structuredSourceLinks.map((l) => l.source_code)),
+    resolveSourceLinkTargets(structuredSourceLinks),
+  ])
+  const sourcesByCode = new Map(structuredSources.map((s) => [s.source_code, s]))
 
   const permalink =
     typeof process.env.NEXT_PUBLIC_SITE_URL === 'string'
@@ -252,6 +281,7 @@ export default async function SitePage({ params }: PageProps) {
                 height="280px"
                 fitBounds={false}
                 highlightSiteCode={site_code}
+                singlePin
               />
             </div>
           )}
@@ -299,7 +329,7 @@ export default async function SitePage({ params }: PageProps) {
             <dl>
               <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, null)}</Row>
               <Row labelKey="siteTabs.row.mints">{bi(summary?.mints_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.precision">
+              <Row labelKey="siteTabs.row.precision" hintKey="siteTabs.row.precisionHint">
                 {formatNumber(site.precision_level ?? summary?.precision_level)}
               </Row>
             </dl>
@@ -338,11 +368,25 @@ export default async function SitePage({ params }: PageProps) {
         </div>
       )}
 
+      {isDevMode() && (
+        <div className="mt-6">
+          <DataCard title="Site Record (dev only)">
+            <SiteRecordSection site={site} />
+          </DataCard>
+        </div>
+      )}
+
       <div className="mt-8">
         <SiteDetailTabs
+          siteCode={site_code}
           contexts={contexts}
           finds={finds}
           sources={sources}
+          isDevMode={isDevMode()}
+          coinIssues={coinIssues}
+          structuredSourceLinks={structuredSourceLinks}
+          sourcesByCode={sourcesByCode}
+          resolvedTargets={resolvedTargets}
         />
       </div>
     </div>

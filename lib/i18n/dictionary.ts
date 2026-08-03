@@ -105,6 +105,7 @@ export const DICTIONARY = {
     zh: '下图展示了遗址、出土记录、币种与铸地之间的关系结构。',
   },
   'about.resources.title': { en: 'Additional Resources', zh: '更多资源' },
+  'about.resources.sources': { en: 'Bibliographic Sources', zh: '文献来源' },
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
 
   // ── search page ───────────────────────────────────────────────────────
@@ -240,6 +241,10 @@ export const DICTIONARY = {
   'siteTabs.row.states': { en: 'States', zh: '诸侯国' },
   'siteTabs.row.mints': { en: 'Mints', zh: '铸地' },
   'siteTabs.row.precision': { en: 'Precision', zh: '定位精度' },
+  'siteTabs.row.precisionHint': {
+    en: 'How reliable the source material is in giving this find spot’s location, from 1 (least reliable) to 3 (most reliable).',
+    zh: '文献资料对该出土地点定位的可靠程度，从 1（可靠性最低）到 3（可靠性最高）。',
+  },
   'siteTabs.row.contextDescription': { en: 'Context description', zh: '出土单位描述' },
   'siteTabs.selectContext': {
     en: 'Select one context above to view its description.',

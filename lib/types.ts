@@ -70,6 +70,8 @@ export type CoinTypeHierarchyRow = {
   level5_zh: string | null
   level5_en: string | null
   img_acc_num: string | null
+  description_zh: string | null
+  description_en: string | null
 }
 
 /**
@@ -125,22 +127,63 @@ export type Find = {
 }
 
 export type Source = {
+  id: string
   source_code: string
   author_zh: string | null
   author_en: string | null
   title_zh: string | null
   title_en: string | null
+  language: string | null
   year: number | null
   publication_zh: string | null
+  publication_en: string | null
   page: string | null
   citation_zh: string | null
+  citation_en: string | null
   url: string | null
+  note_zh: string | null
+  note_en: string | null
 }
 
 export type DatabaseStats = {
   siteCount: number
   totalCoins: number
   findCount: number
+}
+
+export type Mint = {
+  id: string
+  name_zh: string
+  name_en: string | null
+  precision_level: number | null
+  latitude: number | null
+  longitude: number | null
+  description_zh: string | null
+  description_en: string | null
+  citation: string | null
+}
+
+export type State = {
+  id: string
+  state_zh: string
+  state_en: string | null
+}
+
+export type Inscription = {
+  id: string
+  inscription_zh: string | null
+  inscription_en: string | null
+}
+
+export type SourceLink = {
+  id: string
+  source_link_code: string
+  source_code: string
+  target_type: 'site' | 'context' | 'find' | 'coin_item'
+  target_code: string
+  page: string | null
+  note_zh: string | null
+  note_en: string | null
 }
 
 export type HeatmapFind = {

@@ -154,35 +154,41 @@ export function CoinTypePieChart({
   const cx = rOuter
   const cy = rOuter
 
-  let cursor = 0
-  const groups: RenderGroup[] = data.map((g, i) => {
-    const startAngle = cursor
-    const endAngle = cursor + (g.value / total) * 360
-    cursor = endAngle
-    const baseColor = PALETTE[i % PALETTE.length]
+  const { groups } = data.reduce<{ cursor: number; groups: RenderGroup[] }>(
+    (acc, g, i) => {
+      const startAngle = acc.cursor
+      const endAngle = acc.cursor + (g.value / total) * 360
+      const baseColor = PALETTE[i % PALETTE.length]
 
-    const childTotal = g.children.reduce((sum, c) => sum + c.value, 0) || g.value
-    const shades = shadesOf(baseColor, Math.max(g.children.length, 1))
-    let childCursor = startAngle
-    const children = (g.children.length > 0 ? g.children : [{ label: g.label, labelEn: g.labelEn, value: g.value }]).map(
-      (c, j) => {
-        const childStart = childCursor
-        const childEnd = childCursor + (c.value / childTotal) * (endAngle - startAngle)
-        childCursor = childEnd
-        return { ...c, color: shades[j % shades.length], startAngle: childStart, endAngle: childEnd }
+      const childTotal = g.children.reduce((sum, c) => sum + c.value, 0) || g.value
+      const shades = shadesOf(baseColor, Math.max(g.children.length, 1))
+      const childSource =
+        g.children.length > 0 ? g.children : [{ label: g.label, labelEn: g.labelEn, value: g.value }]
+      const { children } = childSource.reduce<{ cursor: number; children: RenderChild[] }>(
+        (childAcc, c, j) => {
+          const childStart = childAcc.cursor
+          const childEnd = childAcc.cursor + (c.value / childTotal) * (endAngle - startAngle)
+          return {
+            cursor: childEnd,
+            children: [
+              ...childAcc.children,
+              { ...c, color: shades[j % shades.length], startAngle: childStart, endAngle: childEnd },
+            ],
+          }
+        },
+        { cursor: startAngle, children: [] }
+      )
+
+      return {
+        cursor: endAngle,
+        groups: [
+          ...acc.groups,
+          { label: g.label, labelEn: g.labelEn, value: g.value, color: baseColor, startAngle, endAngle, children },
+        ],
       }
-    )
-
-    return {
-      label: g.label,
-      labelEn: g.labelEn,
-      value: g.value,
-      color: baseColor,
-      startAngle,
-      endAngle,
-      children,
-    }
-  })
+    },
+    { cursor: 0, groups: [] }
+  )
 
   return (
     <div className="flex flex-wrap items-start gap-4">

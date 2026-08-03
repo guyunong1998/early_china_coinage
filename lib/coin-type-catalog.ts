@@ -42,6 +42,13 @@ export type CoinTypeNode = {
    * any further), if a specimen was photographed for it — never sourced
    * from a deeper descendant's row. */
   imgAccNum: string | null
+  /** coin_type_hierarchy.id of this node's own row (see ownRow below) — the
+   * target for editing description_zh/description_en. Null when every row
+   * grouped under this node subdivides further (a pure grouping bucket with
+   * no row of its own to attach a description to). */
+  ownHierarchyId: string | null
+  description_zh: string | null
+  description_en: string | null
 }
 
 const LEVELS: CoinTypeLevel[] = ['level1', 'level2', 'level3', 'level4', 'level5']
@@ -94,13 +101,29 @@ function dedupeMints(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>):
   return [...seen.values()].sort((a, b) => a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
 }
 
-/** img_acc_num from the row(s) that terminate exactly at this level — i.e.
- * don't subdivide further — as opposed to a deeper descendant's row that
- * happens to share `group.rows` with this node. */
-function ownImgAccNum(rows: CoinTypeHierarchyRow[], depthIndex: number): string | null {
+/** Row(s) that terminate exactly at this level — i.e. don't subdivide
+ * further — as opposed to a deeper descendant's row that happens to share
+ * `group.rows` with this node. Usually at most one (coin_type_hierarchy's
+ * unique constraint on level1_zh..level5_zh), but Postgres unique
+ * constraints don't dedupe across NULLs, so bucket-level nodes (trailing
+ * levels null) could in principle have more than one — hence a list, not a
+ * single row. */
+function ownRows(rows: CoinTypeHierarchyRow[], depthIndex: number): CoinTypeHierarchyRow[] {
   const nextLevel = LEVELS[depthIndex + 1]
-  const ownRows = nextLevel ? rows.filter((r) => !zhOf(r, nextLevel)) : rows
-  return ownRows.find((r) => r.img_acc_num)?.img_acc_num ?? null
+  return nextLevel ? rows.filter((r) => !zhOf(r, nextLevel)) : rows
+}
+
+function ownImgAccNum(rows: CoinTypeHierarchyRow[], depthIndex: number): string | null {
+  return ownRows(rows, depthIndex).find((r) => r.img_acc_num)?.img_acc_num ?? null
+}
+
+/** The row to target when editing this node's description — prefers one
+ * that already has a description set, else just the first own row (so
+ * there's still something to edit even before a description exists). */
+function ownDescriptionRow(rows: CoinTypeHierarchyRow[], depthIndex: number): CoinTypeHierarchyRow | null {
+  const candidates = ownRows(rows, depthIndex)
+  if (candidates.length === 0) return null
+  return candidates.find((r) => r.description_zh || r.description_en) ?? candidates[0]
 }
 
 function dedupeInscriptions(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): InscriptionRef[] {
@@ -151,6 +174,7 @@ function buildLevel(
       used.add(slug)
 
       const hierarchyIds = new Set(group.rows.map((r) => r.id))
+      const descriptionRow = ownDescriptionRow(group.rows, depthIndex)
 
       nodes.push({
         slug,
@@ -163,6 +187,9 @@ function buildLevel(
         mints: dedupeMints(coinIssues, hierarchyIds),
         inscriptions: dedupeInscriptions(coinIssues, hierarchyIds),
         imgAccNum: ownImgAccNum(group.rows, depthIndex),
+        ownHierarchyId: descriptionRow?.id ?? null,
+        description_zh: descriptionRow?.description_zh ?? null,
+        description_en: descriptionRow?.description_en ?? null,
       })
 
       if (depthIndex < LEVELS.length - 1) {

@@ -2,10 +2,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DetailRow } from '@/components/ui/DetailRow'
 import { ImagePlaceholder } from '@/components/ui/ImagePlaceholder'
+import { CoinIssuesTable } from '@/components/coin-types/CoinIssuesTable'
+import { CoinTypeDescriptionSection } from '@/components/coin-types/CoinTypeDescriptionSection'
 import { CoinTypeImages } from '@/components/coin-types/CoinTypeImages'
 import { MouldTag } from '@/components/coin-types/MouldTag'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
+import { isDevMode } from '@/lib/admin/guard'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import {
@@ -15,7 +18,16 @@ import {
   isMouldNode,
   type CoinTypeLevel,
 } from '@/lib/coin-type-catalog'
-import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
+import {
+  getCoinIssues,
+  getCoinTypeHierarchy,
+  getFindSpotsMapSites,
+  getFindsForHeatmap,
+  getInscriptions,
+  getMints,
+  getStates,
+} from '@/lib/queries'
+import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -63,6 +75,22 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   if (!node) notFound()
 
   const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum, node.slug)
+
+  // Only needed to populate the coin-issue editing comboboxes, so skip in prod.
+  const [mints, states, inscriptions] = isDevMode()
+    ? await Promise.all([getMints(), getStates(), getInscriptions()])
+    : [[], [], []]
+  const mintOptions: ComboOption[] = mints.map((m) => ({ value: m.id, label: m.name_zh, searchText: m.name_en ?? '' }))
+  const stateOptions: ComboOption[] = states.map((s) => ({ value: s.id, label: s.state_zh, searchText: s.state_en ?? '' }))
+  const inscriptionOptions: ComboOption[] = inscriptions.map((i) => ({
+    value: i.id,
+    label: i.inscription_zh ?? '(no text)',
+    searchText: i.inscription_en ?? '',
+  }))
+  const hierarchyOptions: ComboOption[] = hierarchyRows.map((h) => ({
+    value: h.id,
+    label: [h.level1_zh, h.level2_zh, h.level3_zh, h.level4_zh, h.level5_zh].filter(Boolean).join(' › '),
+  }))
 
   const hierarchyIdByIssueId = new Map(coinIssues.map((c) => [c.id, c.coin_type_hierarchy_id]))
   const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByIssueId)
@@ -175,17 +203,21 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Description placeholder — no curated text source for typology
-          nodes yet (unlike mint dossiers); keeps the same "not recorded
-          yet" pattern the mint detail page uses. */}
+      {/* Description — coin_type_hierarchy.description_zh/en on this node's
+          own row (see lib/coin-type-catalog.ts ownDescriptionRow), editable
+          in dev. */}
       <section className="panel mt-6 overflow-hidden">
         <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
           <T k="mintDetail.description" />
         </div>
         <div className="p-5">
-          <p className="text-sm italic text-gray-400">
-            <T k="coinTypeDetail.noDescription" />
-          </p>
+          <CoinTypeDescriptionSection
+            ownHierarchyId={node.ownHierarchyId}
+            descriptionZh={node.description_zh}
+            descriptionEn={node.description_en}
+            isDevMode={isDevMode()}
+            noDescriptionLabel={<T k="coinTypeDetail.noDescription" />}
+          />
         </div>
       </section>
 
@@ -204,56 +236,14 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                    <th className="py-2 pr-4">Code</th>
-                    <th className="py-2 pr-4">Type</th>
-                    <th className="py-2 pr-4">Inscription</th>
-                    <th className="py-2 pr-4">State</th>
-                    <th className="py-2 pr-4">Mint</th>
-                    <th className="py-2">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matchedCoinIssues.map((issue) => {
-                    const typeZh = issue.minor_type_zh ?? issue.major_type_zh
-                    const typeEn = issue.minor_type_zh ? issue.minor_type_en : issue.major_type_en
-                    return (
-                      <tr key={issue.id} className="border-b border-gray-50 align-top">
-                        <td className="py-2 pr-4 font-mono text-xs">{issue.coin_type_code}</td>
-                        <td className="py-2 pr-4 text-gray-600">
-                          {typeZh ?? '—'}
-                          {typeEn && <span className="ml-1 text-xs italic text-gray-400">({typeEn})</span>}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {issue.inscription ?? '—'}
-                          {issue.inscription_en && issue.inscription_en !== issue.inscription && (
-                            <span className="ml-1 text-xs italic text-gray-400">({issue.inscription_en})</span>
-                          )}
-                        </td>
-                        <td className="py-2 pr-4 text-gray-600">
-                          {issue.state_zh ?? '—'}
-                          {issue.state_en && <span className="ml-1 text-xs italic text-gray-400">({issue.state_en})</span>}
-                        </td>
-                        <td className="py-2 pr-4 text-gray-600">
-                          {issue.mint_zh ?? '—'}
-                          {issue.mint_en && <span className="ml-1 text-xs italic text-gray-400">({issue.mint_en})</span>}
-                        </td>
-                        <td className="py-2 text-gray-600">
-                          {issue.description_zh && <div>{issue.description_zh}</div>}
-                          {issue.description_en && (
-                            <div className={issue.description_zh ? 'italic text-gray-400' : undefined}>
-                              {issue.description_en}
-                            </div>
-                          )}
-                          {!issue.description_zh && !issue.description_en && '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <CoinIssuesTable
+                issues={matchedCoinIssues}
+                isDevMode={isDevMode()}
+                mintOptions={mintOptions}
+                stateOptions={stateOptions}
+                inscriptionOptions={inscriptionOptions}
+                hierarchyOptions={hierarchyOptions}
+              />
             </div>
           )}
         </div>

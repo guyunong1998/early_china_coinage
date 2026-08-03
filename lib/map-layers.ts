@@ -181,11 +181,11 @@ function addRiverModeControl(
 }
 
 export function buildBaseLayers(L: LeafletNS) {
-  // The default (and only) base layer across the site — the Consortium of
-  // Ancient World Mappers' hillshaded terrain basemap, a better fit for a
-  // historical/archaeological atlas than a modern street map. Its own tiles
-  // only go up to zoom 11 (maxNativeZoom); maxZoom stays high so Leaflet
-  // just upscales the last tile instead of leaving deep zooms blank.
+  // Ancient World Mappers' hillshaded terrain basemap — an alternative to
+  // the default CyclOSM base layer (see the cyclosm tile layer below) for a
+  // historical/archaeological atlas look. Its own tiles only go up to zoom
+  // 11 (maxNativeZoom); maxZoom stays high so Leaflet just upscales the
+  // last tile instead of leaving deep zooms blank.
   const cawm = L.tileLayer('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png', {
     attribution:
       'Basemap © <a href="https://cawm.lib.uiowa.edu">Consortium of Ancient World Mappers</a>',
@@ -202,10 +202,11 @@ export function buildBaseLayers(L: LeafletNS) {
     }
   )
 
-  // CyclOSM — a modern OpenStreetMap-derived basemap, offered as a third
-  // alternative alongside the hillshaded terrain and satellite base layers.
-  // Carries its own place-name/road labels, so it's used as-is rather than
-  // paired with the labelsEn/labelsZh overlays above.
+  // CyclOSM — a modern OpenStreetMap-derived basemap, and the default base
+  // layer across the site (see each map component's `cyclosm.addTo(map)`).
+  // The hillshaded terrain (cawm) and satellite layers above remain as
+  // alternatives via the layer switcher on the dedicated Map Visualizations
+  // pages.
   const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
     attribution:
       'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.cyclosm.org">CyclOSM</a> hosted by <a href="https://openstreetmap.fr">OpenStreetMap France</a>',
@@ -303,9 +304,9 @@ export function addLayerControl(
 
   L.control
     .layers(
-      // CAWM (already the active base layer when this control is built —
+      // CyclOSM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
-      { 'Ancient World Map': cawm, Satellite: satellite, CyclOSM: cyclosm },
+      { CyclOSM: cyclosm, 'Ancient World Map': cawm, Satellite: satellite },
       {},
       { collapsed: options?.collapsed ?? false, position }
     )

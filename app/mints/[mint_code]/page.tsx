@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation'
 import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
+import { MintRecordSection } from '@/components/mints/MintRecordSection'
 import { DetailRow } from '@/components/ui/DetailRow'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
+import { isDevMode } from '@/lib/admin/guard'
 import { getMintDossierByCode } from '@/lib/mint-dossiers'
 import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
 import { getMintFindspotsData, getMints } from '@/lib/queries'
@@ -26,8 +28,10 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function MintDetailPage({ params }: PageProps) {
   const { mint_code } = await params
-  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(await getMints()), mint_code)
+  const dbMints = await getMints()
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints), mint_code)
   if (!mint) notFound()
+  const rawMint = dbMints.find((m) => m.id === mint.db_id)
 
   const distribution = await getMintFindspotsData(mint.name_zh).catch(() => ({
     sites: [],
@@ -187,6 +191,21 @@ export default async function MintDetailPage({ params }: PageProps) {
           )}
         </div>
       </section>
+
+      {/* Database record — the raw `mints` table row, dev-only. Kept distinct
+          from (and hidden in production, unlike) the merged panels above,
+          which blend in lib/mint-dossiers.ts content that isn't stored in
+          Supabase — showing this in prod would just duplicate them. */}
+      {rawMint && isDevMode() && (
+        <section className="panel mt-6 overflow-hidden">
+          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
+            Database Record (dev only)
+          </div>
+          <div className="p-4">
+            <MintRecordSection mint={rawMint} isDevMode />
+          </div>
+        </section>
+      )}
 
       {/* Mint + issued-coin findspot distribution */}
       <section className="panel mt-6 overflow-hidden">

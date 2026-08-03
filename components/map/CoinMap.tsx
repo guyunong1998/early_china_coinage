@@ -10,6 +10,7 @@
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap, Layer } from 'leaflet'
 import type { MapSite } from '@/lib/types'
+import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
@@ -18,6 +19,10 @@ import {
   shouldShowCityBoundary,
   shouldShowCountyBoundary,
 } from '@/lib/city-boundaries'
+
+// Same accent SinglePointMap.tsx uses for its dropped pin — kept consistent
+// across every "this map shows exactly one place" usage.
+const SINGLE_POINT_PIN_COLOR = '#e1941f'
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
   布币: 'Spade Coin',
@@ -46,6 +51,10 @@ type CoinMapProps = {
   interactive?: boolean
   fitBounds?: boolean
   highlightSiteCode?: string
+  /** Renders each marker as a dropped pin instead of the plain dot every
+   * other (multi-site) map uses — for callers showing exactly one site's own
+   * location (e.g. the site detail page), not search/browse results. */
+  singlePin?: boolean
 }
 
 export default function CoinMap({
@@ -54,6 +63,7 @@ export default function CoinMap({
   interactive = true,
   fitBounds = true,
   highlightSiteCode,
+  singlePin = false,
 }: CoinMapProps) {
   const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -86,8 +96,8 @@ export default function CoinMap({
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
       // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
-      cawm.addTo(map)
+      const { cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      cyclosm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
@@ -115,12 +125,19 @@ export default function CoinMap({
         const size = isHighlighted ? 18 : 14
         const roleClass = isHighlighted ? 'map-dot-findspot-highlight' : 'map-dot-findspot'
         const marker = L.marker([site.lat, site.lng], {
-          icon: L.divIcon({
-            className: '',
-            html: `<div class="map-dot map-dot-size-${size} ${roleClass}"></div>`,
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
-          }),
+          icon: singlePin
+            ? L.divIcon({
+                className: '',
+                html: dropPinHtml(SINGLE_POINT_PIN_COLOR),
+                iconSize: [PIN_WIDTH, PIN_HEIGHT],
+                iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+              })
+            : L.divIcon({
+                className: '',
+                html: `<div class="map-dot map-dot-size-${size} ${roleClass}"></div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+              }),
         })
 
         const nameZh = site.site_name_zh ?? '未命名遗址'
@@ -240,7 +257,7 @@ export default function CoinMap({
     // `lang` is deliberately omitted: the separate [lang] effect below swaps
     // the label layer without rebuilding the whole map on toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sites, interactive, fitBounds, highlightSiteCode])
+  }, [sites, interactive, fitBounds, highlightSiteCode, singlePin])
 
   // Swap the place-name label layer whenever the language toggle changes,
   // without rebuilding the whole map.

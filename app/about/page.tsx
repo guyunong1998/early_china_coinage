@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { DataCard } from '@/components/ui/DataCard'
 import { T } from '@/components/i18n/T'
 
@@ -112,14 +113,22 @@ export default function AboutPage() {
         </DataCard>
 
         <DataCard title={<T k="about.resources.title" />}>
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
-          >
-            <T k="about.resources.github" /> →
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/sources"
+              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+            >
+              <T k="about.resources.sources" /> →
+            </Link>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+            >
+              <T k="about.resources.github" /> →
+            </a>
+          </div>
         </DataCard>
       </div>
     </div>

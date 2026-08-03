@@ -8,9 +8,12 @@ export type FilterMode = 'type' | 'mint'
  * components/map/MapVisCanvas.tsx). */
 export type ViewMode = 'points' | 'density' | 'compare'
 
+// `totalQty` on 'absent'/'pure' is null when this context's finds aren't
+// fully quantified — the site-level rollup below needs it to know whether
+// its own totalQty is trustworthy (see aggregateSiteHeatState).
 export type ContextHeatState =
-  | { kind: 'absent' }
-  | { kind: 'pure' }
+  | { kind: 'absent'; totalQty: number | null }
+  | { kind: 'pure'; totalQty: number | null }
   | { kind: 'ratio'; ratio: number; matchedQty: number; totalQty: number }
   | { kind: 'unquantified' }
 
@@ -28,6 +31,18 @@ function coalesceQuantity(find: HeatmapFind): number | null {
   return null
 }
 
+/** Sum of every find's quantity, or null if any find in the list lacks a
+ * usable quantity (in which case the sum can't be trusted as a total). */
+function sumQuantityIfComplete(finds: HeatmapFind[]): number | null {
+  let total = 0
+  for (const find of finds) {
+    const qty = coalesceQuantity(find)
+    if (qty == null) return null
+    total += qty
+  }
+  return total
+}
+
 /** Heat state for one archaeological context under the selected coin-issue set.
  * `matchedIds` are coin_issues.id values (see HeatmapFind.coin_issues_id) —
  * never coin_type_code, which finds no longer carries. */
@@ -35,13 +50,17 @@ export function computeContextHeatState(
   finds: HeatmapFind[],
   matchedIds: Set<string>
 ): ContextHeatState {
-  if (finds.length === 0) return { kind: 'absent' }
+  if (finds.length === 0) return { kind: 'absent', totalQty: null }
 
   const matched = finds.filter((f) => f.coin_issues_id && matchedIds.has(f.coin_issues_id))
-  if (matched.length === 0) return { kind: 'absent' }
+  // No match here — still carries this context's quantity (when countable)
+  // so the site-level rollup can count it in the denominator instead of
+  // dropping it, which used to make a site with e.g. one small pure-match
+  // context and many unrelated contexts read as 100% matched.
+  if (matched.length === 0) return { kind: 'absent', totalQty: sumQuantityIfComplete(finds) }
 
   // Entire context is the selected type → solid red
-  if (matched.length === finds.length) return { kind: 'pure' }
+  if (matched.length === finds.length) return { kind: 'pure', totalQty: sumQuantityIfComplete(finds) }
 
   let matchedQty = 0
   let totalQty = 0
@@ -74,74 +93,63 @@ export function computeContextHeatState(
 }
 
 /**
- * Aggregate context heat states up to a site marker.
+ * Aggregate context heat states up to a site marker. The ratio is a true
+ * quantity-weighted share across the *whole site* — every context counts
+ * toward the denominator, including ones where the selected type is entirely
+ * absent, not just the contexts that contain a match. (Excluding
+ * non-matching contexts from the denominator used to make a site with a
+ * single small pure-match context, plus many unrelated contexts, read as
+ * 100% matched — e.g. a site with one coin-mould find among hundreds of
+ * ordinary coins used to show up as 100% coin moulds.)
  * - no-data: no context contains the selected type
- * - pure: every context that has finds of any kind is 100% the selected type,
- *   or every context that contains the type is pure and there is no mixed context
- * - ratio: quantity-weighted share across contexts that can be counted
- * - unquantified: type is present but no context has a usable quantity ratio
+ * - pure: every find at the site (across every context) matches
+ * - ratio: quantity-weighted share across the site's contexts, when every
+ *   context's quantity is countable
+ * - unquantified: type is present, but at least one context (matching or
+ *   not) lacks a usable quantity, so no trustworthy site-wide share exists
  */
 export function aggregateSiteHeatState(contextStates: ContextHeatState[]): SiteHeatState {
-  const active = contextStates.filter((s) => s.kind !== 'absent')
-  if (active.length === 0) return { kind: 'no-data' }
+  if (contextStates.length === 0) return { kind: 'no-data' }
 
-  const pure = active.filter((s) => s.kind === 'pure')
-  const ratios = active.filter((s): s is Extract<ContextHeatState, { kind: 'ratio' }> => s.kind === 'ratio')
-  const unquantified = active.filter((s) => s.kind === 'unquantified')
+  const matchedContextCount = contextStates.filter((s) => s.kind === 'pure' || s.kind === 'ratio').length
+  if (matchedContextCount === 0) return { kind: 'no-data' }
 
-  if (pure.length === active.length) return { kind: 'pure' }
+  let matchedQty = 0
+  let totalQty = 0
+  let fullyQuantified = true
 
-  if (ratios.length > 0 || pure.length > 0) {
-    let matchedQty = 0
-    let totalQty = 0
-
-    ratios.forEach((s) => {
-      matchedQty += s.matchedQty
-      totalQty += s.totalQty
-    })
-    // Pure contexts with unknown qty still pull the site toward red:
-    // treat each as a full match unit when no quantities exist there.
-    // If a pure context later gets quantities via ratio path it won't be in `pure`.
-    if (totalQty > 0) {
-      // Pure contexts without separate qty don't add to denominator; ratio contexts dominate.
-      const ratio = Math.min(1, matchedQty / totalQty)
-      // If some contexts are pure (100%) and others mixed, blend by counting pure
-      // as contributing their share: approximate by weighting pure contexts equally
-      // with the quantity mass when we lack their counts.
-      if (pure.length > 0) {
-        const blended =
-          (ratio * ratios.length + 1 * pure.length) / (ratios.length + pure.length)
-        return {
-          kind: 'ratio',
-          ratio: blended,
-          matchedQty,
-          totalQty,
-          contextCount: active.length,
+  for (const s of contextStates) {
+    switch (s.kind) {
+      case 'absent':
+        if (s.totalQty == null) fullyQuantified = false
+        else totalQty += s.totalQty
+        break
+      case 'pure':
+        if (s.totalQty == null) fullyQuantified = false
+        else {
+          matchedQty += s.totalQty
+          totalQty += s.totalQty
         }
-      }
-      return {
-        kind: 'ratio',
-        ratio,
-        matchedQty,
-        totalQty,
-        contextCount: active.length,
-      }
-    }
-
-    // Only pure + unquantified, no countable mixed contexts
-    if (pure.length > 0 && unquantified.length === 0) return { kind: 'pure' }
-    if (pure.length > 0) {
-      return {
-        kind: 'ratio',
-        ratio: pure.length / active.length,
-        matchedQty: pure.length,
-        totalQty: active.length,
-        contextCount: active.length,
-      }
+        break
+      case 'ratio':
+        matchedQty += s.matchedQty
+        totalQty += s.totalQty
+        break
+      case 'unquantified':
+        fullyQuantified = false
+        break
     }
   }
 
-  return { kind: 'unquantified' }
+  if (!fullyQuantified || totalQty <= 0) return { kind: 'unquantified' }
+  if (matchedQty >= totalQty) return { kind: 'pure' }
+  return {
+    kind: 'ratio',
+    ratio: Math.min(1, matchedQty / totalQty),
+    matchedQty,
+    totalQty,
+    contextCount: matchedContextCount,
+  }
 }
 
 export function groupFindsBySiteContext(finds: HeatmapFind[]): Map<string, Map<string, HeatmapFind[]>> {

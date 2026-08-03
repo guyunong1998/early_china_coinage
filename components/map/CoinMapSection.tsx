@@ -17,6 +17,7 @@ type CoinMapSectionProps = {
   fitBounds?: boolean
   highlightSiteCode?: string
   loadingHeight?: string
+  singlePin?: boolean
 }
 
 export function CoinMapSection({
@@ -24,6 +25,7 @@ export function CoinMapSection({
   height = '480px',
   fitBounds = true,
   highlightSiteCode,
+  singlePin = false,
 }: CoinMapSectionProps) {
   return (
     <CoinMap
@@ -31,6 +33,7 @@ export function CoinMapSection({
       height={height}
       fitBounds={fitBounds}
       highlightSiteCode={highlightSiteCode}
+      singlePin={singlePin}
     />
   )
 }

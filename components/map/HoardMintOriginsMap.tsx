@@ -46,6 +46,17 @@ function makeDot(role: string, size: number) {
   return `<div class="map-dot map-dot-size-${size} ${role}"></div>`
 }
 
+// Dropped-pin marker for the findspot, sized so its tip (bottom-center of
+// the viewBox) lands exactly on the coordinate — see iconAnchor below.
+const PIN_WIDTH = 24
+const PIN_HEIGHT = 32
+function makePin(role: string) {
+  return `<svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+    <path class="${role}" d="M12 0C5.9 0 1 4.9 1 11c0 8.25 11 21 11 21s11-12.75 11-21c0-6.1-4.9-11-11-11z"/>
+    <circle cx="12" cy="11" r="4" fill="white"/>
+  </svg>`
+}
+
 export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
   const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -67,21 +78,23 @@ export function HoardMintOriginsMap({ site, mints }: HoardMintOriginsMapProps) {
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
       // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
-      cawm.addTo(map)
+      const { cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      cyclosm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
       const bounds: [number, number][] = [[site.lat, site.lng]]
 
-      // Findspot (hoard) marker — larger, teal, drawn on top
+      // Findspot (hoard) marker — a dropped pin (not a dot), drawn on top,
+      // anchored at its tip so the point lands exactly on the coordinate.
       const siteMarker = L.marker([site.lat, site.lng], {
         icon: L.divIcon({
           className: '',
-          html: makeDot('map-dot-hoard-site', 20),
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
+          html: makePin('map-pin-hoard-site'),
+          iconSize: [PIN_WIDTH, PIN_HEIGHT],
+          iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+          popupAnchor: [0, -PIN_HEIGHT],
         }),
         zIndexOffset: 1000,
       })

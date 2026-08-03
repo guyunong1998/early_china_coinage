@@ -8,9 +8,12 @@ import type {
   DatabaseStats,
   Find,
   HeatmapFind,
+  Inscription,
   MapSite,
   Site,
   Source,
+  SourceLink,
+  State,
 } from '@/lib/types'
 
 const MAP_SITE_FIELDS =
@@ -71,7 +74,7 @@ function deriveMajorMinor(cthRaw: CoinTypeHierarchyEmbed) {
  * by PostgREST — the embed shape used both for `.from('coin_issues')` and
  * for `.from('finds').select('*, coin_issues(...)')`. Each joined relation
  * may come back as an object or a single-element array (see `one` above). */
-type CoinIssueEmbed = {
+export type CoinIssueEmbed = {
   id: string
   coin_type_code: string
   description_zh: string | null
@@ -89,13 +92,13 @@ type CoinIssueEmbed = {
   coin_type_hierarchy: CoinTypeHierarchyEmbed
 }
 
-const COIN_ISSUE_FIELDS =
+export const COIN_ISSUE_FIELDS =
   'id, coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
 
 /** Flattens a joined coin_issues row into the same flat zh/en text shape the
  * old coin_types table provided, plus the FK ids for match-logic callers
  * (see lib/typology-filter.ts, lib/mint-filter.ts). */
-function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
+export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
   const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
   const mint = one(row.mints)
   const state = one(row.states)
@@ -462,10 +465,93 @@ export async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {
     supabase
       .from('coin_type_hierarchy')
       .select(
-        'id, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en, img_acc_num'
+        'id, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en, img_acc_num, description_zh, description_en'
       )
       .order('level2_zh')
       .range(from, to)
+  )
+}
+
+// ── sources / source_links ──────────────────────────────────────────────
+
+export async function getAllSources(): Promise<Source[]> {
+  return fetchAllPages<Source>((from, to) =>
+    supabase.from('sources').select('*').order('source_code').range(from, to)
+  )
+}
+
+export async function getSource(sourceCode: string): Promise<Source | null> {
+  const { data, error } = await supabase.from('sources').select('*').eq('source_code', sourceCode).maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function getAllSourceLinks(): Promise<SourceLink[]> {
+  return fetchAllPages<SourceLink>((from, to) =>
+    supabase.from('source_links').select('*').order('source_code').range(from, to)
+  )
+}
+
+export async function getSourceLinksBySourceCode(sourceCode: string): Promise<SourceLink[]> {
+  const { data, error } = await supabase.from('source_links').select('*').eq('source_code', sourceCode)
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * source_links scoped to one site: its own site_code, its contexts'
+ * context_codes, and its finds' find_codes. Deliberately excludes
+ * coin_item-typed links (a site's finds have coin items too, but the
+ * requirement scopes this to the site/context/find records themselves) —
+ * three separate .eq/.in queries rather than one fragile OR-string, since
+ * target_code isn't a real FK and the three code spaces don't overlap.
+ */
+// A single context can carry 300+ finds (seen live: 385), and PostgREST's
+// .in() filter is serialized into the request URL, which overflows well
+// before that — chunk find_codes to stay well under the header size limit.
+const TARGET_CODE_BATCH_SIZE = 150
+
+export async function getSourceLinksForSite(
+  siteCode: string,
+  contextCodes: string[],
+  findCodes: string[]
+): Promise<SourceLink[]> {
+  async function linksForCodes(targetType: SourceLink['target_type'], codes: string[]): Promise<SourceLink[]> {
+    if (codes.length === 0) return []
+    const batches: string[][] = []
+    for (let i = 0; i < codes.length; i += TARGET_CODE_BATCH_SIZE) batches.push(codes.slice(i, i + TARGET_CODE_BATCH_SIZE))
+    const results = await Promise.all(
+      batches.map(async (batch) => {
+        const { data, error } = await supabase
+          .from('source_links')
+          .select('*')
+          .eq('target_type', targetType)
+          .in('target_code', batch)
+        if (error) throw error
+        return data ?? []
+      })
+    )
+    return results.flat()
+  }
+
+  const [siteLinks, contextLinks, findLinks] = await Promise.all([
+    linksForCodes('site', [siteCode]),
+    linksForCodes('context', contextCodes),
+    linksForCodes('find', findCodes),
+  ])
+
+  return [...siteLinks, ...contextLinks, ...findLinks]
+}
+
+export async function getStates(): Promise<State[]> {
+  return fetchAllPages<State>((from, to) =>
+    supabase.from('states').select('id, state_zh, state_en').order('state_zh').range(from, to)
+  )
+}
+
+export async function getInscriptions(): Promise<Inscription[]> {
+  return fetchAllPages<Inscription>((from, to) =>
+    supabase.from('inscriptions').select('id, inscription_zh, inscription_en').order('inscription_zh').range(from, to)
   )
 }
 

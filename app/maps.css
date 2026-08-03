@@ -98,10 +98,23 @@
 }
 
 /* HoardMintOriginsMap.tsx (site detail page's mint-origins map): the
-   findspot/hoard itself, and each contributing mint town. */
+   findspot/hoard itself (a dropped-pin marker, not a dot — see
+   `.map-pin-hoard-site` below), and each contributing mint town. Both are
+   fully opaque on this map (unlike every other role above, which uses the
+   translucent --map-dot-special/--map-dot-fill) since there's only ever one
+   hoard's markers on screen at a time, so there's no overlap for
+   translucency to help disambiguate. */
 
 .map-dot-hoard-mint {
-  background: var(--map-dot-special);
+  background: rgb(var(--accent-rgb));
+}
+
+/* Dropped-pin marker (teardrop, not a circle) for the hoard/findspot itself
+   — distinguishes it from the round mint-town dots it's connected to. */
+.map-pin-hoard-site {
+  fill: rgb(var(--accent-rgb));
+  stroke: white;
+  stroke-width: 1.5px;
 }
 
 /* MintIssueDistributionMapCanvas.tsx (mint town page's issued-coin

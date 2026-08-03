@@ -707,7 +707,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       L.control.zoom({ position: 'topright' }).addTo(map)
 
       const { cawm, satellite, cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
-      cawm.addTo(map)
+      cyclosm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 

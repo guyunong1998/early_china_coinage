@@ -88,8 +88,8 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       // Homepage teaser map: no layers-switcher or river-mode control widgets
       // (kept for the full map visualizations pages) — just the street tiles
       // plus the bilingual place-name overlay, always on.
-      const { cawm, labelsEn, labelsZh } = buildBaseLayers(L)
-      cawm.addTo(map)
+      const { cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      cyclosm.addTo(map)
       labelLayersRef.current = { labelsEn, labelsZh }
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 

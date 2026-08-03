@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { AddMintSection } from '@/components/mints/AddMintSection'
 import { MintListClient } from '@/components/mints/MintListClient'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
+import { isDevMode } from '@/lib/admin/guard'
 import { buildMintDirectory, buildMintTypeLabels, mintCompleteness } from '@/lib/mint-directory'
 import { resolveMintNameZh } from '@/lib/mint-towns'
 import { computeMintStatsFromFinds, toMintPoints } from '@/lib/mint-stats'
@@ -66,6 +68,9 @@ export default async function MintsPage() {
           <T k="mints.description" />{' '}
           <T k="mints.townsDocumented" vars={{ count: mints.length }} />
         </p>
+        <div className="mt-3">
+          <AddMintSection isDevMode={isDevMode()} />
+        </div>
       </div>
 
       {/* Overview map — same left-third title/link + right-two-thirds map
