@@ -341,8 +341,8 @@ export const DICTIONARY = {
 
   // ── map explanation paragraph 2: one per view mode, shared by every map ──
   'map.explain.points': {
-    en: 'Point color reflects what share of items there match the active filter — gray means none, red means all, with in-between shades scaled proportionally. Point size reflects total quantity there (log scale), independent of color; a match with unrecorded quantity is sized as a 20% placeholder.',
-    zh: '点的颜色反映该处符合当前筛选条件的比例——灰色表示无、红色表示全部，中间按比例过渡。点的大小反映该处的总数量（对数缩放），与颜色无关；若匹配存在但未记录具体数量，则按总量的 20% 计算大小。',
+    en: 'Point color reflects what share of items there match the active filter — gray means none, red means all, with in-between shades scaled proportionally. Point size reflects the matching quantity there (log scale) — the selected filter’s own coin count, not the location’s unrelated total; with no filter active, size falls back to the location’s total quantity. A match with unrecorded quantity is sized as a 20% placeholder.',
+    zh: '点的颜色反映该处符合当前筛选条件的比例——灰色表示无、红色表示全部，中间按比例过渡。点的大小反映该处符合条件的数量（对数缩放）——即所选筛选项本身的钱币数量，而非该处的无关总数；未启用筛选时则按该处总数量计算。若匹配存在但未记录具体数量，则按总量的 20% 计算大小。',
   },
   'map.explain.density': {
     en: 'In Density view, each point’s heat weight is: no filter — scales with total quantity; fully matches (including a single item that matches) — full weight; partial match — weight equals the matched percentage (with a small floor so it stays visible); present but quantity uncounted — a fixed moderate weight; no record at all — excluded from the heatmap entirely.',

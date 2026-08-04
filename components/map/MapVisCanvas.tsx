@@ -56,6 +56,29 @@ function toDisplayState(state: SiteHeatState, totalQty: number): DisplayState {
   return state
 }
 
+/** The quantity a marker's size should represent: once a coin-type/mint
+ * filter is active, size reflects that selection's own coin count at this
+ * location, not the location's unrelated overall total — a site with 4 of
+ * the selected type among 400 other coins should read as "4," not "400."
+ * `ratio` (a partial match) carries its own matchedQty for this; `pure` and
+ * `single-find` mean the whole location's total already *is* the matched
+ * count, and `no-filter` has no selection to narrow by, so both fall back
+ * to totalQty. `unquantified`'s 20%-of-total estimate is unchanged. */
+function effectiveQty(state: DisplayState, totalQty: number): number {
+  switch (state.kind) {
+    case 'ratio':
+      return state.matchedQty
+    case 'unquantified':
+      return totalQty * 0.2
+    case 'no-data':
+      return 0
+    case 'no-filter':
+    case 'pure':
+    case 'single-find':
+      return totalQty
+  }
+}
+
 // Note: this map's fill colors are state-driven (stateColor() below, backed
 // by lib/color-scale.ts's match-ratio gradient, including one genuinely
 // continuous interpolation) rather than fixed per-marker-role classes like
@@ -375,12 +398,7 @@ function applyHeatMarkerStyle(
       // nothing to size by for a type/mint that isn't recorded there at all.
       isStaticNoData
       ? NO_DATA_DOT_SIZE
-      : // Present but the matching quantity wasn't recorded — sized as if it
-        // were 20% of the location's total, a conservative stand-in that
-        // still reflects scale without claiming a count we don't have.
-        state.kind === 'unquantified'
-        ? siteSizeByQuantity(totalQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
-        : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
+      : siteSizeByQuantity(effectiveQty(state, totalQty), maxQty, sizeRange.min, sizeRange.max)
 
   marker.setIcon(
     L.divIcon({
@@ -532,7 +550,19 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       if (props.kind === 'sites') {
         const { sites, siteStates } = props
-        const maxQty = Math.max(...sites.map((s) => s.total_quantity_for_map ?? 0), 1)
+        // Anchored to the same quantity each marker is actually sized by
+        // (effectiveQty) rather than raw site totals, so a narrow filter's
+        // dots use the full min–max size range instead of bunching at
+        // `min` because every matched count is small next to unrelated
+        // site totals.
+        const maxQty = Math.max(
+          ...sites.map((s) => {
+            const totalQty = s.total_quantity_for_map ?? 0
+            const state = toDisplayState(siteStates?.get(s.site_code) ?? { kind: 'no-filter' }, totalQty)
+            return effectiveQty(state, totalQty)
+          }),
+          1
+        )
         pointMarkersRef.current.forEach((marker, code) => {
           const site = sites.find((s) => s.site_code === code)
           if (!site) return
@@ -554,7 +584,14 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       } else {
         const { mintPoints, mintStates } = props
-        const maxQty = Math.max(...mintPoints.map((m) => m.totalQty), 1)
+        // See the `sites` branch above — same rescale, keyed by mint instead.
+        const maxQty = Math.max(
+          ...mintPoints.map((m) => {
+            const state = toDisplayState(mintStates?.get(m.mint_zh) ?? { kind: 'no-filter' }, m.totalQty)
+            return effectiveQty(state, m.totalQty)
+          }),
+          1
+        )
         pointMarkersRef.current.forEach((marker, mintZh) => {
           const mint = mintPoints.find((m) => m.mint_zh === mintZh)
           if (!mint) return
