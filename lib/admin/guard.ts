@@ -1,6 +1,6 @@
 import 'server-only'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 
 /**
  * In dev (NODE_ENV !== 'production'), always true -- no login exists to
@@ -39,12 +39,13 @@ export async function assertAuthorized(): Promise<void> {
 
 /**
  * Client to use for admin writes. Locally there's no login to scope a
- * session to, so writes go through supabaseAdmin (service-role, bypasses
- * RLS) exactly as before. In production, writes go through the caller's own
+ * session to, so writes go through the service-role client (bypasses RLS)
+ * exactly as before. In production, writes go through the caller's own
  * session-scoped client instead -- RLS write policies + is_admin() are the
- * real gate there, not this client's identity.
+ * real gate there, not this client's identity -- so SUPABASE_SERVICE_ROLE_KEY
+ * is never read in production (see getSupabaseAdmin's lazy construction).
  */
 export async function getWriteClient() {
-  if (process.env.NODE_ENV !== 'production') return supabaseAdmin
+  if (process.env.NODE_ENV !== 'production') return getSupabaseAdmin()
   return createServerSupabaseClient()
 }
