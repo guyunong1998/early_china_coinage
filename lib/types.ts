@@ -99,6 +99,13 @@ export type CoinIssueDisplay = {
   major_type_en: string | null
   minor_type_zh: string | null
   minor_type_en: string | null
+  /** Raw coin_type_hierarchy.level2_zh/en, un-collapsed by the major/minor
+   *  coin-vs-mould logic in deriveMajorMinor — e.g. distinguishes '布币范'
+   *  from every other mould, where major_type_zh flattens all moulds to
+   *  '钱范'. Only populated where callers need that finer breakdown (see
+   *  the search-results pie chart). */
+  level2_zh: string | null
+  level2_en: string | null
   inscription: string | null
   inscription_en: string | null
   mint_zh: string | null

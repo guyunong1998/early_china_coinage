@@ -22,6 +22,43 @@ const PALETTE = [
   '#8b8b3d', // bronze-green
 ]
 
+/**
+ * Permanent color per level2 type, so a slice's color is a property of the
+ * type itself rather than of where it lands in a particular card's data
+ * (the old `PALETTE[i % PALETTE.length]` scheme reassigned colors every
+ * time the set of types present, or their order, changed). Every mould
+ * label (level2_zh ending in 范) shares its coin counterpart's hue one
+ * shade lighter — a spade coin and the mould that cast it are the same
+ * real-world type, not unrelated categories, so they read as a family.
+ */
+const TYPE_COLORS: Record<string, string> = {
+  布币: '#006d71', // spade coin — brand teal
+  布币范: '#5aa9ac', // spade coin mould
+  刀币: '#c0392b', // knife coin — terracotta red
+  刀币范: '#dd8a7f', // knife coin mould
+  圜钱: '#d4a017', // round coin — ochre
+  圜钱范: '#e8c467', // round coin mould
+  蚁鼻钱: '#7c5295', // cowrie coin — plum
+  蚁鼻钱范: '#b696cb', // cowrie coin mould
+  金版: '#2f7fbf', // gold plate — slate blue
+  金饼: '#a0522d', // gold cake — sienna
+  马蹄金: '#4a7c59', // horse-hoof gold — olive green
+  钱范: '#8b8b3d', // coin mould (collapsed, no per-type breakdown) — bronze-green
+}
+
+/** Deterministic string hash, so a type absent from TYPE_COLORS (a new
+ *  hierarchy entry, or '未知') still always renders the same fallback
+ *  color instead of one that drifts with array order. */
+function hashString(s: string) {
+  let hash = 0
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0
+  return hash
+}
+
+function colorForType(label: string): string {
+  return TYPE_COLORS[label] ?? PALETTE[hashString(label) % PALETTE.length]
+}
+
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
@@ -155,10 +192,10 @@ export function CoinTypePieChart({
   const cy = rOuter
 
   const { groups } = data.reduce<{ cursor: number; groups: RenderGroup[] }>(
-    (acc, g, i) => {
+    (acc, g) => {
       const startAngle = acc.cursor
       const endAngle = acc.cursor + (g.value / total) * 360
-      const baseColor = PALETTE[i % PALETTE.length]
+      const baseColor = colorForType(g.label)
 
       const childTotal = g.children.reduce((sum, c) => sum + c.value, 0) || g.value
       const shades = shadesOf(baseColor, Math.max(g.children.length, 1))

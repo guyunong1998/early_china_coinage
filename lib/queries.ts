@@ -100,6 +100,7 @@ export const COIN_ISSUE_FIELDS =
  * (see lib/typology-filter.ts, lib/mint-filter.ts). */
 export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
   const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
+  const cth = one(row.coin_type_hierarchy)
   const mint = one(row.mints)
   const state = one(row.states)
   const inscription = one(row.inscriptions)
@@ -110,6 +111,8 @@ export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
     major_type_en: major_en,
     minor_type_zh: minor_zh,
     minor_type_en: minor_en,
+    level2_zh: cth?.level2_zh ?? null,
+    level2_en: cth?.level2_en ?? null,
     inscription: inscription?.inscription_zh ?? null,
     inscription_en: inscription?.inscription_en ?? null,
     mint_zh: mint?.name_zh ?? null,
