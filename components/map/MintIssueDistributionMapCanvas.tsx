@@ -39,6 +39,13 @@ function makeDot(role: string, size: number) {
 // deliberately solid, not the translucent 0.6-alpha most map-dot roles use).
 const MINT_ISSUE_YELLOW = '#eda100'
 
+// Leaflet's vector layers (the dashed connector line below) can't take a CSS
+// class, so the line color still needs a real JS value — reads the same
+// --map-dot-special token .map-dot-mint-issue-site's CSS uses, so retinting
+// that variable keeps both in sync (mirrors HoardMintOriginsMap's
+// MINT_LINE_COLOR, the same connector-line pattern in the other direction).
+const MINT_LINE_COLOR = 'var(--map-dot-special)'
+
 export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistributionMapCanvasProps) {
   const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -90,6 +97,15 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
       sites.forEach((site) => {
         if (site.lat == null || site.lng == null) return
         bounds.push([site.lat, site.lng])
+
+        // Dashed line connecting the mint to each findspot of its coins.
+        L.polyline(
+          [
+            [mint.lat, mint.lng],
+            [site.lat, site.lng],
+          ],
+          { color: MINT_LINE_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
+        ).addTo(map)
 
         L.marker([site.lat, site.lng], {
           icon: L.divIcon({

@@ -27,7 +27,7 @@ export function SearchFiltersToggle({ children }: { children: ReactNode }) {
           {open ? '▲' : '▼'}
         </span>
       </button>
-      <div className={`${open ? 'block' : 'hidden'} min-[1440px]:block`}>{children}</div>
+      <div className={`panel-body ${open ? 'block' : 'hidden'} min-[1440px]:block`}>{children}</div>
     </div>
   )
 }

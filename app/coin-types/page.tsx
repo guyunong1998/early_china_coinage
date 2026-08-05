@@ -5,6 +5,7 @@ import { FullTypologyTree } from '@/components/coin-types/TypologyTree'
 import { TypologyViewer } from '@/components/coin-types/TypologyViewer'
 import { T } from '@/components/i18n/T'
 import { LabelHint } from '@/components/ui/LabelHint'
+import { Panel } from '@/components/ui/Panel'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
 import { getCoinTypeImagePaths, type CoinTypeImagePaths } from '@/lib/coin-images'
 import { DEMO_VISUALIZATIONS, demoHref } from '@/lib/demo-visualizations'
@@ -96,10 +97,10 @@ export default async function CoinTypesPage() {
             that) rather than growing to fit a fully-expanded tree, since
             this sits beside the map card. */}
         <div className="p-4 flex flex-col border-t border-brand/15 lg:border-l lg:border-t-0">
-          <div className="panel-header px-4 py-3 text-sm font-bold uppercase tracking-wide">
+          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
             <LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />
           </div>
-          <div className="scrollbar min-h-[460px] overflow-y-auto p-5 pl-8 lg:max-h-[460px] lg:flex-1">
+          <div className="panel-body scrollbar min-h-[460px] overflow-y-auto p-5 pl-8 lg:max-h-[460px] lg:flex-1">
             <FullTypologyTree nodes={nodes} />
           </div>
         </div>
@@ -109,14 +110,9 @@ export default async function CoinTypesPage() {
           poster image (photos + silhouettes + connecting lines baked in by
           scripts/gen-coin-hierarchy-diagram.py), for browsing the whole
           classification visually instead of as text. */}
-      <section className="panel mt-8 overflow-hidden">
-        <div className="panel-header px-4 py-3 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeList.typologyViewer.title" />
-        </div>
-        <div className="p-5">
-          <TypologyViewer src="/images/coin-type-hierarchy.png" manifest={typologyManifest} />
-        </div>
-      </section>
+      <Panel header={<T k="coinTypeList.typologyViewer.title" />} className="mt-8">
+        <TypologyViewer src="/images/coin-type-hierarchy.png" manifest={typologyManifest} />
+      </Panel>
 
       {/* Searchable list */}
       <div className="mt-8">

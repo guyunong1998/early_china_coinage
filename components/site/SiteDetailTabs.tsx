@@ -5,6 +5,7 @@ import { ContextCard } from '@/components/site/ContextCard'
 import { CoinTypePieChart, type PieChild, type PieGroup } from '@/components/site/CoinTypePieChart'
 import { FindRow } from '@/components/site/FindRow'
 import { CitationsSection } from '@/components/sources/CitationsSection'
+import { ClickHint } from '@/components/ui/ClickHint'
 import { Tabs } from '@/components/ui/Tabs'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
@@ -156,6 +157,20 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
 function coinIssueOptionLabel(c: CoinIssueDisplay): string {
   const type = c.minor_type_zh ?? c.major_type_zh ?? c.inscription ?? c.coin_type_code
   return `${c.coin_type_code} — ${type ?? ''}`
+}
+
+/** A tab label with a click-to-reveal explanation of what the tab actually
+ * contains — "Contexts" and "Finds" both name database concepts that aren't
+ * self-explanatory from the word alone. */
+function tabLabel(label: string, count: number, hint: string) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <ClickHint hint={hint} className="cursor-help underline decoration-dotted underline-offset-2">
+        {label}
+      </ClickHint>
+      {` (${count})`}
+    </span>
+  )
 }
 
 export function SiteDetailTabs({
@@ -376,8 +391,24 @@ export function SiteDetailTabs({
 
       <Tabs
         tabs={[
-          { id: 'contexts', label: `Contexts (${filteredContexts.length})`, content: contextsContent },
-          { id: 'finds', label: `Finds (${filteredFinds.length})`, content: findsContent },
+          {
+            id: 'contexts',
+            label: tabLabel(
+              'Contexts',
+              filteredContexts.length,
+              'A context is one excavated unit within this site — for example, a single tomb within a cemetery site.'
+            ),
+            content: contextsContent,
+          },
+          {
+            id: 'finds',
+            label: tabLabel(
+              'Finds',
+              filteredFinds.length,
+              'A find is a group of coins from the same issue — the same state, mint, and type, sharing the same inscription (and reverse inscription).'
+            ),
+            content: findsContent,
+          },
           {
             id: 'source-links',
             label: `Sources & Citations (${structuredSourceLinks.length})`,

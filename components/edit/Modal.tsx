@@ -37,7 +37,7 @@ export function Modal({
             ×
           </button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="panel-body p-4">{children}</div>
       </div>
     </div>,
     document.body

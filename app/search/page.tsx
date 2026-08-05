@@ -367,10 +367,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
           <div>
             <div className="mb-6 search-filter">
-              <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
+              <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
                 <T k="map.title" />
               </div>
-              <div className="overflow-hidden">
+              <div className="panel-body overflow-hidden">
                 <CoinMapSection sites={filtered} height="360px" fitBounds />
               </div>
             </div>

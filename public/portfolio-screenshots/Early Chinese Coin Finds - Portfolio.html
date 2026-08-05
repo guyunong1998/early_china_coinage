@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Early Chinese Coin Finds Database — Project Portfolio</title>
+<style>
+  :root {
+    --brand: #3f4d1f;
+    --brand-dark: #2c3616;
+    --brand-light: #eef1e4;
+    --cream: #fbfaf6;
+    --ink: #2a2a24;
+    --muted: #6b6b5f;
+    --border: #ddd8c8;
+    --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  code {
+    font-family: var(--code);
+    font-size: 0.9em;
+    background: var(--brand-light);
+    color: var(--brand-dark);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  header.hero {
+    background: linear-gradient(160deg, #1c2410 0%, #2c3616 55%, #3f4d1f 100%);
+    color: #f3f1e6;
+    padding: 72px 0 96px;
+    position: relative;
+    overflow: hidden;
+  }
+  header.hero .wrap { position: relative; z-index: 2; }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 12.5px;
+    color: #b9c48c;
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+  header.hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(32px, 5vw, 54px);
+    line-height: 1.12;
+    margin: 0 0 20px;
+    max-width: 780px;
+  }
+  header.hero p.lede {
+    font-size: 18px;
+    max-width: 680px;
+    color: #dfe3cf;
+    margin: 0 0 32px;
+  }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+  .badge {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #eef1e4;
+    background: rgba(255,255,255,0.06);
+    white-space: nowrap;
+  }
+  .stat-row { display: flex; flex-wrap: wrap; gap: 28px 44px; }
+  .stat .num { font-family: var(--serif); font-size: 28px; color: #fff; display: block; }
+  .stat .label { font-size: 12px; color: #b9c48c; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .hero-shot {
+    margin-top: 48px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .hero-shot img { display: block; width: 100%; height: auto; }
+
+  nav.toc {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(251,250,246,0.96);
+    backdrop-filter: blur(4px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.toc .wrap { display: flex; gap: 2px; flex-wrap: wrap; padding: 10px 24px; overflow-x: auto; }
+  nav.toc a {
+    white-space: nowrap;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--brand-dark);
+    padding: 6px 11px;
+    border-radius: 5px;
+  }
+  nav.toc a:hover { background: var(--brand-light); }
+
+  section { padding: 72px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  section.alt { background: #f4f2e8; }
+  .section-kicker {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 700; margin: 0 0 10px;
+  }
+  h2.section-title {
+    font-family: var(--serif);
+    font-size: 30px;
+    color: var(--brand-dark);
+    margin: 0 0 12px;
+  }
+  .route-chip {
+    font-family: var(--code);
+    font-size: 12.5px;
+    font-weight: 400;
+    background: var(--brand-light);
+    color: var(--brand-dark);
+    padding: 2px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  p.section-lede {
+    color: var(--muted);
+    max-width: 700px;
+    font-size: 16px;
+    margin: 0 0 40px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 36px; align-items: start; margin-bottom: 8px; }
+  .two-col p { color: #4a4a3f; font-size: 15px; margin: 0 0 14px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+  .callout {
+    background: var(--brand-light);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--brand);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: #3d4230;
+  }
+  .callout b { color: var(--brand-dark); }
+  .callout .callout-title { display: block; font-weight: 700; color: var(--brand-dark); margin-bottom: 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .callout ul { margin: 0; padding-left: 18px; }
+  .callout li { margin-bottom: 6px; }
+
+  .feature {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 40px;
+    align-items: center;
+    padding: 40px 0;
+  }
+  .feature:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .feature.reverse .feature-text { order: 2; }
+  .feature.reverse .feature-shot { order: 1; }
+  .feature-text h3 {
+    font-family: var(--serif);
+    font-size: 23px;
+    color: var(--brand-dark);
+    margin: 0 0 10px;
+  }
+  .feature-text p { color: #4a4a3f; font-size: 15px; margin: 0 0 14px; }
+  .feature-text ul { margin: 0; padding-left: 18px; color: #4a4a3f; font-size: 14.5px; }
+  .feature-text li { margin-bottom: 6px; }
+  .feature-shot {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 18px 40px -18px rgba(30,35,10,0.35);
+  }
+  .feature-shot img { display: block; width: 100%; height: auto; }
+  .tag {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--brand);
+    background: var(--brand-light);
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-bottom: 12px;
+  }
+
+  figure { margin: 0; }
+  .shot {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 10px 24px -16px rgba(30,35,10,0.25);
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot figcaption {
+    font-size: 12.5px; color: var(--muted); padding: 10px 14px;
+    border-top: 1px solid var(--border); background: #fcfbf5;
+  }
+  .shot.highlight { border: 2px solid var(--brand); box-shadow: 0 14px 30px -16px rgba(63,77,31,0.4); }
+
+  .shot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 32px 0; }
+  .shot-grid.thirds { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 820px) { .shot-grid, .shot-grid.thirds { grid-template-columns: 1fr; } }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+  .gallery-grid.five { grid-template-columns: repeat(5, 1fr); }
+  .gallery-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 24px -16px rgba(30,35,10,0.25);
+  }
+  .gallery-card img { display: block; width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; }
+  .gallery-card .cap { padding: 12px 14px 16px; }
+  .gallery-card .cap .t { font-weight: 700; font-size: 13.5px; color: var(--brand-dark); margin-bottom: 3px; }
+  .gallery-card .cap .d { font-size: 12px; color: var(--muted); }
+  @media (max-width: 900px) { .gallery-grid.five { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 560px) { .gallery-grid, .gallery-grid.five { grid-template-columns: 1fr 1fr; } }
+
+  .mobile-row { display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; margin: 8px 0; }
+  .mobile-row .shot { width: 240px; flex-shrink: 0; }
+  .mobile-note { text-align: center; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  table.stack-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 8px 0 8px; }
+  table.stack-table th, table.stack-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.stack-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  table.stack-table td:first-child { font-weight: 700; color: var(--brand-dark); white-space: nowrap; }
+
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 18px;
+  }
+  .stack-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 16px;
+    background: #fff;
+  }
+  .stack-item .role { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 4px; }
+  .stack-item .name { font-weight: 700; color: var(--brand-dark); font-size: 15px; }
+
+  ul.plain-list { margin: 0; padding-left: 18px; color: #3a3f2e; font-size: 14.5px; }
+  ul.plain-list li { margin-bottom: 10px; }
+  ul.plain-list b { color: var(--brand-dark); }
+
+  footer {
+    background: var(--brand-dark);
+    color: #cfd6ba;
+    padding: 48px 0;
+    font-size: 13.5px;
+  }
+  footer a { color: #e6ecd2; }
+  footer .foot-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; align-items: center; }
+
+  @media (max-width: 860px) {
+    .feature, .feature.reverse .feature-text, .feature.reverse .feature-shot { order: initial; }
+    .feature { grid-template-columns: 1fr; }
+    .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .gallery-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Full-Stack Web App &middot; Archaeological Data Platform &middot; Engineering Portfolio</p>
+    <h1>Early Chinese Coin Finds Database</h1>
+    <p class="lede">A searchable, mapped record of pre-Qin to early Han coin discoveries across China — archaeological sites, excavation contexts, individual finds, coin typology, mint towns, and museum specimens, presented bilingually in English and Chinese. There's no separate backend: every page queries Supabase directly.</p>
+
+    <div class="badge-row">
+      <span class="badge">Next.js 16 (App Router)</span>
+      <span class="badge">React 19</span>
+      <span class="badge">TypeScript</span>
+      <span class="badge">Tailwind CSS 4</span>
+      <span class="badge">Supabase / Postgres</span>
+      <span class="badge">Leaflet + heat/cluster plugins</span>
+      <span class="badge">Row-Level Security</span>
+      <span class="badge">i18n (EN / ZH)</span>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><span class="num">629,081</span><span class="label">Coins recorded</span></div>
+      <div class="stat"><span class="num">1,356</span><span class="label">Validated find sites</span></div>
+      <div class="stat"><span class="num">6,384</span><span class="label">Find records</span></div>
+      <div class="stat"><span class="num">125</span><span class="label">Mint towns</span></div>
+      <div class="stat"><span class="num">71</span><span class="label">Coin types</span></div>
+      <div class="stat"><span class="num">1,052</span><span class="label">Bibliographic sources</span></div>
+    </div>
+
+    <div class="hero-shot"><img src="01-home.jpg" alt="Home page — hero banner, nav cards, and map demo carousel" /></div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <a href="#overview">Overview</a>
+    <a href="#home">Home</a>
+    <a href="#visualizations">Visualizations</a>
+    <a href="#museum">Museum</a>
+    <a href="#data-model">Data Model</a>
+    <a href="#admin">Admin</a>
+    <a href="#mobile">Mobile</a>
+    <a href="#notes">Notes</a>
+    <a href="#stack">Stack</a>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<section id="overview">
+  <div class="wrap">
+    <span class="tag">Overview</span>
+    <h2 class="section-title">A research tool, not just a dataset</h2>
+
+    <div class="two-col">
+      <div>
+        <p>The database catalogues archaeological discoveries of pre-Qin to early Han coinage across China. Every record links a find site to its geographic location, archaeological context, coin typology, and bibliographic sources — queryable directly from Supabase, with a handful of stable reference datasets (mint-town dossiers, typology hierarchy, specimen photography) kept local for anything that rarely changes.</p>
+        <p>It's built for three kinds of use: browsing curated catalogs (Mints, Coin Types), free-form searching and filtering (Search, Museum Collections), and spatial analysis (the Map Visualizations views — points, density heatmaps, and side-by-side comparison). There's no API layer in between: React Server Components query Supabase directly at render time.</p>
+      </div>
+      <div class="callout">
+        <span class="callout-title">Live pieces at a glance</span>
+        <ul>
+          <li>Full-text + faceted <b>search</b> across every find site</li>
+          <li>Three interactive <b>map visualization</b> modes shared across three datasets</li>
+          <li>A bilingual (EN/ZH) UI with zero hardcoded copy — every string is a dictionary lookup, switched with no page reload</li>
+          <li>In-place <b>admin editing</b>, gated by Supabase Auth + Postgres row-level security</li>
+          <li>ANS museum specimen reconciliation, searchable by accession number</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-text">
+        <span class="tag">Search</span>
+        <h3>Full-text and faceted search</h3>
+        <p>Every find site is searchable by name, province, coin type, inscription, or site code, with facet filters for region, period, site type, coin type, state, mint, and quantity — plus a results map that clusters by count. Every facet computes live counts from the current query (e.g. "河南 (289)"), not a static list.</p>
+        <ul>
+          <li>Sortable by name, quantity, region, find count, coin-type diversity, or state diversity</li>
+          <li>Location-precision filter (site / county / city / all) with a click-to-explain badge on "All," since it deliberately surfaces real gaps in geolocation precision rather than hiding them</li>
+        </ul>
+      </div>
+      <div class="feature-shot"><img src="03-search-default.jpg" alt="Search — default state, 1,362 results with clustered map" /></div>
+    </div>
+
+    <div class="feature reverse">
+      <div class="feature-text">
+        <span class="tag">Site Records</span>
+        <h3>One page per archaeological site</h3>
+        <p>Location, a "Coin Mint Origins" map connecting the site to every mint it received coins from (dashed lines, auto-jittered pins where two mints share a coordinate), classification, and a tabbed breakdown of excavation contexts, individual finds, and citations — all in one record, linked to from Search, mint pages, and coin-type pages alike.</p>
+      </div>
+      <div class="feature-shot"><img src="05-site-detail.jpg" alt="Site record — 4号夯土, Hebei" /></div>
+    </div>
+
+    <div class="shot-grid thirds" style="margin-top:-8px;">
+      <figure class="shot">
+        <img src="06-site-tab-contexts.jpg" alt="Site record — Contexts tab" />
+        <figcaption><b>Contexts</b> tab — each excavation unit with its own coin-type donut chart, hand-rolled SVG, no charting library.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="07-site-tab-finds.jpg" alt="Site record — Finds tab" />
+        <figcaption><b>Finds</b> tab — every reported coin group, joined to its coin-issue record.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="08-site-tab-references.jpg" alt="Site record — Sources & Citations tab" />
+        <figcaption><b>Sources &amp; Citations</b> tab — every bibliographic source cited for this site, with inline add/delete. More on how this works in <a href="#data-model">Data Model</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="feature">
+      <div class="feature-text">
+        <span class="tag">Mints</span>
+        <h3>Every documented mint town</h3>
+        <p>A searchable, sortable directory of mint towns — merging live database rows with hand-transcribed dossiers (location, description, images, citations) wherever the database doesn't carry a field yet, and clearly flagging which is which.</p>
+        <ul>
+          <li>Sort by number of finds, number of coins, number of catalogued issues, or completeness of the record</li>
+          <li>Static, English-only reference data is visually distinguished (dashed border) from live, bilingual database data — never silently mixed</li>
+        </ul>
+      </div>
+      <div class="feature-shot"><img src="09-mints-overview.jpg" alt="Mints overview — 125 mint towns" /></div>
+    </div>
+
+    <div class="feature reverse">
+      <div class="feature-text">
+        <span class="tag">Mint Detail</span>
+        <h3>Location, coin output, and primary sources</h3>
+        <p>Each mint's own page: coordinates on a detail map, an issued-coin distribution map filterable by coin type, an image gallery for historical city plans, and full bilingual citations back to the original excavation reports. A "geolocation is provisional" warning surfaces automatically wherever the dossier flags an uncertain placement.</p>
+      </div>
+      <div class="feature-shot"><img src="10-mint-detail.jpg" alt="Mint detail — 安阳 (Anyang)" /></div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-text">
+        <span class="tag">Coin Types</span>
+        <h3>The full typology, browsable two ways at once</h3>
+        <p>Every documented coin type as a searchable card grid <em>and</em> a full expandable hierarchy tree (钱币/Coin and 钱范/Mould branches), each card showing obverse/reverse photography where available, sortable by hierarchy level, find count, coin count, or catalogued issues.</p>
+      </div>
+      <div class="feature-shot"><img src="11-coin-types-overview.jpg" alt="Coin Types overview — hierarchy tree and card grid" /></div>
+    </div>
+
+    <figure class="shot highlight" style="max-width:760px; margin: -8px auto 40px;">
+      <img src="28-hierarchy-navigator.png" alt="The hierarchy navigator — pannable, zoomable typology tree" />
+      <figcaption><b>The hierarchy navigator, live.</b> Below the tree/grid, one pannable, zoomable poster image (baked in by <code>scripts/gen-coin-hierarchy-diagram.py</code>) renders the entire classification with photography and connecting lines — scroll or pinch to zoom, drag to pan, click any node to zoom straight to it (<code>components/coin-types/TypologyViewer.tsx</code>). A smaller copy of the same widget reappears on the Home page — see <a href="#home">Home</a>.</figcaption>
+    </figure>
+
+    <div class="feature reverse">
+      <div class="feature-text">
+        <span class="tag">Coin Type Detail</span>
+        <h3>One typology node, fully cross-referenced</h3>
+        <p>Obverse/reverse images, parent types, every issuing state and mint, every attested inscription, a collapsible coin-issue catalogue, related find sites, and this node's place in the overall hierarchy tree. Photography is matched to a type at request time by filename-prefix lookup — types without a photographed specimen fall back to a plain placeholder rather than a broken image.</p>
+      </div>
+      <div class="feature-shot"><img src="12-coin-type-detail.jpg" alt="Coin type detail — 小型平肩空首布" /></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="home" class="alt">
+  <div class="wrap">
+    <span class="tag">Page walkthrough</span>
+    <h2 class="section-title">Home <span class="route-chip">/</span></h2>
+    <p class="section-lede">The front door — but not the only door. Every route below is reachable from Home, and (via the persistent header nav) every route is also reachable from every <em>other</em> page, so the site is a densely cross-linked graph rather than a strict tree.</p>
+
+    <div class="feature">
+      <div class="feature-text">
+        <span class="tag">Multiple routes in</span>
+        <h3>More than one way to everywhere</h3>
+        <p>The header nav — Mints, Coin Types, Map Visualizations, Museum Collections, Search, About — is identical on every page, so any destination is one click away regardless of where a visitor currently is. Home layers a second, redundant path on top of that: four nav cards (Mints, Coin Types, Museum Collections, About) plus a hero search box. Go one level deeper and it compounds — a single site record is linked to from a Search result, a mint's own page, and a coin type's own page all at once, exactly the way <a href="#overview">Site Records</a> was described above.</p>
+      </div>
+      <div class="feature-shot"><img src="02-home-zh.jpg" alt="Home page in Chinese — one click of the 中文 toggle" /></div>
+    </div>
+
+    <div class="callout" style="margin: 8px 0 40px;">
+      <b>Bilingual, without a reload.</b> That 中文 toggle re-renders the same page in Chinese instantly — no <code>/zh/...</code> locale routing, no navigation. Every string in the UI is a lookup against a flat dictionary, never a hardcoded literal, so this works identically on every page in the site, not just Home.
+    </div>
+
+    <span class="tag">The map demo carousel</span>
+    <h3 style="font-family:var(--serif); font-size:22px; color:var(--brand-dark); margin: 0 0 10px;">Pre-selected views you can click straight into</h3>
+    <p style="color:#4a4a3f; font-size:15px; max-width:760px; margin:0 0 24px;">Rather than dropping a first-time visitor onto a blank map they have to configure themselves, the Map Visualizations section on Home is a one-at-a-time carousel of five hand-picked, already-filtered views. Click a slide — or one of the dots below it — and it deep-links directly into <code>/visualizations</code> or <code>/museum-collections</code> with that exact filter, mint selection, or Compare-mode combination already applied. Nothing is a hand-written URL: every slide's link is derived from the same plain data (<code>lib/demo-visualizations.ts</code>) that renders its thumbnail and caption, via <code>lib/visualization-deeplink.ts</code>.</p>
+
+    <div class="gallery-grid five">
+      <div class="gallery-card">
+        <img src="demo-spade-knife-round-compare.jpg" alt="Spade, knife & round coins compared" />
+        <div class="cap"><div class="t">Spade, knife &amp; round coins compared</div><div class="d">Coin Type, Compare view</div></div>
+      </div>
+      <div class="gallery-card">
+        <img src="demo-mint-compare-anyang-anyi.jpg" alt="Anyang vs. Anyi mints" />
+        <div class="cap"><div class="t">Anyang vs. Anyi mints</div><div class="d">Mint, Compare view</div></div>
+      </div>
+      <div class="gallery-card">
+        <img src="demo-knife-density.jpg" alt="Knife coin density" />
+        <div class="cap"><div class="t">Knife coin density</div><div class="d">Coin Type, Density view</div></div>
+      </div>
+      <div class="gallery-card">
+        <img src="demo-spade-mint-towns.jpg" alt="Spade coin mint towns" />
+        <div class="cap"><div class="t">Spade coin mint towns</div><div class="d">Mint Town, Points view</div></div>
+      </div>
+      <div class="gallery-card">
+        <img src="demo-museum-fangzubu-jianzubu.jpg" alt="Square-foot vs. pointed-foot spades" />
+        <div class="cap"><div class="t">Square-foot vs. pointed-foot spades</div><div class="d">Museum, Compare view</div></div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:36px;">
+      <b>Coin type hierarchy, one scroll away.</b> Directly beneath the carousel, Home embeds a second, shorter copy of the same pannable Typology Viewer shown in the <a href="#overview">Coin Types</a> section above — so a visitor can start exploring the 钱币/钱范 classification visually before ever leaving the front page, then follow its "Coin Types →" link into the full-size version.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="visualizations">
+  <div class="wrap">
+    <span class="tag">Map Visualizations</span>
+    <h2 class="section-title">Three ways to see the same geography <span class="route-chip">/visualizations/find-site</span> <span class="route-chip">/visualizations/mint-town</span></h2>
+    <p class="section-lede">Find Site, Mint Town, and Museum Collections all share one full-bleed map engine — <code>MapVisCanvas</code> plus three sibling orchestrator components — with Points / Density / Compare display modes, each filterable by Coin Type or Mint. Click-to-reveal explanations on every non-obvious control (View by, Filter by, Display) let the interface teach itself. Landing on <code>/visualizations</code> itself drops you into a random one of the two tabs.</p>
+
+    <div class="gallery-grid">
+      <div class="gallery-card">
+        <div class="cap"><div class="t">Find Site</div><div class="d">Every findspot, filterable by coin type or mint, colored by match ratio.</div></div>
+      </div>
+      <div class="gallery-card">
+        <div class="cap"><div class="t">Mint Town</div><div class="d">Every mint town, sized and colored by output — database-backed.</div></div>
+      </div>
+      <div class="gallery-card">
+        <div class="cap"><div class="t">Museum Collections</div><div class="d">ANS specimens shown the same way, plus accession-number search.</div></div>
+      </div>
+    </div>
+
+    <div class="shot-grid" style="margin-top:32px;">
+      <figure class="shot">
+        <img src="13-viz-find-site-points.jpg" alt="Points mode, filtering by Coin Type" />
+        <figcaption><b>Points</b> mode, filtered by Coin Type — every find site as an individually colored, sized dot. The ancient trade-route network and its named nodes render underneath.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="14-viz-find-site-density.jpg" alt="Density mass mode" />
+        <figcaption><b>Density mass</b> mode — a blended heat layer with an explicit weighting rule (full match vs. partial vs. quantity-uncounted vs. no record at all).</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="16-viz-find-site-mint-filter.jpg" alt="Filter by Mint, multiselect" />
+        <figcaption>Switching <b>Filter by</b> from Coin Type to <b>Mint</b> — a searchable multiselect with per-mint find-site counts.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="17-viz-mint-town.jpg" alt="Mint Town tab" />
+        <figcaption>The <b>Mint Town</b> tab — same shell, same three display modes, scaled to 125 mint towns instead of 1,356 find sites.</figcaption>
+      </figure>
+    </div>
+
+    <h3 style="font-family:var(--serif); font-size:22px; color:var(--brand-dark); margin:36px 0 8px;">Compare mode, with real selections</h3>
+    <p style="color:#4a4a3f; font-size:15px; max-width:760px; margin:0 0 20px;">The pair below is pulled straight from the Home page's own demo carousel, so the colored-point-per-selection behavior is visible with actual coin types and mints chosen rather than a blank panel.</p>
+    <div class="shot-grid">
+      <figure class="shot">
+        <img src="demo-spade-knife-round-compare.jpg" alt="Compare mode — spade, knife, round coins" />
+        <figcaption>Compare mode — 布币 (Spade), 刀币 (Knife), and 圜钱 (Round) coin distributions overlaid, one color per type.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="demo-mint-compare-anyang-anyi.jpg" alt="Compare mode — Anyang vs Anyi" />
+        <figcaption>Compare mode on the Mint filter axis — 安阳 (Anyang) vs. 安邑 (Anyi) coin distributions side by side.</figcaption>
+      </figure>
+    </div>
+    <figure class="shot" style="max-width:560px; margin: 8px auto 0;">
+      <img src="demo-knife-density.jpg" alt="Density mode filtered to knife coins" />
+      <figcaption>Density mode filtered to 刀币 (knife coins) only — the heat layer re-weights around Yan/Zhao/Qi territory.</figcaption>
+    </figure>
+
+    <div class="callout" style="margin-top:32px;">
+      <b>Case study — fixing the route overlay.</b> The orange trade-route network visible on several maps above (digitized from a Tang-dynasty route shapefile) is a live example of a bug fixed in this same codebase: the route lines and their named-node markers were digitized independently, so nodes sat up to ~2&nbsp;km off their line at high zoom, and clicking a route triggered the browser's default focus outline as a giant rectangle around the line's full bounding box. The fix projects each node onto its nearest route segment (<code>scripts/route-node-snap.mjs</code>) and suppresses the stray focus ring in <code>app/maps.css</code> — 246 of 251 nodes moved onto their line, verified with a side-by-side before/after render.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="museum" class="alt">
+  <div class="wrap">
+    <span class="tag">Museum Collections</span>
+    <h2 class="section-title">Reconciled specimens, same map engine <span class="route-chip">/museum-collections</span></h2>
+    <p class="section-lede">American Numismatic Society specimens (<code>ans_data</code> — reconciled per-specimen, independently of the database's own find records), shown with the same Mint Town map/filter shell as the visualizations page, plus a dedicated Search tab for looking up specimens by accession number.</p>
+
+    <div class="shot-grid">
+      <figure class="shot">
+        <img src="18-museum-mint-view.jpg" alt="Museum Collections — Mint Town tab" />
+        <figcaption>Mint Town tab — ANS specimens aggregated per mint, same Points/Density/Compare toggle as the database-backed visualizations.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="19-museum-search.jpg" alt="Museum Collections — Search tab" />
+        <figcaption>Search tab — typing "1937" narrows 2,451 specimens by accession-number substring; each result links out to its ANS Online Collection record, and checking one drops a colored pin.</figcaption>
+      </figure>
+    </div>
+    <ul class="plain-list" style="margin-top:24px;">
+      <li>Specimens with no mint coordinate on file are still listed, tagged <i>"no mapped mint"</i>, rather than silently dropped.</li>
+      <li>Multiple selected specimens get stable, distinct colors from a fixed 8-hue identity palette — the same mechanism Compare mode uses (see the 方足布 vs. 尖足布 example in the Home carousel above).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="data-model">
+  <div class="wrap">
+    <span class="tag">Data model</span>
+    <h2 class="section-title">Schema &amp; data sources</h2>
+    <p class="section-lede">The core find-provenance chain, plus how sources and citations tie back to every record.</p>
+
+    <div class="two-col">
+      <div>
+        <p>The provenance chain is <code>sites</code> → <code>contexts</code> (an archaeological findspot within a site — a tomb, hoard pit, stratum) → <code>finds</code> (a reported coin group from one context, per one source) → <code>coin_items</code> (individually catalogued specimens, defined but not yet surfaced by the app). Every quantity shown in the UI comes from the <code>finds</code>-level quantity fields, not from counting itemized rows.</p>
+        <p>A dedicated <code>ans_data</code> table holds reconciled American Numismatic Society specimens (mint/state/hierarchy/inscription already resolved per row), feeding Museum Collections independently of the database's own find records. Supabase's REST API caps a single response at 1000 rows — several tables here exceed that, so every multi-row query pages through a shared <code>fetchAllPages()</code> helper rather than silently truncating.</p>
+      </div>
+      <div class="callout">
+        <span class="callout-title">Request → page, in one line</span>
+        Browser hits a Server Component → it <code>await</code>s <code>lib/queries.ts</code> functions that hit Supabase over HTTPS → results pass down as plain props into a <code>'use client'</code> component → that component owns all interactive state and the Leaflet map instance. No further round-trip happens until the user navigates.
+      </div>
+    </div>
+
+    <figure class="shot" style="max-width:820px; margin: 8px auto 40px;">
+      <img src="../images/database_schema.png" alt="Entity-relationship diagram of the database schema" />
+      <figcaption>The schema on its own — <code>sites</code> → <code>contexts</code> → <code>finds</code> → <code>coin_items</code>, plus <code>coin_issues</code> resolving out to <code>coin_type_hierarchy</code>, <code>mints</code>, <code>states</code>, and <code>inscriptions</code>, and <code>ans_data</code> feeding Museum Collections independently.</figcaption>
+    </figure>
+
+    <h3 style="font-family:var(--serif); font-size:22px; color:var(--brand-dark); margin:0 0 10px;">How sources &amp; citations work</h3>
+    <div class="two-col">
+      <div>
+        <p>A <code>source_links</code> join table connects each <code>sources</code> row to whichever site, context, find, or mint it documents. Nothing is a free-text citation string embedded in a record — every citation is a real row in that join table, so removing or re-attaching a source never requires editing the record it's cited on.</p>
+        <p>The dedicated <a href="#admin">Sources browser</a> lists all 1,052 catalogued sources and 9,565 linked citations, searchable by code, author, title, publication, or citation text, with an inline "+ Add source" form. Every place a citation shows up — a site's own Sources &amp; Citations tab (seen above), a mint page, or the Sources browser itself — reads from this same table and offers the same quick-remove control per citation.</p>
+      </div>
+      <div class="callout">
+        <b>Static + live, merged per field.</b> Mint town profiles merge a live Supabase row with a static, hand-transcribed dossier — the database wins wherever it has a value, the dossier fills gaps — rather than forcing a full migration before every field can be shown.
+      </div>
+    </div>
+
+    <h3 style="font-family:var(--serif); font-size:22px; color:var(--brand-dark); margin:36px 0 10px;">Stack</h3>
+    <table class="stack-table">
+      <tr><th>Layer</th><th>Tool</th><th>Role</th></tr>
+      <tr><td>Framework</td><td>Next.js 16 (App Router)</td><td>Routing, SSR — the only "backend" this project has</td></tr>
+      <tr><td>UI</td><td>React 19</td><td>Server + client components</td></tr>
+      <tr><td>Language</td><td>TypeScript</td><td>Everywhere — no <code>.js</code> app code</td></tr>
+      <tr><td>Styling</td><td>Tailwind CSS 4</td><td>Utility classes + a hand-written design-token layer</td></tr>
+      <tr><td>Database</td><td>Supabase (Postgres)</td><td>The one remote datastore, via <code>@supabase/supabase-js</code></td></tr>
+      <tr><td>Maps</td><td>Leaflet + leaflet.heat + leaflet.markercluster</td><td>Every interactive map on the site</td></tr>
+      <tr><td>Auth</td><td>Supabase Auth (Google OAuth + email/password)</td><td>Gates in-place admin editing</td></tr>
+      <tr><td>Hosting</td><td>Vercel</td><td>Zero-config deployment, most pages render per-request</td></tr>
+      <tr><td>Misc</td><td>pinyin-pro</td><td>Runtime EN-name fallback when no curated translation exists</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="admin" class="alt">
+  <div class="wrap">
+    <span class="tag">Interactive &middot; security-gated</span>
+    <h2 class="section-title">Admin editing &amp; deletion protections <span class="route-chip">/sources</span></h2>
+    <p class="section-lede">The app is read-only for anonymous visitors, but every record — sites, contexts, mints, sources, and the citations linking them — has an in-place edit form for authorized collaborators, no separate admin dashboard required. Editing is gated twice: once at the UI level (hidden entirely for anonymous visitors in production) and again, non-negotiably, at the database level via Postgres row-level security policies keyed to a shared <code>is_admin()</code> function — so the real enforcement boundary is the database, not the UI.</p>
+
+    <figure class="shot" style="max-width:460px; margin: 0 auto 32px;">
+      <img src="21-login.jpg" alt="Sign-in page" />
+      <figcaption>Sign-in — Supabase Auth via Google OAuth or email/password. (Hosting is Vercel; it isn't the auth provider.)</figcaption>
+    </figure>
+
+    <div class="shot-grid">
+      <figure class="shot">
+        <img src="26-admin-edit-site.jpg" alt="Site record open for editing" />
+        <figcaption>A site's full bilingual record opened for editing directly on its own page — every field, EN and ZH side by side.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="27-admin-add-source.jpg" alt="Sources browser with add-source form" />
+        <figcaption>Sources — inline "+ Add source" form above the list; each citation ("cited by") gets its own quick-remove control.</figcaption>
+      </figure>
+    </div>
+
+    <div class="callout" style="margin-top:28px;">
+      <span class="callout-title">Deletion protection: typed confirm, no bulk table wipe</span>
+      Every delete action anywhere in the admin UI — a context, a find, a source, a single citation — routes through one shared confirm control: clicking Delete opens an inline popover whose Confirm button stays disabled until you type the word <code>delete</code> into its field. There's no "wipe this whole table" action anywhere in the app; the closest equivalent is the Sources browser's per-citation remove next to each "cited by" row above — the same typed-confirm popover, just scoped to one link at a time rather than a bulk operation.
+    </div>
+    <div class="callout" style="margin-top:16px;">
+      In local development, authorization checks always pass (there's nothing to sign into yet) — every edit-form screenshot on this page was taken from that dev-mode view, which is exactly why it was safe to capture without a real session.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="mobile">
+  <div class="wrap">
+    <span class="tag">Cross-cutting</span>
+    <h2 class="section-title">Mobile</h2>
+    <p class="section-lede">Below the <code>lg</code> breakpoint, the desktop horizontal nav collapses into a hamburger menu; full-bleed map pages (the two visualizations tabs and Museum Collections) hide the site footer entirely so the map gets the whole viewport, and every floating filter panel that's always-open on desktop becomes a collapsible drawer instead of just shrinking in place. Shown here at Mobile‑L width (~390–425px) rather than stretched to the desktop screenshots' full size, so the frames actually read as a phone.</p>
+
+    <div class="mobile-row">
+      <figure class="shot">
+        <img src="23-mobile-home.jpg" alt="Home page on mobile" />
+        <figcaption>Home at Mobile‑L width — nav cards and hero stats reflow to a single column.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="24-mobile-nav-open.jpg" alt="Hamburger nav open" />
+        <figcaption>Hamburger nav open — same six routes as the desktop bar.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="25-mobile-viz-find-site.jpg" alt="Find Site visualization on mobile" />
+        <figcaption>Find Site visualization — the filter panel collapses behind a toggle so the map stays full-width.</figcaption>
+      </figure>
+    </div>
+
+    <div class="callout" style="margin-top:28px;">
+      <b>Internationalization, mechanically.</b> Every piece of UI copy is a lookup against a flat <code>{ key: { en, zh } }</code> dictionary — nothing is a hardcoded string in a component. There's no locale-based routing; a client-side context defaults to English for SSR-safety, then corrects to whatever's saved in <code>localStorage</code> right after mount — which is what makes the 中文 toggle instant on every page, not just Home.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="notes" class="alt">
+  <div class="wrap">
+    <span class="tag">Worth knowing</span>
+    <h2 class="section-title">Engineering notes</h2>
+    <p class="section-lede">A few decisions that don't show up in a screenshot but shape how the whole thing holds together.</p>
+    <ul class="plain-list">
+      <li><b>No API layer, no Server Actions for reads.</b> Server Components call <code>lib/queries.ts</code> directly; the anon Supabase key is safe to expose because every table it reads is public catalogue data and reads never write.</li>
+      <li><b>Pagination that doesn't silently truncate.</b> Supabase's PostgREST caps responses at 1000 rows; <code>fetchAllPages()</code> pages through <code>.range()</code> until a short page comes back, since <code>sites</code>, <code>finds</code>, and <code>contexts</code> all exceed that cap.</li>
+      <li><b>One canvas, three call sites.</b> <code>MapVisCanvas</code> and its three sibling orchestrators mean "how a marker gets drawn, sized, and reconciled across re-renders" is written exactly once, even though it backs three visually distinct pages.</li>
+      <li><b>Hand-rolled data visualization.</b> No charting library anywhere — the site-detail pie charts are raw SVG, and every "chart" on the site is actually the Leaflet map itself, styled through one shared color-ramp module.</li>
+      <li><b>Security lives in Postgres, not just the UI.</b> Admin write access is enforced by row-level-security policies calling a shared <code>is_admin()</code> function — the same check the UI uses to decide whether to render an Edit button, so a bypassed UI still can't write.</li>
+      <li><b>Type system split deliberately in two.</b> DB-shaped types mirror what Supabase returns; rendering-shaped types are defined next to the component that consumes them and imported back into the functions that produce them, so "the shape a map needs" is defined exactly once, at the map.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="stack">
+  <div class="wrap">
+    <span class="tag">Built with</span>
+    <h2 class="section-title">Stack, at a glance</h2>
+    <div class="stack-grid">
+      <div class="stack-item"><div class="role">Framework</div><div class="name">Next.js 16 (App Router)</div></div>
+      <div class="stack-item"><div class="role">UI</div><div class="name">React 19</div></div>
+      <div class="stack-item"><div class="role">Language</div><div class="name">TypeScript</div></div>
+      <div class="stack-item"><div class="role">Styling</div><div class="name">Tailwind CSS 4</div></div>
+      <div class="stack-item"><div class="role">Database</div><div class="name">Supabase (Postgres)</div></div>
+      <div class="stack-item"><div class="role">Maps</div><div class="name">Leaflet + heat/cluster plugins</div></div>
+      <div class="stack-item"><div class="role">Auth</div><div class="name">Supabase Auth (Google + email)</div></div>
+      <div class="stack-item"><div class="role">Hosting</div><div class="name">Vercel</div></div>
+      <div class="stack-item"><div class="role">i18n</div><div class="name">Custom EN/ZH dictionary</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-row">
+    <div>Early Chinese Coin Finds Database — a research tool for pre-Qin to early Han numismatic archaeology.</div>
+    <div><a href="https://github.com/guyunong1998/early_china_coinage" target="_blank" rel="noopener noreferrer">View source on GitHub &rarr;</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

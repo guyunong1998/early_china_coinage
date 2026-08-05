@@ -7,7 +7,7 @@ export const DICTIONARY = {
 
   // ── header / nav ──────────────────────────────────────────────────────
   'nav.about': { en: 'About', zh: '关于' },
-  'nav.search': { en: 'Search', zh: '搜索' },
+  'nav.search': { en: 'Browse', zh: '搜索' },
   'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Museum Collections', zh: '博物馆藏品' },
@@ -25,7 +25,7 @@ export const DICTIONARY = {
     zh: '先秦至汉初中国钱币出土记录检索——遗址、出土单位、类型学与地理分布。',
   },
   'hero.searchHint': {
-    en: 'Search by site name, province, coin type, inscription, or site code.',
+    en: 'Search, sort, and filter find sites…',
     zh: '可按遗址名称、省份、币种、铭文或遗址编号搜索。',
   },
 
@@ -109,13 +109,13 @@ export const DICTIONARY = {
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
 
   // ── search page ───────────────────────────────────────────────────────
-  'search.title': { en: 'Search', zh: '搜索' },
+  'search.title': { en: 'Browse Find Sites', zh: '搜索' },
   'search.description': {
     en: 'Browse sites by name, province, coin type, inscription, or site code.',
     zh: '按遗址名称、省份、币种、铭文或遗址编号浏览。',
   },
   'search.placeholder': {
-    en: 'Search by site, province, type, inscription…',
+    en: 'Search, sort, and filter find sites…',
     zh: '按遗址、省份、币种、铭文搜索…',
   },
   'search.placeholderCompact': { en: 'Search sites…', zh: '搜索遗址…' },
@@ -227,7 +227,7 @@ export const DICTIONARY = {
   'site.row.findRecords': { en: 'Find records', zh: '出土记录数' },
   'site.row.totalCoins': { en: 'Total coins', zh: '钱币总数' },
   'site.descriptionLabel': { en: 'Description', zh: '描述' },
-  'site.row.classification': { en: 'Classification', zh: '分类' },
+  'site.row.classification': { en: 'Coin Types', zh: '钱币类型' },
   'site.classification.title': { en: 'Record Classification', zh: '记录分类' },
   'site.mintOrigins.caption': {
     en: 'Pin: this findspot. Dots: mint towns that issued coins found here, connected by dashed lines.',
@@ -473,6 +473,7 @@ export const DICTIONARY = {
   'mintDetail.row.coordinates': { en: 'Coordinates', zh: '坐标' },
   'mintDetail.row.name': { en: 'Name', zh: '名称' },
   'mintDetail.row.coinTypes': { en: 'Coin types', zh: '币种' },
+  'mintDetail.coinTypeHint.viewMore': { en: 'View coin type', zh: '查看币种' },
   'mintDetail.row.inscriptions': { en: 'Inscriptions', zh: '铭文' },
   'mintDetail.row.coinsAndSites': { en: 'Coins / find sites', zh: '钱币数／出土遗址数' },
   'mintDetail.issueDistribution.caption': {

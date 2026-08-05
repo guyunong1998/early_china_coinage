@@ -9,6 +9,7 @@ import { MouldTag } from '@/components/coin-types/MouldTag'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
 import { LabelHint } from '@/components/ui/LabelHint'
+import { CollapsiblePanel, Panel } from '@/components/ui/Panel'
 import { isAuthorized } from '@/lib/admin/guard'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
@@ -131,13 +132,9 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
       )}
 
       {/* Information card */}
-      <section className="panel mt-4 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="mintDetail.information" />
-        </div>
-        <div className="p-4">
-          <dl>
-            <DetailRow labelKey="coinTypeDetail.row.level" value={<T k={LEVEL_LABEL_KEY[node.level]} />} />
+      <Panel header={<T k="mintDetail.information" />} className="mt-4" bodyClassName="p-4">
+        <dl>
+          <DetailRow labelKey="coinTypeDetail.row.level" value={<T k={LEVEL_LABEL_KEY[node.level]} />} />
             <DetailRow
               labelKey="coinTypeDetail.row.parentTypes"
               value={
@@ -198,113 +195,94 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                 )
               }
             />
-          </dl>
-        </div>
-      </section>
+        </dl>
+      </Panel>
 
       {/* Description — coin_type_hierarchy.description_zh/en on this node's
           own row (see lib/coin-type-catalog.ts ownDescriptionRow), editable
           in dev. */}
-      <section className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="mintDetail.description" />
-        </div>
-        <div className="p-5">
-          <CoinTypeDescriptionSection
-            ownHierarchyId={node.ownHierarchyId}
-            descriptionZh={node.description_zh}
-            descriptionEn={node.description_en}
-            isDevMode={authorized}
-            noDescriptionLabel={<T k="coinTypeDetail.noDescription" />}
-          />
-        </div>
-      </section>
+      <Panel header={<T k="mintDetail.description" />} className="mt-6">
+        <CoinTypeDescriptionSection
+          ownHierarchyId={node.ownHierarchyId}
+          descriptionZh={node.description_zh}
+          descriptionEn={node.description_en}
+          isDevMode={authorized}
+          noDescriptionLabel={<T k="coinTypeDetail.noDescription" />}
+        />
+      </Panel>
 
       {/* Coin issues — collapsible, closed by default, same pattern as Related Finds */}
-      <details className="group panel panel-collapsible mt-6 overflow-hidden">
-        <summary className="panel-header flex list-none cursor-pointer items-center justify-between px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeDetail.issues.title" vars={{ count: matchedCoinIssues.length }} />
-          <span aria-hidden className="transition-transform group-open:rotate-180">
-            ▼
-          </span>
-        </summary>
-        <div className="p-4">
-          {matchedCoinIssues.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              <T k="coinTypeDetail.issues.noIssues" />
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <CoinIssuesTable
-                issues={matchedCoinIssues}
-                isDevMode={authorized}
-                mintOptions={mintOptions}
-                stateOptions={stateOptions}
-                inscriptionOptions={inscriptionOptions}
-                hierarchyOptions={hierarchyOptions}
-              />
-            </div>
-          )}
-        </div>
-      </details>
+      <CollapsiblePanel
+        header={<T k="coinTypeDetail.issues.title" vars={{ count: matchedCoinIssues.length }} />}
+        className="mt-6"
+        bodyClassName="p-4"
+      >
+        {matchedCoinIssues.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            <T k="coinTypeDetail.issues.noIssues" />
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <CoinIssuesTable
+              issues={matchedCoinIssues}
+              isDevMode={authorized}
+              mintOptions={mintOptions}
+              stateOptions={stateOptions}
+              inscriptionOptions={inscriptionOptions}
+              hierarchyOptions={hierarchyOptions}
+            />
+          </div>
+        )}
+      </CollapsiblePanel>
 
       {/* Related finds — collapsible, closed by default */}
-      <details className="group panel panel-collapsible mt-6 overflow-hidden">
-        <summary className="panel-header flex list-none cursor-pointer items-center justify-between px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="coinTypeDetail.relatedFinds" />
-          <span aria-hidden className="transition-transform group-open:rotate-180">
-            ▼
-          </span>
-        </summary>
-        <div className="p-4">
-          {relatedSites.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              <T k="coinTypeDetail.noSites" />
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                    <th className="py-2 pr-4">Site</th>
-                    <th className="py-2 pr-4">Province</th>
-                    <th className="py-2">Quantity</th>
+      <CollapsiblePanel header={<T k="coinTypeDetail.relatedFinds" />} className="mt-6" bodyClassName="p-4">
+        {relatedSites.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            <T k="coinTypeDetail.noSites" />
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                  <th className="py-2 pr-4">Site</th>
+                  <th className="py-2 pr-4">Province</th>
+                  <th className="py-2">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {relatedSites.map((site) => (
+                  <tr key={site.site_code} className="border-b border-gray-50">
+                    <td className="py-2 pr-4">
+                      <Link href={`/sites/${site.site_code}`} className="text-brand hover:underline">
+                        {site.site_name_zh ?? site.site_code}
+                      </Link>
+                      {site.site_name_en && (
+                        <span className="ml-1.5 text-xs italic text-gray-400">{site.site_name_en}</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-4 text-gray-600">
+                      {site.province_zh ?? '—'}
+                      {site.province_en && <span className="ml-1 text-xs italic text-gray-400">({site.province_en})</span>}
+                    </td>
+                    <td className="py-2 tabular-nums">{site.total_quantity_for_map ?? 0}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {relatedSites.map((site) => (
-                    <tr key={site.site_code} className="border-b border-gray-50">
-                      <td className="py-2 pr-4">
-                        <Link href={`/sites/${site.site_code}`} className="text-brand hover:underline">
-                          {site.site_name_zh ?? site.site_code}
-                        </Link>
-                        {site.site_name_en && (
-                          <span className="ml-1.5 text-xs italic text-gray-400">{site.site_name_en}</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {site.province_zh ?? '—'}
-                        {site.province_en && <span className="ml-1 text-xs italic text-gray-400">({site.province_en})</span>}
-                      </td>
-                      <td className="py-2 tabular-nums">{site.total_quantity_for_map ?? 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </details>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CollapsiblePanel>
 
       {/* Typology hierarchy — accordion, expanded down to this node */}
-      <section className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />
-        </div>
-        <div className="p-4 pl-8">
-          <TypologyTree nodes={nodes} currentSlug={node.slug} />
-        </div>
-      </section>
+      <Panel
+        header={<LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />}
+        className="mt-6"
+        bodyClassName="p-4 pl-8"
+      >
+        <TypologyTree nodes={nodes} currentSlug={node.slug} />
+      </Panel>
     </div>
   )
 }

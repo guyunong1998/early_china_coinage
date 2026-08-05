@@ -11,11 +11,13 @@ import { LabelHint } from '@/components/ui/LabelHint'
 import { T } from '@/components/i18n/T'
 import { isAuthorized } from '@/lib/admin/guard'
 import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
+import { buildCoinTypeNodes, type CoinTypeLevel } from '@/lib/coin-type-catalog'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import { formatCoordinates, formatNumber } from '@/lib/format'
+import { formatCoordinates, formatNumber, splitCsv } from '@/lib/format'
 import { findMintByNameZh, toMintInfo } from '@/lib/mint-directory'
 import {
   getCoinIssues,
+  getCoinTypeHierarchy,
   getMints,
   getSite,
   getSiteContexts,
@@ -25,6 +27,8 @@ import {
   getSources,
 } from '@/lib/queries'
 import type { Find, MapSite, MintInfo } from '@/lib/types'
+
+const LEVEL_RANK: Record<CoinTypeLevel, number> = { level1: 1, level2: 2, level3: 3, level4: 4, level5: 5 }
 
 type PageProps = {
   params: Promise<{ site_code: string }>
@@ -134,6 +138,35 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
   )
 }
 
+/** A '、'-joined list of labels (coin types, mints, ...), each one linked to
+ * its own detail page when `resolve` finds a match — plain, unstyled text
+ * until hovered, at which point it reads as a link (brand color + underline),
+ * same as any other in-text link. Labels that don't resolve to a record just
+ * render as plain text, never picking up hover styling. */
+function linkedList(items: string[], resolve: (labelZh: string) => { en: string | null; href: string | null }) {
+  if (items.length === 0) return <span className="text-gray-400">—</span>
+  return (
+    <>
+      {items.map((label, i) => {
+        const { en, href } = resolve(label)
+        return (
+          <span key={label}>
+            {i > 0 && '、'}
+            {href ? (
+              <Link href={href} className="text-gray-800 hover:text-brand hover:underline">
+                {label}
+              </Link>
+            ) : (
+              <span>{label}</span>
+            )}
+            {en && <span className="ml-1 text-xs italic text-gray-400">({en})</span>}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
 /** Long field: zh paragraph + en paragraph below */
 function biBlock(zh: string | null | undefined, en: string | null | undefined) {
   const a = zh?.trim()
@@ -208,6 +241,8 @@ export default async function SitePage({ params }: PageProps) {
 
   // Only needed to populate the find-editing combobox, so skip the fetch in prod.
   const coinIssues = authorized ? await getCoinIssues() : []
+  // For linking "Coin Types" labels below through to their /coin-types page.
+  const catalogNodes = buildCoinTypeNodes(await getCoinTypeHierarchy(), coinIssues)
 
   const structuredSourceLinks = await getSourceLinksForSite(
     site_code,
@@ -245,6 +280,20 @@ export default async function SitePage({ params }: PageProps) {
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
   const classification = mergeLevelTypes(summary)
+  const classificationItems = classification.zh ? classification.zh.split('、') : []
+  const mintItems = splitCsv(summary?.mints_zh)
+
+  function resolveCoinType(labelZh: string) {
+    const node = catalogNodes
+      .filter((n) => n.label_zh === labelZh)
+      .sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0]
+    return { en: node?.label_en ?? null, href: node ? `/coin-types/${node.slug}` : null }
+  }
+
+  function resolveMint(labelZh: string) {
+    const mint = findMintByNameZh(mints, labelZh)
+    return { en: mint?.name_en ?? null, href: mint ? `/mints/${mint.mint_code}` : null }
+  }
 
   const mintOrigins =
     summary?.lat != null && summary.lng != null ? buildMintOrigins(finds, mints) : null
@@ -334,12 +383,12 @@ export default async function SitePage({ params }: PageProps) {
         <DataCard title={<T k="site.classification.title" />}>
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
-              <Row labelKey="site.row.classification">{bi(classification.zh, classification.en)}</Row>
+              <Row labelKey="site.row.classification">{linkedList(classificationItems, resolveCoinType)}</Row>
               <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, summary?.inscriptions_en)}</Row>
             </dl>
             <dl>
               <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, summary?.states_en)}</Row>
-              <Row labelKey="siteTabs.row.mints">{bi(summary?.mints_zh, summary?.mints_en)}</Row>
+              <Row labelKey="siteTabs.row.mints">{linkedList(mintItems, resolveMint)}</Row>
               <Row labelKey="siteTabs.row.precision" hintKey="siteTabs.row.precisionHint">
                 {formatNumber(site.precision_level ?? summary?.precision_level)}
               </Row>
