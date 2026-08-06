@@ -10,6 +10,7 @@ import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
 import { LabelHint } from '@/components/ui/LabelHint'
 import { CollapsiblePanel, Panel } from '@/components/ui/Panel'
+import { linkedList } from '@/components/ui/LinkedList'
 import { isAuthorized } from '@/lib/admin/guard'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
@@ -20,6 +21,7 @@ import {
   isMouldNode,
   type CoinTypeLevel,
 } from '@/lib/coin-type-catalog'
+import { findMintByNameZh, toMintInfo } from '@/lib/mint-directory'
 import {
   getCoinIssues,
   getCoinTypeHierarchy,
@@ -76,10 +78,11 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum, node.slug)
 
   const authorized = await isAuthorized()
-  // Only needed to populate the coin-issue editing comboboxes, so skip in prod.
-  const [mints, states, inscriptions] = authorized
-    ? await Promise.all([getMints(), getStates(), getInscriptions()])
-    : [[], [], []]
+  // mints is also needed to resolve the Mints row's links below (for every
+  // visitor, not just admins) -- states/inscriptions stay admin-only since
+  // they only populate the coin-issue editing comboboxes.
+  const mints = await getMints()
+  const [states, inscriptions] = authorized ? await Promise.all([getStates(), getInscriptions()]) : [[], []]
   const mintOptions: ComboOption[] = mints.map((m) => ({ value: m.id, label: m.name_zh, searchText: m.name_en ?? '' }))
   const stateOptions: ComboOption[] = states.map((s) => ({ value: s.id, label: s.state_zh, searchText: s.state_en ?? '' }))
   const inscriptionOptions: ComboOption[] = inscriptions.map((i) => ({
@@ -94,6 +97,13 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
 
   const hierarchyIdByIssueId = new Map(coinIssues.map((c) => [c.id, c.coin_type_hierarchy_id]))
   const counts = computeCoinTypeCounts(node.matchedHierarchyIds, finds, hierarchyIdByIssueId)
+
+  const mintInfos = mints.map(toMintInfo)
+  const mintEnByZh = new Map(node.mints.map((m) => [m.mint_zh, m.mint_en]))
+  function resolveMintLink(labelZh: string) {
+    const mint = findMintByNameZh(mintInfos, labelZh)
+    return { en: mintEnByZh.get(labelZh) ?? null, href: mint ? `/mints/${mint.mint_code}` : null }
+  }
 
   const matchedIds = new Set(node.matchedHierarchyIds)
   const matchedCoinIssues = coinIssues
@@ -157,23 +167,10 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             />
             <DetailRow
               labelKey="coinTypeDetail.row.mints"
-              value={
-                node.mints.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {node.mints.map((m) => (
-                      <span
-                        key={m.mint_zh}
-                        className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
-                      >
-                        {m.mint_zh}
-                        {m.mint_en && <span className="italic text-brand/70"> ({m.mint_en})</span>}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  '—'
-                )
-              }
+              value={linkedList(
+                node.mints.map((m) => m.mint_zh),
+                resolveMintLink
+              )}
             />
             <DetailRow
               labelKey="mintDetail.row.inscriptions"
