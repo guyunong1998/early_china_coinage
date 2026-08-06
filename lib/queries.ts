@@ -163,11 +163,31 @@ export async function fetchAllPages<T>(
   return all
 }
 
+/** Raw shape of a `periods(period_zh, period_en)` embed, as returned by
+ * PostgREST for a to-one FK (see `one` above for the array-vs-object
+ * ambiguity this works around). */
+type PeriodEmbed =
+  | { period_zh: string | null; period_en: string | null }
+  | { period_zh: string | null; period_en: string | null }[]
+  | null
+
+/** Flattens a row carrying an embedded `periods(...)` relation into the same
+ * flat period_zh/period_en shape `sites`/`contexts` exposed before period
+ * was normalized into its own lookup table. */
+// row comes straight off the untyped supabase-js client (see lib/supabase.ts);
+// callers cast the result to their target row type (Site, Context, ...).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function flattenPeriod(row: any) {
+  const { periods, ...rest } = row
+  const period = one(periods as PeriodEmbed)
+  return { ...rest, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
+}
+
 async function attachPeriods(sites: MapSite[]): Promise<SearchSite[]> {
-  const { data, error } = await supabase.from('sites').select('site_code, period_zh, period_en')
+  const { data, error } = await supabase.from('sites').select('site_code, periods(period_zh, period_en)')
   if (error) throw error
 
-  const periodBySiteCode = new Map((data ?? []).map((row) => [row.site_code, row]))
+  const periodBySiteCode = new Map((data ?? []).map((row) => [row.site_code, flattenPeriod(row)]))
   return sites.map((site) => {
     const period = periodBySiteCode.get(site.site_code)
     return { ...site, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
@@ -338,12 +358,12 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
 export async function getSite(siteCode: string): Promise<Site | null> {
   const { data, error } = await supabase
     .from('sites')
-    .select('*')
+    .select('*, periods(period_zh, period_en)')
     .eq('site_code', siteCode)
     .maybeSingle()
 
   if (error) throw error
-  return data
+  return data ? flattenPeriod(data) : null
 }
 
 export async function getSiteMapSummary(siteCode: string): Promise<MapSite | null> {
@@ -360,12 +380,12 @@ export async function getSiteMapSummary(siteCode: string): Promise<MapSite | nul
 export async function getSiteContexts(siteCode: string): Promise<Context[]> {
   const { data, error } = await supabase
     .from('contexts')
-    .select('*')
+    .select('*, periods(period_zh, period_en)')
     .eq('site_code', siteCode)
     .order('context_code')
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(flattenPeriod)
 }
 
 export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {

@@ -34,7 +34,7 @@ declare
 begin
   foreach t in array array[
     'sites', 'contexts', 'finds', 'coin_issues', 'mints',
-    'sources', 'source_links', 'coin_type_hierarchy', 'inscriptions', 'states'
+    'sources', 'source_links', 'coin_type_hierarchy', 'inscriptions', 'states', 'periods'
   ]
   loop
     execute format(
