@@ -107,214 +107,169 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
 }
 
 /**
- * Academia Sinica's scanned Tang-dynasty road atlas (唐代交通路線圖), served
- * as WMTS. It's published as **JPEG**, so every tile arrives as line work
- * baked onto an opaque white sheet — dropped straight into Leaflet it would
- * hide whatever basemap it sits on. These two constants drive `keyOutWhite`
- * below, which repaints that white as real alpha.
+ * Historical route network + its named nodes, converted from the route0180 /
+ * Node shapefiles by scripts/convert-routes-shapefile.mjs.
  *
- * The source is lossy, so "white" is never exactly 255/255/255: JPEG ringing
- * scatters faint speckle across the empty areas and smears a wide halo around
- * every stroke — worst around the atlas's dense blocks of place-name
- * characters, where un-keyed ringing pools into visible violet fog. Anything
- * below `INK_NOISE` is therefore dropped outright rather than faded; the floor
- * sits high enough to take that fog with it. `INK_SOLID` is where ink turns
- * fully opaque, set well below 255 so this atlas's thin, pale strokes read as
- * solid lines instead of ghosts.
+ * Each `routelevel` gets its own cartographic line style:
+ *   1 (trunk)     — double line: a thick casing with a thinner light line
+ *                   drawn down its middle, reading as two parallel lines.
+ *   2 (secondary) — single solid line.
+ *   3 (tertiary)  — dashed line.
+ *
+ * The routes arrive as many short, separately-digitised segments that meet
+ * end to end, so drawing each segment's full stack (halo → casing → inner)
+ * one after another would let a neighbour's halo/inner paint over the segment
+ * before it and leave a visible seam or stub at every junction. Instead each
+ * part of the stack lives in its own pane, so *all* halos are painted, then
+ * *all* casings, and so on — junctions fuse into continuous lines.
  */
-const WHITE_KEY_INK_NOISE = 40
-const WHITE_KEY_INK_SOLID = 100
+type RouteProps = { routelevel?: number | null }
+type RouteNodeProps = { id?: number | null; name?: string | null }
 
-/** How far to push the ink's own hues past what the scan recorded. The atlas
- *  was drawn for print on white paper, so its reds and blues are muted enough
- *  to sink into satellite imagery; this is what makes them read as deliberate
- *  route colors over any basemap. */
-const WHITE_KEY_SATURATION = 1.5
+const ROUTE_COLOR = '#b45309'
+const ROUTE_HALO_COLOR = '#fff7ed'
+const ROUTE_NODE_COLOR = '#7c2d12'
 
-/** Rec. 709 luma — the grey a pixel is pulled away from when saturating. */
-function luma(r: number, g: number, b: number) {
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+/** Pane name → z-index, in paint order. Above Leaflet's overlayPane (400),
+ *  below its markerPane (600) so find-site coin markers stay on top. */
+const ROUTE_PANES = {
+  halo: 402,
+  trunkCasing: 403,
+  trunkInner: 404,
+  line: 405,
+  nodes: 406,
+} as const
+
+const ROUTE_DASH = '7 5'
+
+function ensurePane(map: import('leaflet').Map, name: string, zIndex: number) {
+  const pane = map.getPane(name) ?? map.createPane(name)
+  pane.style.zIndex = String(zIndex)
+  return name
 }
 
-/**
- * Rewrites a tile in place so its white background becomes transparent and
- * its surviving ink reads boldly on any basemap.
- *
- * Ink strength is read off the *darkest* channel rather than luminance — the
- * atlas draws its route classes in saturated colors (red, blue, cyan), and a
- * bright cyan river has a high average luminance despite being solid ink, so
- * a luminance test would erase it.
- *
- * Each surviving pixel is then un-multiplied against white: the scan shows ink
- * already composited onto a white sheet, so dividing that blend back out
- * recovers the stroke's own color. Without it every line would keep the white
- * it was mixed with and wash out over a dark basemap.
- */
-function keyOutWhite(pixels: Uint8ClampedArray) {
-  for (let i = 0; i < pixels.length; i += 4) {
-    const ink = 255 - Math.min(pixels[i], pixels[i + 1], pixels[i + 2])
-    if (ink <= WHITE_KEY_INK_NOISE) {
-      pixels[i + 3] = 0
-      continue
-    }
-    const alpha = Math.min(
-      1,
-      (ink - WHITE_KEY_INK_NOISE) / (WHITE_KEY_INK_SOLID - WHITE_KEY_INK_NOISE)
-    )
-    const white = 255 * (1 - alpha)
-    const r = (pixels[i] - white) / alpha
-    const g = (pixels[i + 1] - white) / alpha
-    const b = (pixels[i + 2] - white) / alpha
-    const grey = luma(r, g, b)
-    pixels[i] = grey + (r - grey) * WHITE_KEY_SATURATION
-    pixels[i + 1] = grey + (g - grey) * WHITE_KEY_SATURATION
-    pixels[i + 2] = grey + (b - grey) * WHITE_KEY_SATURATION
-    pixels[i + 3] = alpha * 255
-  }
-}
-
-/** Pale casing drawn under the keyed ink. Saturated line work on a light
- *  basemap contrasts on its own, but over satellite imagery it lands on
- *  mid-tone greens and browns of similar darkness and stops separating; a
- *  light outline restores that edge, and is simply invisible on the pale
- *  basemaps where it isn't needed. Kept narrow — the blur is clipped at each
- *  tile's border, so a wide one would print a faint seam grid. */
-const WHITE_KEY_CASING = 'drop-shadow(0 0 1.2px rgba(255,255,255,0.95))'
-const WHITE_KEY_CASING_PASSES = 2
-
-/** Leaflet's `_abortLoading` drops any still-loading tile from an outgoing
- *  zoom level, testing `<img>.complete`. A canvas has no such property, so
- *  every canvas tile reads as "never finished" and gets thrown away mid-zoom,
- *  flickering the layer. Tracking it ourselves keeps the old level on screen
- *  until the new one is ready. */
-type CanvasTile = HTMLCanvasElement & { complete: boolean }
-
-/** Scratch canvas the keying happens on, shared by every tile: `putImageData`
- *  ignores the compositing state a filter needs, so the keyed result has to be
- *  built somewhere else and then *drawn* into the real tile. Reused rather than
- *  allocated per tile — a screenful is dozens of tiles, and each one's
- *  processing runs start to finish synchronously inside its own `onload`, so
- *  they can never overlap. */
-let keyingScratch: HTMLCanvasElement | null = null
-
-function scratchFor(width: number, height: number) {
-  const canvas = keyingScratch ?? (keyingScratch = document.createElement('canvas'))
-  canvas.width = width
-  canvas.height = height
-  return canvas
-}
-
-/**
- * A tile layer that keys the white out of every tile before it's shown, then
- * paints it back down over a pale casing (see `WHITE_KEY_CASING`).
- *
- * Reading pixels back out of a canvas taints it unless the image was fetched
- * cross-origin-clean, hence `crossOrigin`; the Academia Sinica host does send
- * `Access-Control-Allow-Origin: *`. If it ever stops doing so, `getImageData`
- * throws and the tile falls back to the raw image — an opaque white block, but
- * still the right map.
- */
-function buildWhiteKeyedTileLayer(
+function buildRoutesLayer(
   L: LeafletNS,
-  url: string,
-  options: import('leaflet').TileLayerOptions
+  map: import('leaflet').Map,
+  linesUrl = '/data/routes.geojson',
+  nodesUrl = '/data/route-nodes.geojson'
 ) {
-  const WhiteKeyed = L.TileLayer.extend({
-    createTile(
-      this: import('leaflet').TileLayer,
-      coords: import('leaflet').Coords,
-      done: import('leaflet').DoneCallback
-    ) {
-      const size = this.getTileSize()
-      const tile = L.DomUtil.create('canvas') as CanvasTile
-      tile.width = size.x
-      tile.height = size.y
-      tile.complete = false
+  const group = L.layerGroup()
 
-      const image = new Image()
-      image.crossOrigin = 'anonymous'
-      image.onload = () => {
-        const ctx = tile.getContext('2d')
-        if (ctx) {
-          const scratch = scratchFor(tile.width, tile.height)
-          const scratchCtx = scratch.getContext('2d', { willReadFrequently: true })
-          try {
-            if (!scratchCtx) throw new Error('no 2d context')
-            scratchCtx.clearRect(0, 0, tile.width, tile.height)
-            scratchCtx.drawImage(image, 0, 0, tile.width, tile.height)
-            const data = scratchCtx.getImageData(0, 0, tile.width, tile.height)
-            keyOutWhite(data.data)
-            scratchCtx.putImageData(data, 0, 0)
+  const panes = {
+    halo: ensurePane(map, 'routes-halo', ROUTE_PANES.halo),
+    trunkCasing: ensurePane(map, 'routes-trunk-casing', ROUTE_PANES.trunkCasing),
+    trunkInner: ensurePane(map, 'routes-trunk-inner', ROUTE_PANES.trunkInner),
+    line: ensurePane(map, 'routes-line', ROUTE_PANES.line),
+    nodes: ensurePane(map, 'routes-nodes', ROUTE_PANES.nodes),
+  }
 
-            // Each casing pass draws the ink *and* its outline, so stacking
-            // passes thickens the outline; the final unfiltered pass puts the
-            // ink back on top crisp.
-            for (let pass = 0; pass < WHITE_KEY_CASING_PASSES; pass++) {
-              ctx.filter = WHITE_KEY_CASING
-              ctx.drawImage(scratch, 0, 0)
-            }
-            ctx.filter = 'none'
-            ctx.drawImage(scratch, 0, 0)
-          } catch {
-            // Tainted canvas or no context — fall back to the raw tile.
-            ctx.filter = 'none'
-            ctx.drawImage(image, 0, 0, tile.width, tile.height)
-          }
-        }
-        tile.complete = true
-        done(undefined, tile)
+  fetch(linesUrl)
+    .then((res) => res.json())
+    .then((geojson: import('geojson').FeatureCollection) => {
+      type RouteFeature = import('geojson').Feature<import('geojson').Geometry, RouteProps>
+
+      const atLevel = (level: number) => ({
+        ...geojson,
+        features: geojson.features.filter(
+          (f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level
+        ),
+      })
+
+      const tooltip = (feature: RouteFeature, layer: import('leaflet').Layer) => {
+        const level = feature.properties?.routelevel
+        if (level == null) return
+        layer.bindTooltip(`Route · level ${level}`, { sticky: true, className: 'river-tooltip' })
       }
-      image.onerror = () => {
-        tile.complete = true
-        done(new Error(`Tile failed to load: ${image.src}`), tile)
-      }
-      image.src = this.getTileUrl(coords)
 
-      return tile
-    },
-  })
+      // Level 1 — halo, then casing, then the light inner line. Round caps on
+      // the casing let abutting segments blend; the inner line uses butt caps
+      // so it can never spill past the casing it sits inside.
+      const trunk = atLevel(1)
+      L.geoJSON(trunk, {
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
+      }).addTo(group)
+      L.geoJSON(trunk, {
+        pane: panes.trunkCasing,
+        style: { color: ROUTE_COLOR, weight: 7, opacity: 1, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: tooltip,
+      }).addTo(group)
+      L.geoJSON(trunk, {
+        pane: panes.trunkInner,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 3, opacity: 1, lineCap: 'butt', lineJoin: 'round' },
+      }).addTo(group)
 
-  return new WhiteKeyed(url, options) as import('leaflet').TileLayer
-}
+      // Level 2 — plain solid line.
+      const secondary = atLevel(2)
+      L.geoJSON(secondary, {
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
+      }).addTo(group)
+      L.geoJSON(secondary, {
+        pane: panes.line,
+        style: { color: ROUTE_COLOR, weight: 2.6, opacity: 1, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: tooltip,
+      }).addTo(group)
 
-/** The place-name overlay has to outrank every other tile layer, and unlike
- *  them it can't get there on its own: `L.control.layers` hands each layer it
- *  manages an auto-assigned z-index, but the label layer is deliberately not
- *  in that control (it follows the language toggle, not a checkbox), so it
- *  would default to none and sit *below* every numbered layer — including
- *  whichever basemap the user switches to. Any value above the handful the
- *  control assigns does the job. */
-const LABEL_TILE_Z_INDEX = 300
+      // Level 3 — dashed. Its halo carries the same dash pattern, otherwise a
+      // solid white line would show through the gaps.
+      const tertiary = atLevel(3)
+      L.geoJSON(tertiary, {
+        pane: panes.halo,
+        interactive: false,
+        style: {
+          color: ROUTE_HALO_COLOR,
+          weight: 4.4,
+          opacity: 0.9,
+          dashArray: ROUTE_DASH,
+          lineCap: 'butt',
+        },
+      }).addTo(group)
+      L.geoJSON(tertiary, {
+        pane: panes.line,
+        style: {
+          color: ROUTE_COLOR,
+          weight: 2,
+          opacity: 1,
+          dashArray: ROUTE_DASH,
+          lineCap: 'butt',
+        },
+        onEachFeature: tooltip,
+      }).addTo(group)
+    })
+    .catch(() => {
+      // Route overlay is non-essential — fail silently.
+    })
 
-/**
- * 唐代交通路線圖 — Academia Sinica's digitised Tang road network, as a
- * white-keyed overlay (see `buildWhiteKeyedTileLayer`). This is the map's route
- * reference: a scanned raster, so nothing on it is queryable and its
- * place-name captions are part of the image rather than a layer that could be
- * switched off, but it covers the whole empire at a level of detail no
- * vectorised subset here matches.
- *
- * Its tile pyramid stops at z11 — deeper requests come back as a blank
- * placeholder image rather than a 404, so Leaflet can't detect the ceiling on
- * its own and `maxNativeZoom` has to state it. `maxZoom` then hides the layer
- * entirely past z13: upscaling a raster two levels is a reasonable stretch,
- * but at street zoom it would blow single strokes up into blurred colour
- * bands wide enough to swallow a whole town, which reads as a rendering fault
- * rather than as a road. `bounds` comes from the service's declared extent —
- * outside it every tile is that same blank placeholder.
- */
-function buildTangRoutesLayer(L: LeafletNS) {
-  return buildWhiteKeyedTileLayer(
-    L,
-    'https://gis.sinica.edu.tw/ccts/file-exists.php?img=Tang_TrafficRoute-jpg-{z}-{x}-{y}',
-    {
-      attribution:
-        '唐代交通路線圖 © <a href="https://gis.sinica.edu.tw/showwmts/index.php?s=ccts&l=Tang_TrafficRoute">中央研究院人社中心 GIS 專題中心</a>',
-      bounds: L.latLngBounds([17.04, 68.139], [57.103, 145.66]),
-      maxNativeZoom: 11,
-      maxZoom: 13,
-    }
-  )
+  fetch(nodesUrl)
+    .then((res) => res.json())
+    .then((geojson) => {
+      L.geoJSON<RouteNodeProps>(geojson, {
+        pane: panes.nodes,
+        pointToLayer: (_feature, latlng) =>
+          L.circleMarker(latlng, {
+            pane: panes.nodes,
+            radius: 3,
+            color: ROUTE_HALO_COLOR,
+            weight: 1.2,
+            fillColor: ROUTE_NODE_COLOR,
+            fillOpacity: 1,
+          }),
+        onEachFeature: (feature, layer) => {
+          const name = feature.properties?.name
+          if (name) layer.bindTooltip(name, { direction: 'top', className: 'river-tooltip' })
+        },
+      }).addTo(group)
+    })
+    .catch(() => {
+      // Node overlay is non-essential — fail silently.
+    })
+
+  return group
 }
 
 export function buildBaseLayers(L: LeafletNS) {
@@ -368,7 +323,7 @@ export function buildBaseLayers(L: LeafletNS) {
   // `setLabelLayerForLang` below), not a manual checkbox.
   const labelsEn = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-    { attribution: '', maxZoom: 19, opacity: 1, zIndex: LABEL_TILE_Z_INDEX }
+    { attribution: '', maxZoom: 19, opacity: 1 }
   )
 
   // Chinese-script place-name overlay — the zh counterpart to Esri's English
@@ -380,13 +335,7 @@ export function buildBaseLayers(L: LeafletNS) {
   // same plain "dot + text" look as the English layer, no road clutter.
   const labelsZh = buildPlaceLabelsLayer(L)
 
-  // Holder for whichever of the two is currently in use, so callers have one
-  // stable layer to add, remove, or hand to a layer control without caring
-  // which language is active — swapping the contents (setLabelLayerForLang)
-  // then never disturbs that outer on/off state.
-  const placeLabels = L.layerGroup()
-
-  return { cawm, satellite, cyclosm, osm, labelsEn, labelsZh, placeLabels }
+  return { cawm, satellite, cyclosm, osm, labelsEn, labelsZh }
 }
 
 export type BaseLayers = ReturnType<typeof buildBaseLayers>
@@ -420,49 +369,33 @@ function buildPlaceLabelsLayer(L: LeafletNS) {
   return group
 }
 
-/** Anything a label layer can live in. `Map` and `LayerGroup` both expose this
- *  much of Leaflet's container API, which is all the swap below needs. */
-type LabelHost = {
-  hasLayer(layer: import('leaflet').Layer): boolean
-  addLayer(layer: import('leaflet').Layer): unknown
-  removeLayer(layer: import('leaflet').Layer): unknown
-}
-
 /**
- * Shows the label layer matching `lang` inside `host` and hides the other one
- * — the single place this decision is made, called both right after the base
+ * Shows the label layer matching `lang` and hides the other one — the
+ * single place this decision is made, called both right after the base
  * layers are built (initial state) and again whenever the language toggle
  * changes (see each map component's `[lang]`-keyed effect).
- *
- * Pass the map itself for the maps where labels are simply always on. Pass
- * `placeLabels` where the user can turn them off (the Map Visualizations layer
- * control): confining the swap to that group means a language change can't
- * quietly switch the labels back on behind the user's checkbox.
  */
 export function setLabelLayerForLang(
-  host: LabelHost,
+  map: import('leaflet').Map,
   labelsEn: import('leaflet').Layer,
   labelsZh: import('leaflet').Layer,
   lang: 'en' | 'zh'
 ) {
   const show = lang === 'zh' ? labelsZh : labelsEn
   const hide = lang === 'zh' ? labelsEn : labelsZh
-  if (host.hasLayer(hide)) host.removeLayer(hide)
-  if (!host.hasLayer(show)) host.addLayer(show)
+  if (map.hasLayer(hide)) map.removeLayer(hide)
+  if (!map.hasLayer(show)) show.addTo(map)
 }
 
 /**
- * Full interactive chrome, as a single control: the basemap switcher over the
- * toggleable overlays, so everything the user can turn on or off lives in one
- * box. Reserved for the dedicated Map Visualizations pages (desktop only — see
- * `addStaticMajorRivers` below for every other map, and for all maps on mobile
- * screens).
- *
- * Place names are one of those overlays here. Elsewhere they're fixed
- * furniture, but this is the one map that stacks a captioned historical atlas
- * under them, and two sets of names competing over the same towns is worth
- * being able to switch off; the language toggle still picks *which* set (see
- * `setLabelLayerForLang`).
+ * Full interactive chrome, as a single control: the basemap switcher over
+ * the toggleable overlays (the two river tiers and the route network), so
+ * everything the user can turn on or off lives in one box. Reserved for the
+ * dedicated Map Visualizations pages (desktop only — see
+ * `addStaticMajorRivers` below for every other map, and for all maps on
+ * mobile screens). The place-name label layer isn't part of this control —
+ * it's always on, following the language toggle (`setLabelLayerForLang`),
+ * not a manual overlay checkbox.
  *
  * The river tiers are two independent checkboxes rather than the
  * Off/Major/Minor/All radio group they replaced: unticking both is "off",
@@ -474,12 +407,12 @@ export function addLayerControl(
   layers: BaseLayers,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
-  const { cawm, satellite, cyclosm, osm, placeLabels } = layers
+  const { cawm, satellite, cyclosm, osm } = layers
   const position = options?.position ?? 'topright'
 
   const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  const tangRoutes = buildTangRoutesLayer(L).addTo(map)
+  const routes = buildRoutesLayer(L, map).addTo(map)
 
   L.control
     .layers(
@@ -489,8 +422,7 @@ export function addLayerControl(
       {
         'Major rivers': majorRivers,
         'Minor rivers': minorRivers,
-        'Tang routes (Academia Sinica)': tangRoutes,
-        'Place names': placeLabels,
+        'Routes & nodes': routes,
       },
       { collapsed: options?.collapsed ?? false, position }
     )
@@ -507,9 +439,9 @@ export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
 }
 
-/** The Tang road atlas as a fixed layer, for the same no-controls maps that get
+/** The route network as a fixed layer, for the same no-controls maps that get
  *  `addStaticMajorRivers` — otherwise routes would vanish entirely below the
  *  768px breakpoint, where the layer control isn't built. */
-export function addStaticTangRoutes(L: LeafletNS, map: import('leaflet').Map) {
-  buildTangRoutesLayer(L).addTo(map)
+export function addStaticRoutes(L: LeafletNS, map: import('leaflet').Map) {
+  buildRoutesLayer(L, map).addTo(map)
 }

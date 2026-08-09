@@ -530,10 +530,6 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const labelLayersRef = useRef<{
     labelsEn: import('leaflet').Layer
     labelsZh: import('leaflet').Layer
-    /** Where the active label layer lives — the `placeLabels` group when it's
-     *  user-toggleable, the map itself otherwise. Recorded at init so the
-     *  language-swap effect below targets whichever one this map chose. */
-    host: Parameters<typeof import('@/lib/map-layers').setLabelLayerForLang>[0]
   } | null>(null)
   const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
@@ -764,7 +760,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         buildBaseLayers,
         addLayerControl,
         addStaticMajorRivers,
-        addStaticTangRoutes,
+        addStaticRoutes,
         setLabelLayerForLang,
       } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
@@ -776,8 +772,10 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       L.control.zoom({ position: 'topright' }).addTo(map)
 
       const baseLayers = buildBaseLayers(L)
-      const { cyclosm, labelsEn, labelsZh, placeLabels } = baseLayers
+      const { cyclosm, labelsEn, labelsZh } = baseLayers
       cyclosm.addTo(map)
+      labelLayersRef.current = { labelsEn, labelsZh }
+      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       // The layer control is reserved for the dedicated Map Visualizations
       // pages (fullControls, default true), desktop only — on mobile, or
@@ -785,20 +783,11 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       // (e.g. the /mints overview map), it drops back to the same "just the
       // bilingual labels + static major rivers and routes" baseline every
       // other map on the site uses.
-      //
-      // Only the control build makes place names switchable, so only it routes
-      // them through the `placeLabels` group; the static path puts them
-      // straight on the map, where they're permanent.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
-      const labelHost = isMobile || props.fullControls === false ? map : placeLabels
-      labelLayersRef.current = { labelsEn, labelsZh, host: labelHost }
-      setLabelLayerForLang(labelHost, labelsEn, labelsZh, lang)
-
       if (isMobile || props.fullControls === false) {
         addStaticMajorRivers(L, map)
-        addStaticTangRoutes(L, map)
+        addStaticRoutes(L, map)
       } else {
-        placeLabels.addTo(map)
         addLayerControl(L, map, baseLayers, {
           collapsed: true,
           position: 'bottomright',
@@ -957,7 +946,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     const layers = labelLayersRef.current
     if (!map || !layers) return
     import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
-      setLabelLayerForLang(layers.host, layers.labelsEn, layers.labelsZh, lang)
+      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
     })
   }, [lang])
 
