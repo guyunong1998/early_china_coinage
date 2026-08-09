@@ -98,7 +98,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   const matchedIds = new Set(node.matchedHierarchyIds)
   const matchedCoinIssues = coinIssues
     .filter((c) => c.coin_type_hierarchy_id && matchedIds.has(c.coin_type_hierarchy_id))
-    .sort((a, b) => a.coin_type_code.localeCompare(b.coin_type_code))
+    .sort((a, b) => (a.coin_type_code ?? '').localeCompare(b.coin_type_code ?? ''))
   const matchedIssueIds = new Set(matchedCoinIssues.map((c) => c.id))
   const matchedSiteCodes = new Set<string>()
   finds.forEach((f) => {
