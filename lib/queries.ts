@@ -1,5 +1,4 @@
 import { splitCsv } from '@/lib/format'
-import { getMintNameVariants } from '@/lib/mint-towns'
 import { supabase } from '@/lib/supabase'
 import type {
   CoinIssueDisplay,
@@ -8,6 +7,7 @@ import type {
   DatabaseStats,
   Find,
   HeatmapFind,
+  ImageRecord,
   Inscription,
   MapSite,
   Site,
@@ -17,7 +17,7 @@ import type {
 } from '@/lib/types'
 
 const MAP_SITE_FIELDS =
-  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, inscriptions, states_zh, mints_zh'
+  'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, level1_types_en, level2_types_en, level3_types_en, level4_types_en, level5_types_en, inscriptions, states_zh, mints_zh, inscriptions_en, states_en, mints_en'
 
 export type SearchSite = MapSite & { period_zh: string | null; period_en: string | null }
 
@@ -100,6 +100,7 @@ export const COIN_ISSUE_FIELDS =
  * (see lib/typology-filter.ts, lib/mint-filter.ts). */
 export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
   const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
+  const cth = one(row.coin_type_hierarchy)
   const mint = one(row.mints)
   const state = one(row.states)
   const inscription = one(row.inscriptions)
@@ -110,6 +111,8 @@ export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
     major_type_en: major_en,
     minor_type_zh: minor_zh,
     minor_type_en: minor_en,
+    level2_zh: cth?.level2_zh ?? null,
+    level2_en: cth?.level2_en ?? null,
     inscription: inscription?.inscription_zh ?? null,
     inscription_en: inscription?.inscription_en ?? null,
     mint_zh: mint?.name_zh ?? null,
@@ -160,11 +163,31 @@ export async function fetchAllPages<T>(
   return all
 }
 
+/** Raw shape of a `periods(period_zh, period_en)` embed, as returned by
+ * PostgREST for a to-one FK (see `one` above for the array-vs-object
+ * ambiguity this works around). */
+type PeriodEmbed =
+  | { period_zh: string | null; period_en: string | null }
+  | { period_zh: string | null; period_en: string | null }[]
+  | null
+
+/** Flattens a row carrying an embedded `periods(...)` relation into the same
+ * flat period_zh/period_en shape `sites`/`contexts` exposed before period
+ * was normalized into its own lookup table. */
+// row comes straight off the untyped supabase-js client (see lib/supabase.ts);
+// callers cast the result to their target row type (Site, Context, ...).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function flattenPeriod(row: any) {
+  const { periods, ...rest } = row
+  const period = one(periods as PeriodEmbed)
+  return { ...rest, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
+}
+
 async function attachPeriods(sites: MapSite[]): Promise<SearchSite[]> {
-  const { data, error } = await supabase.from('sites').select('site_code, period_zh, period_en')
+  const { data, error } = await supabase.from('sites').select('site_code, periods(period_zh, period_en)')
   if (error) throw error
 
-  const periodBySiteCode = new Map((data ?? []).map((row) => [row.site_code, row]))
+  const periodBySiteCode = new Map((data ?? []).map((row) => [row.site_code, flattenPeriod(row)]))
   return sites.map((site) => {
     const period = periodBySiteCode.get(site.site_code)
     return { ...site, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
@@ -231,9 +254,17 @@ function siteRowToMapSite(row: SitePrecisionRow): MapSite {
     level3_types_zh: null,
     level4_types_zh: null,
     level5_types_zh: null,
+    level1_types_en: null,
+    level2_types_en: null,
+    level3_types_en: null,
+    level4_types_en: null,
+    level5_types_en: null,
     inscriptions: null,
     states_zh: null,
     mints_zh: null,
+    inscriptions_en: null,
+    states_en: null,
+    mints_en: null,
   }
 }
 
@@ -327,12 +358,12 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
 export async function getSite(siteCode: string): Promise<Site | null> {
   const { data, error } = await supabase
     .from('sites')
-    .select('*')
+    .select('*, periods(period_zh, period_en)')
     .eq('site_code', siteCode)
     .maybeSingle()
 
   if (error) throw error
-  return data
+  return data ? flattenPeriod(data) : null
 }
 
 export async function getSiteMapSummary(siteCode: string): Promise<MapSite | null> {
@@ -349,12 +380,12 @@ export async function getSiteMapSummary(siteCode: string): Promise<MapSite | nul
 export async function getSiteContexts(siteCode: string): Promise<Context[]> {
   const { data, error } = await supabase
     .from('contexts')
-    .select('*')
+    .select('*, periods(period_zh, period_en)')
     .eq('site_code', siteCode)
     .order('context_code')
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(flattenPeriod)
 }
 
 export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
@@ -543,6 +574,18 @@ export async function getSourceLinksForSite(
   return [...siteLinks, ...contextLinks, ...findLinks]
 }
 
+/** source_links scoped to one mint — no child records to also pull in
+ * (unlike a site's contexts/finds), so a single scoped query is enough. */
+export async function getSourceLinksForMint(mintCode: string): Promise<SourceLink[]> {
+  const { data, error } = await supabase
+    .from('source_links')
+    .select('*')
+    .eq('target_type', 'mint')
+    .eq('target_code', mintCode)
+  if (error) throw error
+  return data ?? []
+}
+
 export async function getStates(): Promise<State[]> {
   return fetchAllPages<State>((from, to) =>
     supabase.from('states').select('id, state_zh, state_en').order('state_zh').range(from, to)
@@ -552,6 +595,18 @@ export async function getStates(): Promise<State[]> {
 export async function getInscriptions(): Promise<Inscription[]> {
   return fetchAllPages<Inscription>((from, to) =>
     supabase.from('inscriptions').select('id, inscription_zh, inscription_en').order('inscription_zh').range(from, to)
+  )
+}
+
+export async function getImages(): Promise<ImageRecord[]> {
+  return fetchAllPages<ImageRecord>((from, to) =>
+    supabase
+      .from('images')
+      .select(
+        'id, filename, source_id, source_text, caption_zh, caption_en, note_zh, note_en, sources(citation_zh, citation_en, url)'
+      )
+      .order('filename')
+      .range(from, to)
   )
 }
 
@@ -565,13 +620,24 @@ export type MintRow = {
   description_zh: string | null
   description_en: string | null
   citation: string | null
+  modern_location_zh: string | null
+  modern_location_en: string | null
+  location_note: string | null
+  state_id: string | null
+  states: { state_zh: string; state_en: string | null } | { state_zh: string; state_en: string | null }[] | null
+  image_ids: string[]
+  sources_unlinked: string[]
+  mint_code: string
+  alternative_names: string[]
 }
 
 export async function getMints(): Promise<MintRow[]> {
   return fetchAllPages<MintRow>((from, to) =>
     supabase
       .from('mints')
-      .select('id, name_zh, name_en, precision_level, latitude, longitude, description_zh, description_en, citation')
+      .select(
+        'id, name_zh, name_en, precision_level, latitude, longitude, description_zh, description_en, citation, modern_location_zh, modern_location_en, location_note, state_id, states(state_zh, state_en), image_ids, sources_unlinked, mint_code, alternative_names'
+      )
       .order('name_zh')
       .range(from, to)
   )
@@ -628,8 +694,8 @@ export type MintFindspotsData = {
    * whether a find has been recorded for it yet. */
   inscriptions: { zh: string; en: string | null }[]
   /** Distinct coin-type labels catalogued for this mint in coin_issues
-   * (deepest populated hierarchy level, minor falling back to major) —
-   * bilingual, unlike the static dossier's English-only MintTown.coin_types. */
+   * (deepest populated hierarchy level, minor falling back to major),
+   * bilingual. */
   typeLabels: { zh: string; en: string | null }[]
   /** Total coin quantity across all finds attributed to this mint. */
   totalCoinCount: number
@@ -674,24 +740,17 @@ function buildTypeLabel(coin: {
 }
 
 /** Returns mint-issued coin findspots based on finds+coin_issues in current DB.
- * `mintZh` is resolved to a live `mints.id` (via known name variants) before
- * querying — coin_issues links to mints by id, not by text. */
-export async function getMintFindspotsData(mintZh: string): Promise<MintFindspotsData> {
-  if (!mintZh) return EMPTY_MINT_FINDSPOTS_DATA
-
-  const variants = getMintNameVariants(mintZh)
-  const { data: mintRows, error: mintError } = await supabase.from('mints').select('id').in('name_zh', variants)
-
-  if (mintError) throw mintError
-  const mintIds = (mintRows ?? []).map((row) => row.id)
-  if (mintIds.length === 0) return EMPTY_MINT_FINDSPOTS_DATA
+ * Takes the mint's own `mints.id` directly — coin_issues.mint_id is a real
+ * foreign key, so no name/variant matching is needed to find it. */
+export async function getMintFindspotsData(mintId: string): Promise<MintFindspotsData> {
+  if (!mintId) return EMPTY_MINT_FINDSPOTS_DATA
 
   const { data: mintedIssueRows, error: coinError } = await supabase
     .from('coin_issues')
     .select(
       'id, coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
     )
-    .in('mint_id', mintIds)
+    .eq('mint_id', mintId)
 
   if (coinError) throw coinError
   if (!mintedIssueRows || mintedIssueRows.length === 0) {

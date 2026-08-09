@@ -10,6 +10,7 @@
 
 import { useMemo, useState } from 'react'
 import { MintIssueDistributionMapCanvas } from '@/components/map/MintIssueDistributionMapCanvas'
+import { T } from '@/components/i18n/T'
 import type { MapSite } from '@/lib/types'
 import type { MintTypeOption } from '@/lib/queries'
 
@@ -57,7 +58,7 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
       <MintIssueDistributionMapCanvas mint={mint} sites={filteredSites} />
 
       <p className="text-xs text-gray-500">
-        Red marker: mint location. Teal markers: findspots containing coins issued by this mint.
+        <T k="mintDetail.issueDistribution.caption" />
       </p>
     </div>
   )

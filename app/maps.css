@@ -36,11 +36,16 @@
   --map-dot-nodata-fill: rgba(90, 90, 90, 0.3);
   --map-dot-nodata-border: rgba(60, 60, 60, 0.25);
 
-  /* MapVisCanvas.tsx's quantity-driven dot sizing (Find Site + Mint Town):
+  /* MapVisCanvas.tsx's quantity-driven dot sizing (Find Site):
      a single coin sits at the minimum size, growing logarithmically up to
      the maximum as quantity increases relative to the current list's max. */
   --map-dot-qty-size-min: 14px;
   --map-dot-qty-size-max: 40px;
+
+  /* Mint Town importance sizing — wider than find-site dots so log-balanced
+     coin-total × find-count ranks stay visually distinct. */
+  --map-mint-qty-size-min: 10px;
+  --map-mint-qty-size-max: 56px;
 
   /* Overall opacity of the density heat-layer gradient (MapVisCanvas.tsx's
      density view mode, and the homepage's always-on CoinFilterMap density
@@ -118,12 +123,11 @@
 }
 
 /* MintIssueDistributionMapCanvas.tsx (mint town page's issued-coin
-   distribution map): the mint's own center marker, and each findspot. */
-.map-dot-mint-center {
-  background: var(--map-dot-special);
-}
+   distribution map): each findspot dot. Fully opaque, matching the mint's
+   own dropped-pin marker (always opaque -- see dropPinHtml's doc comment)
+   so every marker on this map reads as the same solid yellow. */
 .map-dot-mint-issue-site {
-  background: var(--map-dot-fill);
+  background: #eda100;
 }
 
 /* MintsOverviewMap.tsx (all mint towns overview). */
@@ -242,4 +246,15 @@
 }
 .leaflet-tooltip.place-label-tooltip::before {
   display: none;
+}
+
+/* Leaflet's SVG renderer makes every interactive path (river/route lines,
+   circle markers, etc.) focusable for keyboard accessibility. Clicking one
+   moves focus to it, and without this the browser's default focus ring
+   renders as a rectangle around the path's full bounding box (e.g. a route's
+   entire bend) rather than tracing the line itself — far more distracting
+   than helpful for a fully custom-styled map. Leaflet's own CSS doesn't
+   suppress this, so it's done here. */
+.leaflet-interactive:focus {
+  outline: none;
 }

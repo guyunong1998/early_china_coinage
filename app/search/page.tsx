@@ -191,12 +191,16 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const page = Math.min(currentPage, totalPages)
   const pageResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  // Simplified per-site pie data (major coin type only, no inscription
+  // Simplified per-site pie data (level2 coin type only, no inscription
   // breakdown) for the visible page — cheap since it's just an in-memory
   // group-by over the already-fetched finds, scoped to the 20 visible sites.
-  const majorTypeByIssueId = new Map<string, { zh: string; en: string | null }>()
+  // Grouped by the raw level2_zh rather than major_type_zh so mould finds
+  // split out by their own type (e.g. '布币范') instead of collapsing into
+  // a single '钱范' slice — see CoinTypePieChart's permanent color map,
+  // which pairs each mould with its coin counterpart's color.
+  const level2ByIssueId = new Map<string, { zh: string; en: string | null }>()
   coinIssues.forEach((c) => {
-    if (c.major_type_zh) majorTypeByIssueId.set(c.id, { zh: c.major_type_zh, en: c.major_type_en })
+    if (c.level2_zh) level2ByIssueId.set(c.id, { zh: c.level2_zh, en: c.level2_en })
   })
   const visibleCodes = new Set(pageResults.map((s) => s.site_code))
   const findsBySite = new Map<string, HeatmapFind[]>()
@@ -213,7 +217,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     finds.forEach((f) => {
       const qty = f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? (f.presence ? 1 : null)
       if (qty == null || qty <= 0) return
-      const info = f.coin_issues_id ? majorTypeByIssueId.get(f.coin_issues_id) : undefined
+      const info = f.coin_issues_id ? level2ByIssueId.get(f.coin_issues_id) : undefined
       const label = info?.zh ?? '未知'
       const existing = totals.get(label)
       if (existing) existing.value += qty
@@ -301,6 +305,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             const href = buildHref({ precision: tab.id === 'all' ? undefined : tab.id })
             return (
               <span key={tab.id} className="inline-flex items-center gap-1">
+                {tab.id === 'all' && <PrecisionAllHint />}
                 <Link
                   href={href}
                   className={`rounded border px-3 py-1.5 text-sm transition ${
@@ -311,7 +316,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 >
                   <T k={tab.key} /> ({tab.count})
                 </Link>
-                {tab.id === 'all' && <PrecisionAllHint />}
               </span>
             )
           })}
@@ -363,10 +367,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
           <div>
             <div className="mb-6 search-filter">
-              <div className="panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
+              <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
                 <T k="map.title" />
               </div>
-              <div className="overflow-hidden">
+              <div className="panel-body overflow-hidden">
                 <CoinMapSection sites={filtered} height="360px" fitBounds />
               </div>
             </div>
@@ -393,7 +397,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                     }
                     viewRecordLabel={<T k="search.viewRecord" />}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-stretch justify-between gap-4">
                       <div className="min-w-[200px] flex-1 space-y-1 text-sm leading-6 text-gray-800">
                         <p>
                           <span className="font-semibold"><T k="search.field.province" /> </span>
@@ -420,11 +424,11 @@ export default async function SearchPage({ searchParams }: PageProps) {
                         </p>
                       </div>
                       {pieData.length > 0 && (
-                        <div className="flex shrink-0 flex-col items-center gap-1.5">
+                        <div className="flex w-full flex-col items-center justify-center gap-1.5 sm:w-1/3">
                           <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                             {site.site_code}
                           </span>
-                          <CoinTypePieChart data={pieData} size={96} showLegend={false} />
+                          <CoinTypePieChart data={pieData} size={140} showLegend={false} />
                         </div>
                       )}
                     </div>

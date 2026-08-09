@@ -27,7 +27,6 @@ const BLANK_FIND: Find = {
   id: '',
   find_code: '',
   context_code: '',
-  source_code: null,
   presence: true,
   quantity_total: null,
   quantity_min: null,
@@ -39,6 +38,7 @@ const BLANK_FIND: Find = {
   description_zh: null,
   description_en: null,
   note_zh: null,
+  note_en: null,
   coin_issues: null,
 }
 
@@ -75,7 +75,7 @@ export function FindRow({
     return result
   }
 
-  const { editing, current, state, formAction, pending, deletePending, startEdit, cancelEdit, handleDelete } =
+  const { editing, current, state, formAction, pending, locked, deletePending, startEdit, cancelEdit, handleDelete } =
     useEditableSection<Find>({
       data,
       action: handleAction,
@@ -144,6 +144,7 @@ export function FindRow({
         <form action={formAction} className="space-y-3 rounded border border-brand/30 bg-white p-3">
           <ActionFormStatus state={state} />
           <input type="hidden" name="id" value={current.id} />
+          <fieldset disabled={locked} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <FieldLabel>Find code</FieldLabel>
@@ -247,25 +248,33 @@ export function FindRow({
               <textarea name="description_en" defaultValue={current.description_en ?? ''} rows={2} className={fieldInputClass} />
             </div>
           </div>
-          <div>
-            <FieldLabel>Note</FieldLabel>
-            <textarea name="note_zh" defaultValue={current.note_zh ?? ''} rows={2} className={fieldInputClass} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <FieldLabel>Note (zh)</FieldLabel>
+              <textarea name="note_zh" defaultValue={current.note_zh ?? ''} rows={2} className={fieldInputClass} />
+            </div>
+            <div>
+              <FieldLabel>Note (en)</FieldLabel>
+              <textarea name="note_en" defaultValue={current.note_en ?? ''} rows={2} className={fieldInputClass} />
+            </div>
           </div>
+          </fieldset>
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={pending}
+              disabled={locked}
               className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
-              {pending ? 'Saving…' : 'Save'}
+              {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
             </button>
             <button
               type="button"
+              disabled={locked}
               onClick={() => {
                 cancelEdit()
                 onCancelCreate?.()
               }}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>

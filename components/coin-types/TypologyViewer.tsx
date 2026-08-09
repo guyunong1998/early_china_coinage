@@ -61,7 +61,7 @@ export function TypologyViewer({
   manifest: TypologyViewerManifest
   height?: number
 }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const viewportRef = useRef<HTMLDivElement>(null)
   const minScaleRef = useRef(0.05)
 
@@ -366,10 +366,6 @@ export function TypologyViewer({
             })}
           </div>
         )}
-
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[11px] text-gray-500 shadow-sm">
-          {lang === 'zh' ? '早期中国钱币类型学层级图' : 'Early Chinese Coin Type Hierarchy'}
-        </div>
       </div>
     </div>
   )

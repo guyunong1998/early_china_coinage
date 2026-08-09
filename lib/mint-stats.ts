@@ -1,4 +1,4 @@
-import { getMintByNameZh, MINT_TOWNS, resolveMintNameZh } from '@/lib/mint-towns'
+import { findMintByNameZh } from '@/lib/mint-directory'
 import {
   coinMatchesTypologyFilter,
   emptyTypologySelection,
@@ -8,7 +8,7 @@ import {
   type TypologySelectionEntry,
 } from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
-import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
+import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MintInfo } from '@/lib/types'
 
 const LEVEL_KEYS: Array<keyof Pick<TypologyFilterSelection, 'level1' | 'level2' | 'level3' | 'level4' | 'level5'>> = [
   'level1',
@@ -38,7 +38,8 @@ export type MintStat = {
   state_en: string | null
   modern_location_en: string | null
   inTypology: boolean
-  inMintTowns: boolean
+  /** Whether this mint_zh matched a row in the live `mints` table. */
+  inMintDirectory: boolean
 }
 
 function findQuantity(find: HeatmapFind): number {
@@ -49,14 +50,22 @@ function findQuantity(find: HeatmapFind): number {
  * Aggregates database finds by mint town, optionally narrowed to a set of
  * matching coin_issues.id values (from typology-filter.ts's
  * getMatchingCoinIssueIds — same matching used by the find-site map). Every
- * known mint town is registered up front so the map keeps its full network
- * at zero count rather than dropping mints the active filter doesn't match;
- * only mints with known coordinates go in `mapped`.
+ * mint in `mints` (the live `mints` table, from lib/queries.ts's getMints)
+ * is registered up front so the map keeps its full network at zero count
+ * rather than dropping mints the active filter doesn't match; only mints
+ * with known coordinates go in `mapped`.
+ *
+ * `coinIssue.mint_zh` is already the canonical mints.name_zh (coin_issues.mint_id
+ * is a real foreign key), so it's used as-is with no alias resolution — if a
+ * mint_zh here ever fails to match a row in `mints`, that's a genuine data
+ * inconsistency (e.g. a renamed/deleted mint) worth fixing at the source,
+ * not papering over with a fuzzier lookup.
  */
 export function computeMintStatsFromFinds(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[],
-  matchedIds: Set<string> | null
+  matchedIds: Set<string> | null,
+  mints: MintInfo[]
 ): { mapped: MintStat[]; unmapped: MintStat[] } {
   const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
   const groups = new Map<
@@ -64,17 +73,16 @@ export function computeMintStatsFromFinds(
     { findCount: number; coinCount: number; inscriptions: Set<string>; siteCodes: Set<string> }
   >()
 
-  MINT_TOWNS.forEach((town) => {
-    groups.set(town.name_zh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
+  mints.forEach((mint) => {
+    groups.set(mint.name_zh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
   })
 
   finds.forEach((find) => {
     const issueId = find.coin_issues_id
     if (!issueId) return
     const coinIssue = coinIssueById.get(issueId)
-    const mintRaw = coinIssue?.mint_zh?.trim()
-    if (!mintRaw) return
-    const mintZh = resolveMintNameZh(mintRaw)
+    const mintZh = coinIssue?.mint_zh?.trim()
+    if (!mintZh) return
 
     if (!groups.has(mintZh)) {
       groups.set(mintZh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
@@ -91,22 +99,22 @@ export function computeMintStatsFromFinds(
 
   const stats: MintStat[] = [...groups.entries()]
     .map(([mint_zh, g]) => {
-      const town = getMintByNameZh(mint_zh)
+      const mint = findMintByNameZh(mints, mint_zh)
       return {
         mint_zh,
-        mint_en: town?.name_en ?? null,
-        mint_code: town?.mint_code ?? null,
-        lat: town?.lat ?? NaN,
-        lng: town?.lng ?? NaN,
+        mint_en: mint?.name_en ?? null,
+        mint_code: mint?.mint_code ?? null,
+        lat: mint?.lat ?? NaN,
+        lng: mint?.lng ?? NaN,
         findCount: g.findCount,
         coinCount: g.coinCount,
         siteCount: g.siteCodes.size,
         inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
-        state_zh: town?.state_zh ?? null,
-        state_en: town?.state_en ?? null,
-        modern_location_en: town?.modern_location_en ?? null,
+        state_zh: mint?.state_zh ?? null,
+        state_en: mint?.state_en ?? null,
+        modern_location_en: mint?.modern_location_en ?? null,
         inTypology: false,
-        inMintTowns: !!town,
+        inMintDirectory: !!mint,
       }
     })
     .sort((a, b) => b.coinCount - a.coinCount || a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
@@ -175,17 +183,18 @@ export function ansCollectionUrl(catalogNumber: string): string {
  * coin_issues row).
  */
 export function computeAnsMintStats(
-  specimens: AnsSpecimen[]
+  specimens: AnsSpecimen[],
+  mints: MintInfo[]
 ): { mapped: MintStat[]; unmapped: MintStat[] } {
   const groups = new Map<string, { coinCount: number; inscriptions: Set<string> }>()
 
-  MINT_TOWNS.forEach((town) => {
-    groups.set(town.name_zh, { coinCount: 0, inscriptions: new Set() })
+  mints.forEach((mint) => {
+    groups.set(mint.name_zh, { coinCount: 0, inscriptions: new Set() })
   })
 
   specimens.forEach((s) => {
     if (!s.mint_zh) return
-    const mintZh = resolveMintNameZh(s.mint_zh)
+    const mintZh = s.mint_zh
 
     if (!groups.has(mintZh)) {
       groups.set(mintZh, { coinCount: 0, inscriptions: new Set() })
@@ -198,22 +207,22 @@ export function computeAnsMintStats(
 
   const stats: MintStat[] = [...groups.entries()]
     .map(([mint_zh, g]) => {
-      const town = getMintByNameZh(mint_zh)
+      const mint = findMintByNameZh(mints, mint_zh)
       return {
         mint_zh,
-        mint_en: town?.name_en ?? null,
-        mint_code: town?.mint_code ?? null,
-        lat: town?.lat ?? NaN,
-        lng: town?.lng ?? NaN,
+        mint_en: mint?.name_en ?? null,
+        mint_code: mint?.mint_code ?? null,
+        lat: mint?.lat ?? NaN,
+        lng: mint?.lng ?? NaN,
         findCount: g.coinCount,
         coinCount: g.coinCount,
         siteCount: 0,
         inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
-        state_zh: town?.state_zh ?? null,
-        state_en: town?.state_en ?? null,
-        modern_location_en: town?.modern_location_en ?? null,
+        state_zh: mint?.state_zh ?? null,
+        state_en: mint?.state_en ?? null,
+        modern_location_en: mint?.modern_location_en ?? null,
         inTypology: false,
-        inMintTowns: !!town,
+        inMintDirectory: !!mint,
       }
     })
     .sort((a, b) => b.coinCount - a.coinCount || a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
@@ -334,7 +343,7 @@ export function computeAnsMintTypeQuantities(
   const result = new Map<string, Map<string, number>>()
   specimens.forEach((s) => {
     if (!s.mint_zh) return
-    const mintZh = resolveMintNameZh(s.mint_zh)
+    const mintZh = s.mint_zh
     entries.forEach((entry) => {
       const matches = coinMatchesTypologyFilter(
         { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },

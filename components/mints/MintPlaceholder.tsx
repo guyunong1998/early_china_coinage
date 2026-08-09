@@ -1,4 +1,4 @@
-import type { MintTown } from '@/lib/mint-towns'
+import type { MintDirectoryEntry } from '@/lib/mint-directory'
 
 type Section = {
   key: string
@@ -6,7 +6,7 @@ type Section = {
   done: boolean
 }
 
-function getSections(mint: MintTown): Section[] {
+function getSections(mint: MintDirectoryEntry): Section[] {
   return [
     {
       key: 'geolocation',
@@ -21,22 +21,17 @@ function getSections(mint: MintTown): Section[] {
     {
       key: 'images',
       label: 'Maps & site images',
-      done: (mint.images?.length ?? 0) > 0,
+      done: mint.images.length > 0,
     },
     {
-      key: 'references',
-      label: 'Bibliographic references',
-      done: mint.references.length > 0,
-    },
-    {
-      key: 'coin_types',
-      label: 'Coin types produced',
-      done: mint.coin_types.length > 0,
+      key: 'sources',
+      label: 'Sources',
+      done: mint.sources_unlinked.length > 0,
     },
   ]
 }
 
-export function MintPlaceholder({ mint }: { mint: MintTown }) {
+export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
   const sections = getSections(mint)
   const allDone = sections.every((s) => s.done)
 
@@ -101,20 +96,14 @@ export function MintPlaceholder({ mint }: { mint: MintTown }) {
 
       <div className="border-t border-dashed border-brand/30 bg-gray-50 px-4 py-3">
         <p className="text-xs text-gray-500">
-          <strong className="text-gray-700">How to add content:</strong> Edit the entry for{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-            {mint.mint_code}
-          </code>{' '}
-          in{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-            lib/mint-dossiers.ts
-          </code>{' '}
-          (descriptions, geolocation, coin types, references). To add images or override
-          citations, add a matching entry in <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">MINT_OVERRIDES</code> in{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-            lib/mint-towns.ts
-          </code>{' '}
-          and place image files in{' '}
+          <strong className="text-gray-700">How to add content:</strong> Everything shown on this
+          page — description, geolocation, state, modern location, location note, sources, and
+          images — lives directly on the{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">mints</code> /{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">images</code> tables
+          in Supabase. Edit the row for{' '}
+          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">{mint.mint_code}</code>{' '}
+          there, and place new image files in{' '}
           <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
             public/images/mints/
           </code>

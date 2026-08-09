@@ -4,7 +4,8 @@ import {
   parsePrecisionFilter,
   siteMatchesPrecisionFilter,
 } from '@/lib/city-boundaries'
-import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap } from '@/lib/queries'
+import { toMintInfo } from '@/lib/mint-directory'
+import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap, getMints } from '@/lib/queries'
 import {
   decodeMintNames,
   decodeTypologySelections,
@@ -23,15 +24,17 @@ export const metadata = {
 }
 
 export default async function FindSiteVisualizationPage({ searchParams }: PageProps) {
-  const { precision: precisionParam, mode, view, mints, types } = await searchParams
+  const { precision: precisionParam, mode, view, mints: mintsParam, types } = await searchParams
   const currentPrecision = parsePrecisionFilter(precisionParam)
 
-  const [allSites, coinIssues, hierarchyRows, finds] = await Promise.all([
+  const [allSites, coinIssues, hierarchyRows, finds, dbMints] = await Promise.all([
     getFindSpotsMapSites(),
     getCoinIssues(),
     getCoinTypeHierarchy(),
     getFindsForHeatmap(),
+    getMints(),
   ])
+  const mints = dbMints.map(toMintInfo)
 
   const counts = countSitesByPrecision(allSites)
   const sites = allSites.filter((site) => siteMatchesPrecisionFilter(site, currentPrecision))
@@ -43,11 +46,12 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
         coinIssues={coinIssues}
         hierarchyRows={hierarchyRows}
         finds={finds}
+        mints={mints}
         currentPrecision={currentPrecision}
         precisionCounts={counts}
         initialMode={parseFilterMode(mode)}
         initialViewMode={parseViewMode(view)}
-        initialMintNames={decodeMintNames(mints)}
+        initialMintNames={decodeMintNames(mintsParam)}
         initialTypeSelections={decodeTypologySelections(types)}
       />
     </div>

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { AuthStatus } from '@/components/auth/AuthStatus'
 import { DataCard } from '@/components/ui/DataCard'
 import { T } from '@/components/i18n/T'
 
@@ -24,18 +25,18 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: 'Yunong Gu',
     title: '',
-    affiliation: '',
-    email: '',
-    photo: '/images/yunong-cropped.png',
+    affiliation: 'Ph.D, UCLA',
+    email: 'guyunong1998@g.ucla.edu',
+    photo: '/images/yunong.jpg',
     photoWidth: 1105,
     photoHeight: 2053,
   },
   {
     name: 'Sophia Ling',
     title: '',
-    affiliation: '',
-    email: '',
-    photo: '/images/sophia-cropped.png',
+    affiliation: 'M.S, Columbia University',
+    email: 'sl4909@columbia.edu',
+    photo: '/images/sophia.jpg',
     photoWidth: 1106,
     photoHeight: 2047,
   },
@@ -131,6 +132,8 @@ export default function AboutPage() {
           </div>
         </DataCard>
       </div>
+
+      <AuthStatus />
     </div>
   )
 }

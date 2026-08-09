@@ -1,13 +1,5 @@
 import { pinyin } from 'pinyin-pro'
 
-/**
- * Authoritative/accepted overrides first, then pinyin fallback.
- */
-const OFFICIAL_OVERRIDES: Record<string, string> = {
-  义县: 'Yixian',
-  复兴堡: 'Fuxingbao',
-}
-
 function titleCaseWords(input: string) {
   return input
     .split(/\s+/)
@@ -22,9 +14,6 @@ export function toEnglishName(zh: string | null | undefined, existingEn: string 
 
   const trimmedZh = zh?.trim()
   if (!trimmedZh) return ''
-
-  const official = OFFICIAL_OVERRIDES[trimmedZh]
-  if (official) return official
 
   // Hanyu Pinyin fallback (tone-less)
   const py = pinyin(trimmedZh, { toneType: 'none', type: 'array' }).join(' ')

@@ -40,7 +40,7 @@ export function SearchResultCard({
 
   return (
     <div className="search-result-card">
-      <div className="search-result-card-header panel-header inline-block px-4 py-2 text-sm font-bold uppercase tracking-wide">
+      <div className="search-result-card-header panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
         <span className="flex flex-wrap items-baseline gap-x-2">
           <Link href={href} className="hover:underline" onClick={stopPropagation}>
             {siteName}
@@ -54,7 +54,7 @@ export function SearchResultCard({
         tabIndex={0}
         onClick={goToRecord}
         onKeyDown={goToRecordOnEnter}
-        className="panel-search-item cursor-pointer overflow-hidden"
+        className="panel-body cursor-pointer overflow-hidden"
       >
         <div className="p-4">
           {children}

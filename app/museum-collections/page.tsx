@@ -1,6 +1,7 @@
 import { AnsMintTownVisualization } from '@/components/visualizations/MapVisualization'
 import { getAnsSpecimens } from '@/lib/ans-museum-data'
-import { getCoinIssues, getCoinTypeHierarchy } from '@/lib/queries'
+import { toMintInfo } from '@/lib/mint-directory'
+import { getCoinIssues, getCoinTypeHierarchy, getMints } from '@/lib/queries'
 import { decodeTypologySelections, parseViewMode } from '@/lib/visualization-deeplink'
 
 type PageProps = {
@@ -15,11 +16,13 @@ export const metadata = {
 export default async function MuseumCollectionsPage({ searchParams }: PageProps) {
   const { view, types } = await searchParams
 
-  const [specimens, coinIssues, hierarchyRows] = await Promise.all([
+  const [specimens, coinIssues, hierarchyRows, dbMints] = await Promise.all([
     getAnsSpecimens(),
     getCoinIssues(),
     getCoinTypeHierarchy(),
+    getMints(),
   ])
+  const mints = dbMints.map(toMintInfo)
 
   return (
     <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
@@ -27,6 +30,7 @@ export default async function MuseumCollectionsPage({ searchParams }: PageProps)
         specimens={specimens}
         coinIssues={coinIssues}
         hierarchyRows={hierarchyRows}
+        mints={mints}
         initialViewMode={parseViewMode(view)}
         initialTypeSelections={decodeTypologySelections(types)}
       />

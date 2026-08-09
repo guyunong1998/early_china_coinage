@@ -2,15 +2,30 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
+import { MintCoinTypeHints, type MintCoinTypeHint } from '@/components/mints/MintCoinTypeHints'
 import { MintPlaceholder } from '@/components/mints/MintPlaceholder'
 import { MintRecordSection } from '@/components/mints/MintRecordSection'
+import { CitationsSection } from '@/components/sources/CitationsSection'
 import { DetailRow } from '@/components/ui/DetailRow'
+import { Panel } from '@/components/ui/Panel'
 import SinglePointMap from '@/components/map/SinglePointMap'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
-import { getMintDossierByCode } from '@/lib/mint-dossiers'
+import { isAuthorized } from '@/lib/admin/guard'
+import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
+import { buildCoinTypeNodes, type CoinTypeLevel } from '@/lib/coin-type-catalog'
+import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import { buildMintDirectory, getMintDirectoryEntryBySlug } from '@/lib/mint-directory'
-import { getMintFindspotsData, getMints } from '@/lib/queries'
+import {
+  getCoinIssues,
+  getCoinTypeHierarchy,
+  getImages,
+  getMintFindspotsData,
+  getMints,
+  getSourceLinksForMint,
+  getSources,
+} from '@/lib/queries'
+
+const LEVEL_RANK: Record<CoinTypeLevel, number> = { level1: 1, level2: 2, level3: 3, level4: 4, level5: 5 }
 
 type PageProps = {
   params: Promise<{ mint_code: string }>
@@ -22,30 +37,60 @@ export async function generateMetadata({ params }: PageProps) {
   if (!mint) return { title: 'Not found' }
   return {
     title: `${mint.name_zh} ${mint.name_en} | Mint Town Locations`,
-    description: mint.db_description_zh ?? mint.description_en,
+    description: mint.description_zh ?? mint.description_en,
   }
 }
 
 export default async function MintDetailPage({ params }: PageProps) {
   const { mint_code } = await params
-  const dbMints = await getMints()
-  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints), mint_code)
+  const [dbMints, images] = await Promise.all([getMints(), getImages()])
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints, images), mint_code)
   if (!mint) notFound()
-  const rawMint = dbMints.find((m) => m.id === mint.db_id)
+  const rawMint = dbMints.find((m) => m.id === mint.id)
+  const authorized = await isAuthorized()
 
-  const distribution = await getMintFindspotsData(mint.name_zh).catch(() => ({
-    sites: [],
-    typeOptions: [],
-    siteTypeKeys: {},
-    inscriptions: [],
-    typeLabels: [],
-    totalCoinCount: 0,
-    siteCount: 0,
-  }))
-  const dossier = getMintDossierByCode(mint_code)
+  const [distribution, coinIssues, hierarchyRows] = await Promise.all([
+    getMintFindspotsData(mint.id).catch(() => ({
+      sites: [],
+      typeOptions: [],
+      siteTypeKeys: {},
+      inscriptions: [],
+      typeLabels: [],
+      totalCoinCount: 0,
+      siteCount: 0,
+    })),
+    getCoinIssues(),
+    getCoinTypeHierarchy(),
+  ])
 
-  const descriptionZh = mint.db_description_zh ?? dossier?.description_zh ?? null
-  const descriptionEn = mint.description_en || dossier?.description_en || null
+  // Match each type label shown for this mint to its catalog node (deepest
+  // level first) so the label can link/preview through to /coin-types —
+  // labels are unique within a given mint's catalogue in practice.
+  const catalogNodes = buildCoinTypeNodes(hierarchyRows, coinIssues)
+  const coinTypeHints: MintCoinTypeHint[] = distribution.typeLabels.map(({ zh, en }) => {
+    const candidates = catalogNodes
+      .filter((n) => n.label_zh === zh && n.mints.some((m) => m.mint_zh === mint.name_zh))
+      .sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])
+    const node = candidates[0]
+    const images = node ? getCoinTypeImagePaths(node.imgAccNum, node.slug) : null
+    return {
+      zh,
+      en,
+      slug: node?.slug ?? null,
+      obverseSrc: images?.obverseSrc ?? null,
+      reverseSrc: images?.reverseSrc ?? null,
+    }
+  })
+
+  const descriptionZh = mint.description_zh
+  const descriptionEn = mint.description_en || null
+
+  const mintSourceLinks = await getSourceLinksForMint(mint_code)
+  const [mintSources, mintResolvedTargets] = await Promise.all([
+    getSources(mintSourceLinks.map((l) => l.source_code)),
+    resolveSourceLinkTargets(mintSourceLinks),
+  ])
+  const mintSourcesByCode = new Map(mintSources.map((s) => [s.source_code, s]))
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -55,262 +100,190 @@ export default async function MintDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
+      <h1 className="mb-6 font-serif text-3xl font-semibold text-brand">
+        {mint.name_zh} <span className="text-xl font-normal italic text-gray-400">({mint.name_en})</span>
+      </h1>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: Location card */}
-        <section className="panel overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <T k="mintDetail.location" />
-          </div>
-          <div className="p-4">
-            <dl>
-              <DetailRow labelKey="mintDetail.row.state" value={`${mint.state_zh} (${mint.state_en})`} />
-              <DetailRow
-                labelKey="mintDetail.row.modernLocation"
-                value={
-                  mint.modern_location_zh
-                    ? `${mint.modern_location_zh} (${mint.modern_location_en})`
-                    : mint.modern_location_en
-                }
+        <Panel header={<T k="mintDetail.location" />} bodyClassName="p-4">
+          <dl>
+            <DetailRow labelKey="mintDetail.row.state" value={`${mint.state_zh} (${mint.state_en})`} />
+            <DetailRow
+              labelKey="mintDetail.row.modernLocation"
+              value={
+                mint.modern_location_zh
+                  ? `${mint.modern_location_zh} (${mint.modern_location_en})`
+                  : mint.modern_location_en
+              }
+            />
+            <DetailRow
+              labelKey="mintDetail.row.coordinates"
+              value={
+                mint.lat != null && mint.lng != null
+                  ? `${mint.lat.toFixed(6)}, ${mint.lng.toFixed(6)}`
+                  : 'Not yet established'
+              }
+            />
+          </dl>
+          <div className="mt-4 overflow-hidden border border-brand/20">
+            {mint.lat != null && mint.lng != null ? (
+              <SinglePointMap
+                lat={mint.lat}
+                lng={mint.lng}
+                label={`${mint.name_zh} (${mint.name_en})`}
+                height="280px"
+                zoom={12}
               />
-              <DetailRow
-                labelKey="mintDetail.row.coordinates"
-                value={
-                  mint.lat != null && mint.lng != null
-                    ? `${mint.lat.toFixed(6)}, ${mint.lng.toFixed(6)}`
-                    : 'Not established in source document'
-                }
-              />
-            </dl>
-            <div className="mt-4 overflow-hidden border border-brand/20">
-              {mint.lat != null && mint.lng != null ? (
-                <SinglePointMap
-                  lat={mint.lat}
-                  lng={mint.lng}
-                  label={`${mint.name_zh} (${mint.name_en})`}
-                  height="280px"
-                  zoom={12}
-                />
-              ) : (
-                <div className="flex h-[280px] items-center justify-center bg-gray-50 text-sm text-gray-400">
-                  Geolocation not yet established for this mint town.
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="flex h-[280px] items-center justify-center bg-gray-50 text-sm text-gray-400">
+                Geolocation not yet established for this mint town.
+              </div>
+            )}
           </div>
-        </section>
+        </Panel>
 
         {/* Right: Information card */}
-        <section className="panel overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <T k="mintDetail.information" />
-          </div>
-          <div className="p-4">
-            <dl>
-              <DetailRow
-                labelKey="mintDetail.row.name"
-                value={
-                  <>
-                    {mint.name_zh}{' '}
-                    <span className="text-xs italic text-gray-400">({mint.name_en})</span>
-                  </>
-                }
-              />
-              <DetailRow
-                labelKey="mintDetail.row.coinsAndSites"
-                value={
-                  distribution.totalCoinCount > 0
-                    ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
-                    : '—'
-                }
-              />
-              <DetailRow
-                labelKey="mintDetail.row.coinTypes"
-                value={
-                  distribution.typeLabels.length > 0
-                    ? distribution.typeLabels.map((t) => (t.en ? `${t.zh} (${t.en})` : t.zh)).join('、')
-                    : mint.coin_types.length > 0
-                      ? mint.coin_types.join(', ')
-                      : '—'
-                }
-              />
-              <DetailRow
-                labelKey="mintDetail.row.inscriptions"
-                value={
-                  distribution.inscriptions.length > 0
-                    ? distribution.inscriptions.map((i) => (i.en ? `${i.zh} (${i.en})` : i.zh)).join('、')
-                    : '—'
-                }
-              />
-            </dl>
-          </div>
-        </section>
+        <Panel header={<T k="mintDetail.information" />} bodyClassName="p-4">
+          <dl>
+            <DetailRow
+              labelKey="mintDetail.row.name"
+              value={
+                <>
+                  {mint.name_zh}{' '}
+                  <span className="text-xs italic text-gray-400">({mint.name_en})</span>
+                </>
+              }
+            />
+            <DetailRow
+              labelKey="mintDetail.row.coinsAndSites"
+              value={
+                distribution.totalCoinCount > 0
+                  ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
+                  : '—'
+              }
+            />
+            <DetailRow
+              labelKey="mintDetail.row.coinTypes"
+              value={<MintCoinTypeHints items={coinTypeHints} />}
+            />
+            <DetailRow
+              labelKey="mintDetail.row.inscriptions"
+              value={
+                distribution.inscriptions.length > 0
+                  ? distribution.inscriptions.map((i) => (i.en ? `${i.zh} (${i.en})` : i.zh)).join('、')
+                  : '—'
+              }
+            />
+          </dl>
+        </Panel>
       </div>
 
-      {/* Description — Supabase mints table takes priority; the local
-          dossier (lib/mint-dossiers.ts) fills in gaps and supplies the
-          location note / coin-types-from-document / source-doc lines it
-          alone carries. */}
-      <section className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          <T k="mintDetail.description" />
-        </div>
-        <div className="space-y-3 p-5">
-          {descriptionZh && <p className="leading-7 text-gray-800">{descriptionZh}</p>}
-          {descriptionEn ? (
-            <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
-          ) : (
-            <p className="text-sm italic text-gray-400">
-              No English description available yet in the source document.
-            </p>
-          )}
-          {!descriptionZh && !descriptionEn && (
-            <p className="text-sm italic text-gray-400">
-              No description recorded yet for this mint town.
-            </p>
-          )}
-          {dossier?.location_note && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded">
-              ⚠ {dossier.location_note}
-            </p>
-          )}
-          {mint.citation && (
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">Citation:</span> {mint.citation}
-            </p>
-          )}
-          {dossier?.coin_types && dossier.coin_types.length > 0 && (
-            <p className="text-sm text-gray-700">
-              <span className="font-semibold">Coin types (from document):</span>{' '}
-              {dossier.coin_types.join(', ')}
-            </p>
-          )}
-          {dossier?.source_doc && (
-            <p className="text-xs text-gray-400">
-              Source: <span className="font-mono">{dossier.source_doc}</span>
-            </p>
-          )}
-        </div>
-      </section>
+      {/* Description — straight from the mints table. */}
+      <Panel header={<T k="mintDetail.description" />} className="mt-6" bodyClassName="space-y-3">
+        {descriptionZh && <p className="leading-7 text-gray-800">{descriptionZh}</p>}
+        {descriptionEn ? (
+          <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
+        ) : (
+          <p className="text-sm italic text-gray-400">No English description recorded yet.</p>
+        )}
+        {!descriptionZh && !descriptionEn && (
+          <p className="text-sm italic text-gray-400">
+            No description recorded yet for this mint town.
+          </p>
+        )}
+        {mint.location_note && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded">
+            ⚠ {mint.location_note}
+          </p>
+        )}
+      </Panel>
 
-      {/* Database record — the raw `mints` table row, dev-only. Kept distinct
-          from (and hidden in production, unlike) the merged panels above,
-          which blend in lib/mint-dossiers.ts content that isn't stored in
-          Supabase — showing this in prod would just duplicate them. */}
-      {rawMint && isDevMode() && (
-        <section className="panel mt-6 overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            Database Record (dev only)
-          </div>
-          <div className="p-4">
-            <MintRecordSection mint={rawMint} isDevMode />
-          </div>
-        </section>
+      {/* Database record — the raw `mints` table row, dev-only. */}
+      {rawMint && authorized && (
+        <Panel header="Database Record (dev only)" className="mt-6" bodyClassName="p-4">
+          <MintRecordSection mint={rawMint} isDevMode />
+        </Panel>
       )}
 
       {/* Mint + issued-coin findspot distribution */}
-      <section className="panel mt-6 overflow-hidden">
-        <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-          Issued Coin Distribution
-        </div>
-        <div className="p-5">
-          {distribution.sites.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No findspot records linked to this mint in the current database.
-            </p>
-          ) : mint.lat != null && mint.lng != null ? (
-            <MintIssueDistribution
-              mint={{
-                name_zh: mint.name_zh,
-                name_en: mint.name_en,
-                lat: mint.lat,
-                lng: mint.lng,
-              }}
-              sites={distribution.sites}
-              siteTypeKeys={distribution.siteTypeKeys}
-              typeOptions={distribution.typeOptions}
-            />
-          ) : (
-            <p className="text-sm text-gray-500">
-              {distribution.sites.length} findspot record(s) exist for coins issued by this mint, but the
-              mint&apos;s own location is not yet established, so the distribution map cannot be centred.
-            </p>
-          )}
-        </div>
-      </section>
+      <Panel header="Issued Coin Distribution" className="mt-6">
+        {distribution.sites.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No findspot records linked to this mint in the current database.
+          </p>
+        ) : mint.lat != null && mint.lng != null ? (
+          <MintIssueDistribution
+            mint={{
+              name_zh: mint.name_zh,
+              name_en: mint.name_en,
+              lat: mint.lat,
+              lng: mint.lng,
+            }}
+            sites={distribution.sites}
+            siteTypeKeys={distribution.siteTypeKeys}
+            typeOptions={distribution.typeOptions}
+          />
+        ) : (
+          <p className="text-sm text-gray-500">
+            {distribution.sites.length} findspot record(s) exist for coins issued by this mint, but the
+            mint&apos;s own location is not yet established, so the distribution map cannot be centred.
+          </p>
+        )}
+      </Panel>
 
       {/* Maps & Images */}
-      {mint.images && mint.images.length > 0 && (
-        <section className="panel mt-6 overflow-hidden">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <T k="mintDetail.mapsImages" />
-          </div>
-          <div className="p-5">
-            <MintImageGallery images={mint.images} />
-          </div>
-        </section>
+      {mint.images.length > 0 && (
+        <Panel header={<T k="mintDetail.mapsImages" />} className="mt-6">
+          <MintImageGallery images={mint.images} />
+        </Panel>
       )}
 
       {/* Placeholder checklist for incomplete records */}
       <MintPlaceholder mint={mint} />
 
-      {/* References — combines mint.references + dossier.references */}
-      {(() => {
-        const mintRefs = mint.references
-        const dossierRefs = dossier?.references ?? []
-        const hasAny = mintRefs.length > 0 || dossierRefs.length > 0
-        return (
-          <section className="panel mt-6 overflow-hidden">
-            <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-              <T k="mintDetail.references" />
-            </div>
-            <div className="p-5">
-              {!hasAny ? (
-                <p className="text-sm text-gray-500">
-                  <T k="mintDetail.noReferences" />
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {mintRefs.map((ref, i) => (
-                    <div key={i} className="text-sm">
-                      <p className="leading-6 text-gray-800">{ref.citation_zh}</p>
-                      {ref.citation_en && (
-                        <p className="mt-1 leading-6 italic text-gray-500">{ref.citation_en}</p>
-                      )}
-                      {ref.url && (
-                        <a href={ref.url} className="mt-1 inline-block text-brand hover:underline">
-                          {ref.url}
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                  {dossierRefs.length > 0 && (
-                    <div>
-                      {mintRefs.length > 0 && (
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Additional references (from research document)
-                        </p>
-                      )}
-                      <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
-                        {dossierRefs.map((r) => (
-                          <li key={r}>{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
-        )
-      })()}
+      {/* Sources & Citations — structured source_links on top, mint's own
+          legacy freetext (sources_unlinked + citation) at the bottom. */}
+      <Panel header={<T k="mintDetail.references" />} className="mt-6">
+        <CitationsSection
+          targetType="mint"
+          targetCode={mint_code}
+          targetLabel={`${mint.name_zh} (${mint.name_en})`}
+          initialLinks={mintSourceLinks}
+          sourcesByCode={mintSourcesByCode}
+          resolvedTargets={mintResolvedTargets}
+          isDevMode={authorized}
+          legacy={
+            mint.sources_unlinked.length === 0 && !mint.citation ? (
+              <p className="text-sm text-gray-500">
+                <T k="mintDetail.noReferences" />
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {mint.sources_unlinked.length > 0 && (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+                    {mint.sources_unlinked.map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                )}
+                {mint.citation && (
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Citation:</span> {mint.citation}
+                  </p>
+                )}
+              </div>
+            )
+          }
+        />
+      </Panel>
 
       {/* Editing note */}
       <p className="mt-4 text-xs text-gray-400">
-        Geolocation, description, and citation now come from the{' '}
-        <code className="font-mono">mints</code> table in Supabase. To add supplementary content not
-        yet in Supabase (images, additional references, coin types, location notes), edit{' '}
-        <code className="font-mono">lib/mint-dossiers.ts</code> / <code className="font-mono">lib/mint-towns.ts</code>{' '}
-        and place image files under <code className="font-mono">public/images/mints/</code>.
+        Everything on this page — description, geolocation, citation, state, modern location,
+        location note, images, and references — comes from the{' '}
+        <code className="font-mono">mints</code> / <code className="font-mono">images</code> tables
+        in Supabase.
       </p>
     </div>
   )

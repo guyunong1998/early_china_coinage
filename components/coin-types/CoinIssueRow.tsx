@@ -28,7 +28,7 @@ export function CoinIssueRow({
   hierarchyOptions: ComboOption[]
   onSaved?: (issue: CoinIssueDisplay) => void
 }) {
-  const { editing, current, state, formAction, pending, startEdit, cancelEdit } = useEditableSection<CoinIssueDisplay>({
+  const { editing, current, state, formAction, pending, locked, startEdit, cancelEdit } = useEditableSection<CoinIssueDisplay>({
     data: issue,
     action: async (prev, formData) => {
       const result = await updateCoinIssue(prev, formData)
@@ -94,6 +94,7 @@ export function CoinIssueRow({
         <form action={formAction} className="space-y-3 rounded border border-brand/30 bg-white p-3">
           <ActionFormStatus state={state} />
           <input type="hidden" name="id" value={current.id} />
+          <fieldset disabled={locked} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <FieldLabel>Coin type code</FieldLabel>
@@ -176,18 +177,20 @@ export function CoinIssueRow({
               />
             </div>
           </div>
+          </fieldset>
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={pending}
+              disabled={locked}
               className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
             >
-              {pending ? 'Saving…' : 'Save'}
+              {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
             </button>
             <button
               type="button"
+              disabled={locked}
               onClick={cancelEdit}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>

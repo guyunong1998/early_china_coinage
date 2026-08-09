@@ -15,6 +15,7 @@ const TARGET_TYPES: { value: TargetType; label: string }[] = [
   { value: 'context', label: 'Context' },
   { value: 'find', label: 'Find' },
   { value: 'coin_item', label: 'Coin item' },
+  { value: 'mint', label: 'Mint' },
 ]
 
 const INITIAL: ActionState<SourceLink> = {
@@ -65,6 +66,7 @@ export function AddSourceLinkForm({
   return (
     <form action={formAction} className="space-y-3 rounded border border-brand/30 bg-brand-light/20 p-3">
       <ActionFormStatus state={state} />
+      <fieldset disabled={pending} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         {sourceCode ? (
           <input type="hidden" name="source_code" value={sourceCode} />
@@ -116,6 +118,7 @@ export function AddSourceLinkForm({
         <FieldLabel>Note</FieldLabel>
         <textarea name="note_zh" rows={2} className={fieldInputClass} />
       </div>
+      </fieldset>
       <div className="flex gap-2">
         <button
           type="submit"
@@ -126,8 +129,9 @@ export function AddSourceLinkForm({
         </button>
         <button
           type="button"
+          disabled={pending}
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
           Cancel
         </button>

@@ -4,17 +4,22 @@ import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/map/HoardMintOriginsMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { SiteRecordSection } from '@/components/site/SiteRecordSection'
+import { ClickHint } from '@/components/ui/ClickHint'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { DataCard } from '@/components/ui/DataCard'
 import { LabelHint } from '@/components/ui/LabelHint'
+import { linkedList } from '@/components/ui/LinkedList'
 import { T } from '@/components/i18n/T'
-import { isDevMode } from '@/lib/admin/guard'
+import { isAuthorized } from '@/lib/admin/guard'
 import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target'
+import { buildCoinTypeNodes, type CoinTypeLevel } from '@/lib/coin-type-catalog'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
-import { formatCoordinates, formatNumber } from '@/lib/format'
-import { getMintByNameZh } from '@/lib/mint-towns'
+import { formatCoordinates, formatNumber, splitCsv } from '@/lib/format'
+import { findMintByNameZh, toMintInfo } from '@/lib/mint-directory'
 import {
   getCoinIssues,
+  getCoinTypeHierarchy,
+  getMints,
   getSite,
   getSiteContexts,
   getSiteFinds,
@@ -22,18 +27,12 @@ import {
   getSourceLinksForSite,
   getSources,
 } from '@/lib/queries'
-import type { Find } from '@/lib/types'
+import type { Find, MapSite, MintInfo } from '@/lib/types'
+
+const LEVEL_RANK: Record<CoinTypeLevel, number> = { level1: 1, level2: 2, level3: 3, level4: 4, level5: 5 }
 
 type PageProps = {
   params: Promise<{ site_code: string }>
-}
-
-function splitSourceCodes(raw: string | null | undefined): string[] {
-  if (!raw) return []
-  return raw
-    .split(/[、,，;；|]/)
-    .map((s) => s.trim())
-    .filter(Boolean)
 }
 
 const UNKNOWN_MINT_TOKENS = ['未知', '不详', '无', '—', '-', 'n/a', 'na', 'unknown', '']
@@ -61,7 +60,10 @@ type MintOriginGroup = {
 }
 
 /** Group a site's finds by the mint that issued each coin, for the "Coin Mint Origins" map. */
-function buildMintOrigins(finds: Find[]): {
+function buildMintOrigins(
+  finds: Find[],
+  mints: MintInfo[]
+): {
   matched: HoardMintOrigin[]
   unmatched: MintOriginGroup[]
 } {
@@ -91,14 +93,14 @@ function buildMintOrigins(finds: Find[]): {
   const unmatched: MintOriginGroup[] = []
 
   groups.forEach((group) => {
-    const mintTown = getMintByNameZh(group.mint_zh)
-    if (mintTown && mintTown.lat != null && mintTown.lng != null) {
+    const mint = findMintByNameZh(mints, group.mint_zh)
+    if (mint && mint.lat != null && mint.lng != null) {
       matched.push({
-        mint_code: mintTown.mint_code,
+        mint_code: mint.mint_code,
         mint_zh: group.mint_zh,
-        mint_en: group.mint_en ?? mintTown.name_en,
-        lat: mintTown.lat,
-        lng: mintTown.lng,
+        mint_en: group.mint_en ?? mint.name_en,
+        lat: mint.lat,
+        lng: mint.lng,
         quantity: group.quantity,
         findCount: group.findCount,
         coinTypes: [...group.coinTypes],
@@ -150,6 +152,31 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
   )
 }
 
+/** Union of the site's populated coin_type_hierarchy levels (level1..level5 —
+ * Coin/Mould, Category, Type, Subtype, Variant), deduped and flattened into
+ * one bilingual list — the level split is a taxonomy implementation detail,
+ * not something a site's classification summary needs to spell out row by
+ * row. */
+function mergeLevelTypes(summary: MapSite | null): { zh: string | null; en: string | null } {
+  const zhLists = [
+    summary?.level1_types_zh,
+    summary?.level2_types_zh,
+    summary?.level3_types_zh,
+    summary?.level4_types_zh,
+    summary?.level5_types_zh,
+  ]
+  const enLists = [
+    summary?.level1_types_en,
+    summary?.level2_types_en,
+    summary?.level3_types_en,
+    summary?.level4_types_en,
+    summary?.level5_types_en,
+  ]
+  const zh = [...new Set(zhLists.flatMap((s) => (s ? s.split('、') : [])))]
+  const en = [...new Set(enLists.flatMap((s) => (s ? s.split('、') : [])))]
+  return { zh: zh.length ? zh.join('、') : null, en: en.length ? en.join(', ') : null }
+}
+
 // ── row component ─────────────────────────────────────────────────────────
 
 function Row({
@@ -178,23 +205,17 @@ export default async function SitePage({ params }: PageProps) {
   const site = await getSite(site_code)
   if (!site) notFound()
 
+  const authorized = await isAuthorized()
   const summary = await getSiteMapSummary(site_code)
   const contexts = await getSiteContexts(site_code)
   const finds = await getSiteFinds(contexts.map((c) => c.context_code))
+  const mints = (await getMints()).map(toMintInfo)
 
-  // Support multiple refs stored in one field, e.g. "SRC001;SRC002"
-  const sourceCodes = [
-    ...splitSourceCodes(site.source_code),
-    ...contexts.flatMap((c) => splitSourceCodes(c.source_code)),
-    ...finds.flatMap((f) => splitSourceCodes(f.source_code)),
-  ]
-
-  const sources = await getSources(sourceCodes)
   // Only needed to populate the find-editing combobox, so skip the fetch in prod.
-  const coinIssues = isDevMode() ? await getCoinIssues() : []
+  const coinIssues = authorized ? await getCoinIssues() : []
+  // For linking "Coin Types" labels below through to their /coin-types page.
+  const catalogNodes = buildCoinTypeNodes(await getCoinTypeHierarchy(), coinIssues)
 
-  // Structured citations (source_links), distinct from the legacy freetext
-  // source_code fields resolved above.
   const structuredSourceLinks = await getSourceLinksForSite(
     site_code,
     contexts.map((c) => c.context_code),
@@ -230,9 +251,24 @@ export default async function SitePage({ params }: PageProps) {
       : []
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
+  const classification = mergeLevelTypes(summary)
+  const classificationItems = classification.zh ? classification.zh.split('、') : []
+  const mintItems = splitCsv(summary?.mints_zh)
+
+  function resolveCoinType(labelZh: string) {
+    const node = catalogNodes
+      .filter((n) => n.label_zh === labelZh)
+      .sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level])[0]
+    return { en: node?.label_en ?? null, href: node ? `/coin-types/${node.slug}` : null }
+  }
+
+  function resolveMint(labelZh: string) {
+    const mint = findMintByNameZh(mints, labelZh)
+    return { en: mint?.name_en ?? null, href: mint ? `/mints/${mint.mint_code}` : null }
+  }
 
   const mintOrigins =
-    summary?.lat != null && summary.lng != null ? buildMintOrigins(finds) : null
+    summary?.lat != null && summary.lng != null ? buildMintOrigins(finds, mints) : null
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -308,7 +344,7 @@ export default async function SitePage({ params }: PageProps) {
           {/* Keep description area visible: prefer remark, fallback to description */}
           <div className="mt-4 border-t border-gray-100 pt-3 text-sm">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Description / 描述
+              <T k="site.descriptionLabel" />
             </p>
             {biBlock(infoTextZh, infoTextEn)}
           </div>
@@ -316,19 +352,15 @@ export default async function SitePage({ params }: PageProps) {
       </div>
 
       <div className="mt-6">
-        <DataCard title="Record Classification">
+        <DataCard title={<T k="site.classification.title" />}>
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
-              <Row labelKey="map.filter.l0">{bi(summary?.level1_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l1">{bi(summary?.level2_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l2">{bi(summary?.level3_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l3">{bi(summary?.level4_types_zh, null)}</Row>
-              <Row labelKey="map.filter.l4">{bi(summary?.level5_types_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, null)}</Row>
+              <Row labelKey="site.row.classification">{linkedList(classificationItems, resolveCoinType)}</Row>
+              <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, summary?.inscriptions_en)}</Row>
             </dl>
             <dl>
-              <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, null)}</Row>
-              <Row labelKey="siteTabs.row.mints">{bi(summary?.mints_zh, null)}</Row>
+              <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, summary?.states_en)}</Row>
+              <Row labelKey="siteTabs.row.mints">{linkedList(mintItems, resolveMint)}</Row>
               <Row labelKey="siteTabs.row.precision" hintKey="siteTabs.row.precisionHint">
                 {formatNumber(site.precision_level ?? summary?.precision_level)}
               </Row>
@@ -352,23 +384,26 @@ export default async function SitePage({ params }: PageProps) {
                 mints={mintOrigins.matched}
               />
               <p className="text-xs text-gray-500">
-                Teal marker: this findspot. Red markers: mint towns that issued coins found here, connected
-                by dashed lines.
+                <T k="site.mintOrigins.caption" />
               </p>
             </div>
             {mintOrigins.unmatched.length > 0 && (
               <p className="mt-3 text-xs text-gray-500">
-                Mint location not yet mapped for:{' '}
-                {mintOrigins.unmatched
-                  .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
-                  .join('、')}
+                <ClickHint
+                  hint={mintOrigins.unmatched
+                    .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
+                    .join('、')}
+                  className="cursor-help underline decoration-dotted decoration-gray-400 underline-offset-2"
+                >
+                  <T k="site.mintOrigins.unmapped" vars={{ count: mintOrigins.unmatched.length }} /> ⓘ
+                </ClickHint>
               </p>
             )}
           </DataCard>
         </div>
       )}
 
-      {isDevMode() && (
+      {authorized && (
         <div className="mt-6">
           <DataCard title="Site Record (dev only)">
             <SiteRecordSection site={site} />
@@ -381,8 +416,7 @@ export default async function SitePage({ params }: PageProps) {
           siteCode={site_code}
           contexts={contexts}
           finds={finds}
-          sources={sources}
-          isDevMode={isDevMode()}
+          isDevMode={authorized}
           coinIssues={coinIssues}
           structuredSourceLinks={structuredSourceLinks}
           sourcesByCode={sourcesByCode}

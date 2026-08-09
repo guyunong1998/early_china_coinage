@@ -171,13 +171,13 @@ a {
   width: 100%;
 }
 
-/* The bordered body underneath a `.panel-header`. Default rule: its border
-   color always matches the header's background, so the two read as one
-   connected piece — retint --brand-light above to restyle both at once. */
+/* The body underneath a `.panel-header`, inside a `.panel`-bordered
+   container — every panel is `.panel` > `.panel-header` + `.panel-body`, so
+   this never carries its own border (the outer `.panel` already draws one
+   around the whole card); it just keeps the body's background consistent
+   with the header directly above it. */
 .panel-body {
   background: var(--paper);
-  border: 3px solid var(--brand-light);
-  /* border-radius: var(--radius); */
 }
 
 /* Panels that want their own look, decoupled from the shared `.panel-body`

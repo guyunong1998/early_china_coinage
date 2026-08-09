@@ -40,7 +40,7 @@ export function EditableSection<T>({
    * Delete alongside Edit in the display-mode overlay. */
   deleteInFormOnly?: boolean
 }) {
-  const { editing, current, state, formAction, pending, deletePending, startEdit, cancelEdit, handleDelete } =
+  const { editing, current, state, formAction, pending, locked, deletePending, startEdit, cancelEdit, handleDelete } =
     useEditableSection({ data, action, deleteAction, onDeleted, startInEditing })
 
   if (!isDevMode) {
@@ -70,23 +70,26 @@ export function EditableSection<T>({
   return (
     <form action={formAction} className="space-y-3 rounded border border-brand/30 bg-brand-light/20 p-3">
       <ActionFormStatus state={state} />
-      {renderForm(current)}
+      <fieldset disabled={locked} className="space-y-3">
+        {renderForm(current)}
+      </fieldset>
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
           <button
             type="submit"
-            disabled={pending}
+            disabled={locked}
             className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
           >
-            {pending ? 'Saving…' : 'Save'}
+            {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
           </button>
           <button
             type="button"
+            disabled={locked}
             onClick={() => {
               cancelEdit()
               onCancelCreate?.()
             }}
-            className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>

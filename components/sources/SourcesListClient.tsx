@@ -28,6 +28,8 @@ const BLANK_SOURCE: Source = {
   note_en: null,
 }
 
+const PAGE_SIZE = 50
+
 export function SourcesListClient({
   initialSources,
   initialLinks,
@@ -44,6 +46,7 @@ export function SourcesListClient({
   const [resolved, setResolved] = useState(initialResolved)
   const [addingSource, setAddingSource] = useState(false)
   const [query, setQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const linksBySource = useMemo(() => {
     const map = new Map<string, SourceLink[]>()
@@ -76,6 +79,13 @@ export function SourcesListClient({
         .some((field) => field!.toLowerCase().includes(q))
     )
   }, [sources, query])
+
+  const totalPages = Math.max(1, Math.ceil(filteredSources.length / PAGE_SIZE))
+  // A delete (or a search that no longer matches as many results) can leave
+  // `currentPage` past the end -- clamp for rendering rather than showing an
+  // empty page; the stored value only snaps back once the user navigates.
+  const clampedPage = Math.min(currentPage, totalPages)
+  const pageSources = filteredSources.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
 
   function handleSourceUpdated(updated: Source) {
     setSources((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
@@ -111,14 +121,16 @@ export function SourcesListClient({
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setCurrentPage(1)
+          }}
           placeholder="Search by code, author, title, publication, or citation text…"
           className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand"
         />
         <p className="text-xs text-gray-500">
-          {query.trim()
-            ? `${filteredSources.length} of ${sources.length} sources`
-            : `${sources.length} sources`}
+          {query.trim() ? `${filteredSources.length} of ${sources.length} sources` : `${sources.length} sources`}
+          {totalPages > 1 && ` · page ${clampedPage} of ${totalPages}`}
         </p>
       </div>
 
@@ -153,20 +165,44 @@ export function SourcesListClient({
           {sources.length === 0 ? 'No sources catalogued yet.' : 'No sources match this search.'}
         </p>
       ) : (
-        filteredSources.map((source, index) => (
+        pageSources.map((source, index) => (
           <SourceCard
             key={source.id}
             source={source}
             links={linksBySource.get(source.source_code) ?? []}
             resolved={resolved}
             isDevMode={isDevMode}
-            index={index}
+            index={(clampedPage - 1) * PAGE_SIZE + index}
             onSourceUpdated={handleSourceUpdated}
             onSourceDeleted={() => handleSourceDeleted(source.id)}
             onLinkAdded={handleLinkAdded}
             onLinkDeleted={handleLinkDeleted}
           />
         ))
+      )}
+
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-center gap-2 pt-2 text-sm">
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.max(1, clampedPage - 1))}
+            disabled={clampedPage <= 1}
+            className="rounded border border-brand/30 bg-white px-3 py-1.5 text-brand transition hover:bg-brand-light disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white"
+          >
+            Prev
+          </button>
+          <span className="text-gray-500">
+            Page {clampedPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage(Math.min(totalPages, clampedPage + 1))}
+            disabled={clampedPage >= totalPages}
+            className="rounded border border-brand/30 bg-white px-3 py-1.5 text-brand transition hover:bg-brand-light disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white"
+          >
+            Next
+          </button>
+        </nav>
       )}
     </div>
   )

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import type { MintImage } from '@/lib/mint-towns'
+import type { MintImage } from '@/lib/types'
 
 export function MintImageGallery({ images }: { images: MintImage[] }) {
   const [lightbox, setLightbox] = useState<MintImage | null>(null)

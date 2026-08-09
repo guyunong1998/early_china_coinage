@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react'
 
 type Tab = {
   id: string
-  label: string
+  label: ReactNode
   content: ReactNode
 }
 
@@ -38,7 +38,7 @@ export function Tabs({ tabs }: TabsProps) {
           )
         })}
       </div>
-      <div className="border border-brand border-t-0 bg-white p-4">{activeTab?.content}</div>
+      <div className="border border-brand bg-white p-4">{activeTab?.content}</div>
     </div>
   )
 }

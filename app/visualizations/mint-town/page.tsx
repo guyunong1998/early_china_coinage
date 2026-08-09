@@ -1,5 +1,6 @@
 import { MintTownVisualization } from '@/components/visualizations/MapVisualization'
-import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap } from '@/lib/queries'
+import { toMintInfo } from '@/lib/mint-directory'
+import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap, getMints } from '@/lib/queries'
 import { decodeTypologySelections, parseViewMode } from '@/lib/visualization-deeplink'
 
 type PageProps = {
@@ -14,11 +15,13 @@ export const metadata = {
 export default async function MintTownVisualizationPage({ searchParams }: PageProps) {
   const { view, types } = await searchParams
 
-  const [coinIssues, hierarchyRows, finds] = await Promise.all([
+  const [coinIssues, hierarchyRows, finds, dbMints] = await Promise.all([
     getCoinIssues(),
     getCoinTypeHierarchy(),
     getFindsForHeatmap(),
+    getMints(),
   ])
+  const mints = dbMints.map(toMintInfo)
 
   return (
     <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
@@ -26,6 +29,7 @@ export default async function MintTownVisualizationPage({ searchParams }: PagePr
         finds={finds}
         coinIssues={coinIssues}
         hierarchyRows={hierarchyRows}
+        mints={mints}
         initialViewMode={parseViewMode(view)}
         initialTypeSelections={decodeTypologySelections(types)}
       />

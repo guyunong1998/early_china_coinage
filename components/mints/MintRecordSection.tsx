@@ -50,6 +50,22 @@ export function MintFormFields({ mint, includeId = true }: { mint: Partial<Mint>
             className={fieldInputClass}
           />
         </div>
+        <div>
+          <FieldLabel>State ID (uuid, references states.id)</FieldLabel>
+          <input name="state_id" defaultValue={mint.state_id ?? ''} className={fieldInputClass} />
+        </div>
+        <div>
+          <FieldLabel>Modern location (zh)</FieldLabel>
+          <input name="modern_location_zh" defaultValue={mint.modern_location_zh ?? ''} className={fieldInputClass} />
+        </div>
+        <div>
+          <FieldLabel>Modern location (en)</FieldLabel>
+          <input name="modern_location_en" defaultValue={mint.modern_location_en ?? ''} className={fieldInputClass} />
+        </div>
+      </div>
+      <div>
+        <FieldLabel>Location note</FieldLabel>
+        <textarea name="location_note" defaultValue={mint.location_note ?? ''} rows={2} className={fieldInputClass} />
       </div>
       <div>
         <FieldLabel>Description (zh)</FieldLabel>
@@ -73,14 +89,31 @@ export function MintFormFields({ mint, includeId = true }: { mint: Partial<Mint>
         <FieldLabel>Citation</FieldLabel>
         <textarea name="citation" defaultValue={mint.citation ?? ''} rows={2} className={fieldInputClass} />
       </div>
+      <div>
+        <FieldLabel>Unlinked sources (one per line — delete a line to drop it)</FieldLabel>
+        <textarea
+          name="sources_unlinked"
+          defaultValue={(mint.sources_unlinked ?? []).join('\n')}
+          rows={4}
+          className={fieldInputClass}
+        />
+      </div>
+      <div>
+        <FieldLabel>Alternative names (one per line — other spellings this mint is known by)</FieldLabel>
+        <textarea
+          name="alternative_names"
+          defaultValue={(mint.alternative_names ?? []).join('\n')}
+          rows={2}
+          className={fieldInputClass}
+        />
+      </div>
     </>
   )
 }
 
-/** The raw `mints` DB record, editable in place — distinct from the merged
- * dossier-derived panels elsewhere on the mint page (state, modern location,
- * coin types, images, references all come from lib/mint-dossiers.ts, not
- * this table, and aren't editable here). */
+/** The raw `mints` DB record, editable in place. Everything shown on the
+ * mint page — description, state, modern location, location_note, images
+ * (via image_ids), and sources_unlinked — lives on this table now. */
 export function MintRecordSection({ mint, isDevMode }: { mint: Mint; isDevMode: boolean }) {
   return (
     <EditableSection
@@ -99,13 +132,42 @@ export function MintRecordSection({ mint, isDevMode }: { mint: Mint; isDevMode: 
             }
           />
           <FieldRow
+            label="Mint code (URL slug)"
+            value={<code className="font-mono">{m.mint_code}</code>}
+          />
+          <FieldRow
             label="Coordinates"
             value={m.latitude != null && m.longitude != null ? `${m.latitude}, ${m.longitude}` : '—'}
           />
           <FieldRow label="Precision level" value={m.precision_level ?? '—'} />
+          <FieldRow label="State ID" value={m.state_id ?? '—'} />
+          <FieldRow
+            label="Modern location"
+            value={
+              m.modern_location_zh || m.modern_location_en
+                ? `${m.modern_location_zh ?? ''}${m.modern_location_zh && m.modern_location_en ? ' / ' : ''}${m.modern_location_en ?? ''}`
+                : '—'
+            }
+          />
+          <FieldRow label="Location note" value={m.location_note ?? '—'} />
           <FieldRow label="Description (zh)" value={m.description_zh ?? '—'} />
           <FieldRow label="Description (en)" value={m.description_en ?? '—'} />
           <FieldRow label="Citation" value={m.citation ?? '—'} />
+          <FieldRow
+            label="Unlinked sources"
+            value={
+              m.sources_unlinked.length > 0 ? (
+                <ul className="list-disc pl-4">
+                  {m.sources_unlinked.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ul>
+              ) : (
+                '—'
+              )
+            }
+          />
+          <FieldRow label="Alternative names" value={m.alternative_names.length > 0 ? m.alternative_names.join(', ') : '—'} />
         </dl>
       )}
       renderForm={(m) => <MintFormFields mint={m} />}

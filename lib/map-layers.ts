@@ -414,7 +414,15 @@ export function addLayerControl(
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
   const routes = buildRoutesLayer(L, map).addTo(map)
 
-  L.control
+  // Leaflet's layer control inserts each key as raw innerHTML, so "Routes &
+  // nodes" can carry its own hover-title explanation (a native tooltip, not
+  // the app's usual ClickHint popover — this control is plain Leaflet DOM,
+  // not React) the same dotted-underline look every other in-app hint uses.
+  const routesLabel =
+    '<span class="routes-hint-label" title="Ancient trade-route network and its named nodes, from the Tang dynasty (description may change)." ' +
+    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes &amp; nodes</span>'
+
+  const control = L.control
     .layers(
       // CyclOSM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
@@ -422,11 +430,22 @@ export function addLayerControl(
       {
         'Major rivers': majorRivers,
         'Minor rivers': minorRivers,
-        'Routes & nodes': routes,
+        [routesLabel]: routes,
       },
       { collapsed: options?.collapsed ?? false, position }
     )
     .addTo(map)
+
+  // Clicking anywhere in a Leaflet overlay row toggles its checkbox, because
+  // the row is a <label> wrapping the input. That swallows clicks meant to
+  // read the "Routes & nodes" hint text as a toggle instead. Calling
+  // preventDefault() on the span cancels the browser's implicit forwarding
+  // of the click to the checkbox, so only the checkbox itself now toggles
+  // the layer — the label text becomes hover-only, like the hint it is.
+  control
+    .getContainer()
+    ?.querySelector('.routes-hint-label')
+    ?.addEventListener('click', (e) => e.preventDefault())
 }
 
 /**

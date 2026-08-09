@@ -20,6 +20,14 @@ const INITIAL: ActionState<Mint> = {
     description_zh: null,
     description_en: null,
     citation: null,
+    state_id: null,
+    modern_location_zh: null,
+    modern_location_en: null,
+    location_note: null,
+    image_ids: [],
+    sources_unlinked: [],
+    mint_code: '',
+    alternative_names: [],
   },
 }
 
@@ -39,14 +47,16 @@ export function MintQuickCreateForm({
   return (
     <form action={formAction} className="space-y-3">
       <ActionFormStatus state={state} />
-      <div>
-        <FieldLabel>Name (zh)</FieldLabel>
-        <input name="name_zh" required autoFocus className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Name (en)</FieldLabel>
-        <input name="name_en" className={fieldInputClass} />
-      </div>
+      <fieldset disabled={pending} className="space-y-3">
+        <div>
+          <FieldLabel>Name (zh)</FieldLabel>
+          <input name="name_zh" required autoFocus className={fieldInputClass} />
+        </div>
+        <div>
+          <FieldLabel>Name (en)</FieldLabel>
+          <input name="name_en" className={fieldInputClass} />
+        </div>
+      </fieldset>
       <div className="flex gap-2">
         <button
           type="submit"
@@ -57,8 +67,9 @@ export function MintQuickCreateForm({
         </button>
         <button
           type="button"
+          disabled={pending}
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
           Cancel
         </button>

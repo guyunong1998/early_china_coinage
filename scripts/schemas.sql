@@ -90,8 +90,7 @@ create table public.contexts (
   context_original_code text null,
   context_type_zh text null,
   context_type_en text null,
-  period_zh text null,
-  period_en text null,
+  period_id uuid null,
   description_zh text null,
   description_en text null,
   source_code text null,
@@ -101,7 +100,8 @@ create table public.contexts (
   constraint contexts_pkey primary key (id),
   constraint contexts_context_code_key unique (context_code),
   constraint contexts_site_code_fkey foreign KEY (site_code) references sites (site_code) on update CASCADE on delete CASCADE,
-  constraint contexts_source_code_fkey foreign KEY (source_code) references sources (source_code) on update CASCADE on delete set null
+  constraint contexts_source_code_fkey foreign KEY (source_code) references sources (source_code) on update CASCADE on delete set null,
+  constraint contexts_period_id_fkey foreign KEY (period_id) references periods (id) on delete set null
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_contexts_site_code on public.contexts using btree (site_code) TABLESPACE pg_default;
@@ -183,8 +183,7 @@ create table public.sites (
   precision_level integer null,
   site_type_zh text null,
   site_type_en text null,
-  period_zh text null,
-  period_en text null,
+  period_id uuid null,
   description_zh text null,
   description_en text null,
   source_code text null,
@@ -193,7 +192,16 @@ create table public.sites (
   created_at timestamp with time zone null default now(),
   constraint sites_pkey primary key (id),
   constraint sites_site_code_key unique (site_code),
-  constraint sites_source_code_fkey foreign KEY (source_code) references sources (source_code) on update CASCADE on delete set null
+  constraint sites_source_code_fkey foreign KEY (source_code) references sources (source_code) on update CASCADE on delete set null,
+  constraint sites_period_id_fkey foreign KEY (period_id) references periods (id) on delete set null
+) TABLESPACE pg_default;
+
+create table public.periods (
+  id uuid not null default gen_random_uuid (),
+  period_zh text null,
+  period_en text null,
+  created_at timestamp with time zone not null default now(),
+  constraint periods_pkey primary key (id)
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_sites_lat_lng on public.sites using btree (lat, lng) TABLESPACE pg_default;

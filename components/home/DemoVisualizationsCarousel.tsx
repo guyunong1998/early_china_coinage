@@ -52,23 +52,25 @@ export function DemoVisualizationsCarousel() {
   }
 
   return (
-    <div className="panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
-      <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
-        <h2 className="font-serif text-xl font-semibold text-brand">
-          <T k="navcards.map.label" />
-        </h2>
-        <p className="text-sm leading-6 text-gray-600">
-          <T k="home.demos.desc" />
-        </p>
-        <Link
-          href="/visualizations"
-          className="mt-4 block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
-        >
-          <T k="home.mapSection.title" /> →
-        </Link>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <div className="panel-nav-card flex flex-col p-3 lg:col-span-1">
+        <div className="panel-nav-card-inner flex flex-1 flex-col justify-center gap-0 p-4">
+          <h2 className="font-serif text-xl font-semibold text-brand">
+            <T k="navcards.map.label" />
+          </h2>
+          <p className="text-sm leading-6 text-gray-600">
+            <T k="home.demos.desc" />
+          </p>
+          <Link
+            href="/visualizations"
+            className="mt-4 block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          >
+            <T k="home.mapSection.title" /> →
+          </Link>
+        </div>
       </div>
 
-      <div className="lg:col-span-2 p-4">
+      <div className="panel-nav-card overflow-hidden p-4 lg:col-span-2">
         <div className="relative" onWheel={handleWheel}>
           {/* The sliding "track": every slide sits side by side (width =
               count × 100%) inside this fixed 16:9, overflow-hidden viewport,

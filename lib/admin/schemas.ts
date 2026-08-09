@@ -30,6 +30,17 @@ const omittableText = z.preprocess(
 
 const requiredText = z.string().trim().min(1, 'Required')
 
+/** A textarea edited one entry per line, parsed to a text[] column — blank
+ * lines dropped. Used for mints.sources_unlinked: deleting a line removes
+ * that unlinked citation on save. */
+const textLines = z.preprocess((v) => {
+  if (typeof v !== 'string') return []
+  return v
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}, z.array(z.string()))
+
 // ── mints ────────────────────────────────────────────────────────────────
 
 export const mintSchema = z.object({
@@ -42,6 +53,12 @@ export const mintSchema = z.object({
   description_zh: optionalText,
   description_en: optionalText,
   citation: optionalText,
+  state_id: optionalUuid,
+  modern_location_zh: optionalText,
+  modern_location_en: optionalText,
+  location_note: optionalText,
+  sources_unlinked: textLines,
+  alternative_names: textLines,
 })
 
 export const createMintSchema = mintSchema.omit({ id: true })
@@ -138,8 +155,11 @@ export const findSchema = z.object({
   quantity_estimated: optionalNumber,
   quantity_is_estimated: z.preprocess((v) => v === 'true' || v === true, z.boolean()),
   total_weight_g: optionalNumber,
-  quantity_note_zh: optionalText,
-  quantity_note_en: optionalText,
+  // Not surfaced in the compact find edit row — omittable so an absent
+  // field leaves the existing DB value alone instead of nulling it (same
+  // pattern as coinIssueSchema's note_zh/note_en below).
+  quantity_note_zh: omittableText,
+  quantity_note_en: omittableText,
   description_zh: optionalText,
   description_en: optionalText,
   note_zh: optionalText,
@@ -189,7 +209,7 @@ export const sourceLinkSchema = z.object({
   id: z.string().uuid().optional(),
   source_link_code: requiredText,
   source_code: requiredText,
-  target_type: z.enum(['site', 'context', 'find', 'coin_item']),
+  target_type: z.enum(['site', 'context', 'find', 'coin_item', 'mint']),
   target_code: requiredText,
   page: optionalText,
   note_zh: optionalText,
