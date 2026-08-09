@@ -301,9 +301,9 @@ function stackOffset(index: number, total: number, radius: number): [number, num
 }
 
 /** What drives mint-town circle size on the Map Visualizations Mint Town
- * tab. Coin total is the summed find quantities; find count is how many
- * distinct find records attribute coins to that mint. */
-export type MintSizeBy = 'coins' | 'finds'
+ * tab. `coins` / `finds` are single channels; `combined` balances both
+ * (see `mintSizeNorm`). */
+export type MintSizeBy = 'coins' | 'finds' | 'combined'
 
 /** One mint town, aggregated regardless of the active filter (coordinates +
  * "typical information" — always the mint's full totals/inscriptions, not
@@ -322,8 +322,38 @@ export type MintPoint = {
   modern_location_en: string | null
 }
 
-function mintSizeValue(mint: MintPoint, sizeBy: MintSizeBy): number {
-  return sizeBy === 'finds' ? mint.findCount : mint.totalQty
+/** Log-relative standing of `value` within `[1, maxValue]`, in `[0, 1]`. */
+function logNorm(value: number, maxValue: number): number {
+  if (value <= 1 || maxValue <= 1) return 0
+  return Math.log(value) / Math.log(maxValue)
+}
+
+/**
+ * Mint importance as a 0–1 score for circle sizing.
+ *
+ * - `coins` / `finds`: that channel alone, log-scaled against the current
+ *   list's max (same curve `siteSizeByQuantity` used to apply).
+ * - `combined`: arithmetic mean of the two log-normalized standings, so a
+ *   mint that is merely a single huge hoard, or many tiny finds, sits
+ *   mid-pack; only mints high on *both* axes reach the largest circles.
+ */
+function mintSizeNorm(mint: MintPoint, sizeBy: MintSizeBy, maxCoins: number, maxFinds: number): number {
+  const coins = logNorm(mint.totalQty, maxCoins)
+  const finds = logNorm(mint.findCount, maxFinds)
+  if (sizeBy === 'coins') return coins
+  if (sizeBy === 'finds') return finds
+  return (coins + finds) / 2
+}
+
+function mintSizePx(
+  mint: MintPoint,
+  sizeBy: MintSizeBy,
+  maxCoins: number,
+  maxFinds: number,
+  sizeRange: { min: number; max: number }
+): number {
+  const t = mintSizeNorm(mint, sizeBy, maxCoins, maxFinds)
+  return Math.round(sizeRange.min + t * (sizeRange.max - sizeRange.min))
 }
 
 function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
@@ -362,7 +392,11 @@ function applyHeatMarkerStyle(
   /** When set, circle size follows this value instead of `totalQty` — used by
    * mint towns so size can track find-occurrence count while color/ratio
    * state still uses coin quantity. */
-  sizeQty = totalQty
+  sizeQty = totalQty,
+  /** When set, use this pixel diameter directly (mint combined/coins/finds
+   * sizing already applied its own log-normalization). Density / no-data
+   * branches still win over it. */
+  sizePx: number | null = null
 ) {
   if (hidden) {
     marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
@@ -385,12 +419,14 @@ function applyHeatMarkerStyle(
       // nothing to size by for a type/mint that isn't recorded there at all.
       isStaticNoData
       ? NO_DATA_DOT_SIZE
-      : // Present but the matching quantity wasn't recorded — sized as if it
-        // were 20% of the location's total, a conservative stand-in that
-        // still reflects scale without claiming a count we don't have.
-        state.kind === 'unquantified'
-        ? siteSizeByQuantity(sizeQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
-        : siteSizeByQuantity(sizeQty, maxQty, sizeRange.min, sizeRange.max)
+      : sizePx != null
+        ? sizePx
+        : // Present but the matching quantity wasn't recorded — sized as if it
+          // were 20% of the location's total, a conservative stand-in that
+          // still reflects scale without claiming a count we don't have.
+          state.kind === 'unquantified'
+          ? siteSizeByQuantity(sizeQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
+          : siteSizeByQuantity(sizeQty, maxQty, sizeRange.min, sizeRange.max)
 
   marker.setIcon(
     L.divIcon({
@@ -475,8 +511,9 @@ type MintsCanvasProps = {
   /** Compare view's per-(mint, group) points — see ComparePoint. Only
    * meaningful (and only supplied) when viewMode === 'compare'. */
   comparePoints?: ComparePoint[]
-  /** What the circle radius encodes. Defaults to coin total; the Mint Town
-   * visualization passes this from its Size-by control. */
+  /** What the circle radius encodes. Defaults to `combined` (coin total and
+   * find count balanced); the Mint Town visualization passes this from its
+   * Size-by control. */
   sizeBy?: MintSizeBy
   /** See SitesCanvasProps.fullControls. */
   fullControls?: boolean
@@ -521,7 +558,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const sitesForInit = props.kind === 'sites' ? props.sites : null
   const pins = props.pins ?? []
   const comparePoints = props.comparePoints ?? []
-  const mintSizeBy: MintSizeBy = props.kind === 'mints' ? (props.sizeBy ?? 'coins') : 'coins'
+  const mintSizeBy: MintSizeBy = props.kind === 'mints' ? (props.sizeBy ?? 'combined') : 'combined'
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -565,7 +602,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       } else {
         const { mintPoints, mintStates } = props
-        const maxSize = Math.max(...mintPoints.map((m) => mintSizeValue(m, mintSizeBy)), 1)
+        const maxCoins = Math.max(...mintPoints.map((m) => m.totalQty), 1)
+        const maxFinds = Math.max(...mintPoints.map((m) => m.findCount), 1)
         pointMarkersRef.current.forEach((marker, mintZh) => {
           const mint = mintPoints.find((m) => m.mint_zh === mintZh)
           if (!mint) return
@@ -575,13 +613,14 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             marker,
             rawState,
             mint.totalQty,
-            maxSize,
+            maxCoins,
             sizeRange,
             pointOpacity,
             inDensity,
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
             inCompare,
-            mintSizeValue(mint, mintSizeBy)
+            mint.totalQty,
+            mintSizePx(mint, mintSizeBy, maxCoins, maxFinds, sizeRange)
           )
         })
       }
@@ -862,12 +901,13 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         // position tracking (the `_leaflet_pos` crash), so skip them here
         // too even though callers are expected to have filtered already.
         const plottableMints = props.mintPoints.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng))
-        const sizeBy = props.sizeBy ?? 'coins'
-        const maxSize = Math.max(...plottableMints.map((m) => mintSizeValue(m, sizeBy)), 1)
+        const sizeBy = props.sizeBy ?? 'combined'
+        const maxCoins = Math.max(...plottableMints.map((m) => m.totalQty), 1)
+        const maxFinds = Math.max(...plottableMints.map((m) => m.findCount), 1)
         plottableMints.forEach((mint) => {
           bounds.push([mint.lat, mint.lng])
 
-          const size = siteSizeByQuantity(mintSizeValue(mint, sizeBy), maxSize, sizeRange.min, sizeRange.max)
+          const size = mintSizePx(mint, sizeBy, maxCoins, maxFinds, sizeRange)
           const marker = L.marker([mint.lat, mint.lng], {
             icon: L.divIcon({
               className: '',

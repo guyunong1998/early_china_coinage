@@ -403,9 +403,10 @@ export const DICTIONARY = {
   },
   'map.sizeBy.label': { en: 'Size by', zh: '大小依据' },
   'map.sizeBy.labelHint': {
-    en: 'Circle size shows mint-town importance on a log scale. Coin total sums the recorded quantities of finds attributed to that mint; find occurrences counts how many find records attribute coins to it (one site may contribute several finds).',
-    zh: '圆圈大小以对数缩放表示铸地重要程度。「钱币总数」为归属于该铸地的出土数量合计；「发现次数」为归属于该铸地的出土记录条数（同一遗址可有多条出土记录）。',
+    en: 'Circle size shows mint-town importance on a log scale. Combined averages each mint’s standing on coin total and on find occurrences (equal weight), so a single huge hoard or many tiny finds alone will not dominate. Coin total sums recorded quantities; find occurrences count find records attributed to that mint.',
+    zh: '圆圈大小以对数缩放表示铸地重要程度。「综合」将各铸地在钱币总数与发现次数上的相对位置等权平均，因此单次大宗窖藏或多次零星出土都不会单独主导尺寸。「钱币总数」为归属数量合计；「发现次数」为归属出土记录条数。',
   },
+  'map.sizeBy.combined': { en: 'Combined', zh: '综合' },
   'map.sizeBy.coins': { en: 'Coin total', zh: '钱币总数' },
   'map.sizeBy.finds': { en: 'Find occurrences', zh: '发现次数' },
   'map.popup.coins': { en: 'Coins', zh: '钱币数' },

@@ -916,9 +916,9 @@ export function MintTownVisualization({
   // another entry in `options` below, not a UI rebuild.
   const [source, setSource] = useState<HeatmapSource>('database')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
-  // Circle size encodes mint importance; coin total vs find-occurrence count
-  // answer different questions (how many coins vs how often attributed).
-  const [sizeBy, setSizeBy] = useState<MintSizeBy>('coins')
+  // Circle size encodes mint importance — combined (default) balances coin
+  // total against find-occurrence count; the other two modes isolate each.
+  const [sizeBy, setSizeBy] = useState<MintSizeBy>('combined')
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -993,9 +993,15 @@ export function MintTownVisualization({
     const points: [number, number, number][] = []
     mintPoints.forEach((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      // Unfiltered density weight follows the same importance metric as
-      // circle size, so switching Size-by also reshapes the heatmap.
-      const weight = sizeBy === 'finds' ? mint.findCount : mint.totalQty
+      // Unfiltered density weight follows Size-by. Combined uses the
+      // geometric mean of (coins+1)×(finds+1) so both axes lift the heat
+      // without needing a list-wide max (heatIntensity applies its own log).
+      const weight =
+        sizeBy === 'finds'
+          ? mint.findCount
+          : sizeBy === 'coins'
+            ? mint.totalQty
+            : Math.sqrt((mint.totalQty + 1) * (mint.findCount + 1)) - 1
       const intensity = heatIntensity(state, weight)
       if (intensity == null) return
       points.push([mint.lat, mint.lng, intensity])
@@ -1094,6 +1100,7 @@ export function MintTownVisualization({
               value={sizeBy}
               onChange={setSizeBy}
               options={[
+                { value: 'combined' as const, label: <T k="map.sizeBy.combined" /> },
                 { value: 'coins' as const, label: <T k="map.sizeBy.coins" /> },
                 { value: 'finds' as const, label: <T k="map.sizeBy.finds" /> },
               ]}
