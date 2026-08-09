@@ -17,7 +17,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
-import { MapVisCanvas, type ComparePoint, type PinPoint } from '@/components/map/MapVisCanvas'
+import { MapVisCanvas, type ComparePoint, type MintSizeBy, type PinPoint } from '@/components/map/MapVisCanvas'
 import { AccessionNumberSearch } from '@/components/museum/AccessionNumberSearch'
 import { MapVisualizationOverlay } from '@/components/visualizations/MapVisualizationOverlay'
 import { TypologyFilterBar } from '@/components/visualizations/TypologyFilterBar'
@@ -916,6 +916,9 @@ export function MintTownVisualization({
   // another entry in `options` below, not a UI rebuild.
   const [source, setSource] = useState<HeatmapSource>('database')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
+  // Circle size encodes mint importance; coin total vs find-occurrence count
+  // answer different questions (how many coins vs how often attributed).
+  const [sizeBy, setSizeBy] = useState<MintSizeBy>('coins')
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -990,12 +993,15 @@ export function MintTownVisualization({
     const points: [number, number, number][] = []
     mintPoints.forEach((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      const intensity = heatIntensity(state, mint.totalQty)
+      // Unfiltered density weight follows the same importance metric as
+      // circle size, so switching Size-by also reshapes the heatmap.
+      const weight = sizeBy === 'finds' ? mint.findCount : mint.totalQty
+      const intensity = heatIntensity(state, weight)
       if (intensity == null) return
       points.push([mint.lat, mint.lng, intensity])
     })
     return points
-  }, [mintPoints, mintStates])
+  }, [mintPoints, mintStates, sizeBy])
 
   const foundInSummary = useMemo(() => {
     if (!mintStates) return null
@@ -1059,6 +1065,7 @@ export function MintTownVisualization({
         viewMode={viewMode}
         densityLatLngs={densityLatLngs}
         comparePoints={comparePoints}
+        sizeBy={sizeBy}
       />
 
       <MapVisualizationOverlay>
@@ -1075,6 +1082,23 @@ export function MintTownVisualization({
           </div>
 
           <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ClickHint
+              hint={t('map.sizeBy.labelHint')}
+              className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+            >
+              <T k="map.sizeBy.label" />
+            </ClickHint>
+            <ToggleButtons
+              value={sizeBy}
+              onChange={setSizeBy}
+              options={[
+                { value: 'coins' as const, label: <T k="map.sizeBy.coins" /> },
+                { value: 'finds' as const, label: <T k="map.sizeBy.finds" /> },
+              ]}
+            />
+          </div>
 
           <p className="text-sm leading-snug text-gray-700">
             {typeEntries.length === 0 ? (

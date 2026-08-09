@@ -300,6 +300,11 @@ function stackOffset(index: number, total: number, radius: number): [number, num
   return [Math.round(Math.cos(angle) * radius), Math.round(Math.sin(angle) * radius)]
 }
 
+/** What drives mint-town circle size on the Map Visualizations Mint Town
+ * tab. Coin total is the summed find quantities; find count is how many
+ * distinct find records attribute coins to that mint. */
+export type MintSizeBy = 'coins' | 'finds'
+
 /** One mint town, aggregated regardless of the active filter (coordinates +
  * "typical information" — always the mint's full totals/inscriptions, not
  * just what currently matches). */
@@ -309,9 +314,16 @@ export type MintPoint = {
   mint_code: string | null
   lat: number
   lng: number
+  /** Summed coin quantity across finds attributed to this mint. */
   totalQty: number
+  /** Number of find records attributed to this mint. */
+  findCount: number
   inscriptions: string[]
   modern_location_en: string | null
+}
+
+function mintSizeValue(mint: MintPoint, sizeBy: MintSizeBy): number {
+  return sizeBy === 'finds' ? mint.findCount : mint.totalQty
 }
 
 function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
@@ -321,7 +333,8 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
     <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
       ${status}
       <strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}</strong><br/>
-      <strong>Coins:</strong> ${mint.totalQty}<br/>
+      <strong>${t('map.popup.coins')}:</strong> ${mint.totalQty}<br/>
+      <strong>${t('map.popup.finds')}:</strong> ${mint.findCount}<br/>
       ${mint.inscriptions.length > 0 ? `<strong>Inscriptions:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
       ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
       ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
@@ -345,7 +358,11 @@ function applyHeatMarkerStyle(
   pointOpacity: number,
   inDensity: boolean,
   popupHtml: string,
-  hidden = false
+  hidden = false,
+  /** When set, circle size follows this value instead of `totalQty` — used by
+   * mint towns so size can track find-occurrence count while color/ratio
+   * state still uses coin quantity. */
+  sizeQty = totalQty
 ) {
   if (hidden) {
     marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
@@ -372,8 +389,8 @@ function applyHeatMarkerStyle(
         // were 20% of the location's total, a conservative stand-in that
         // still reflects scale without claiming a count we don't have.
         state.kind === 'unquantified'
-        ? siteSizeByQuantity(totalQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
-        : siteSizeByQuantity(totalQty, maxQty, sizeRange.min, sizeRange.max)
+        ? siteSizeByQuantity(sizeQty * 0.2, maxQty, sizeRange.min, sizeRange.max)
+        : siteSizeByQuantity(sizeQty, maxQty, sizeRange.min, sizeRange.max)
 
   marker.setIcon(
     L.divIcon({
@@ -458,6 +475,9 @@ type MintsCanvasProps = {
   /** Compare view's per-(mint, group) points — see ComparePoint. Only
    * meaningful (and only supplied) when viewMode === 'compare'. */
   comparePoints?: ComparePoint[]
+  /** What the circle radius encodes. Defaults to coin total; the Mint Town
+   * visualization passes this from its Size-by control. */
+  sizeBy?: MintSizeBy
   /** See SitesCanvasProps.fullControls. */
   fullControls?: boolean
   height?: string
@@ -473,6 +493,10 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const labelLayersRef = useRef<{
     labelsEn: import('leaflet').Layer
     labelsZh: import('leaflet').Layer
+    /** Where the active label layer lives — the `placeLabels` group when it's
+     *  user-toggleable, the map itself otherwise. Recorded at init so the
+     *  language-swap effect below targets whichever one this map chose. */
+    host: Parameters<typeof import('@/lib/map-layers').setLabelLayerForLang>[0]
   } | null>(null)
   const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
@@ -497,6 +521,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const sitesForInit = props.kind === 'sites' ? props.sites : null
   const pins = props.pins ?? []
   const comparePoints = props.comparePoints ?? []
+  const mintSizeBy: MintSizeBy = props.kind === 'mints' ? (props.sizeBy ?? 'coins') : 'coins'
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -540,7 +565,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       } else {
         const { mintPoints, mintStates } = props
-        const maxQty = Math.max(...mintPoints.map((m) => m.totalQty), 1)
+        const maxSize = Math.max(...mintPoints.map((m) => mintSizeValue(m, mintSizeBy)), 1)
         pointMarkersRef.current.forEach((marker, mintZh) => {
           const mint = mintPoints.find((m) => m.mint_zh === mintZh)
           if (!mint) return
@@ -550,12 +575,13 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             marker,
             rawState,
             mint.totalQty,
-            maxQty,
+            maxSize,
             sizeRange,
             pointOpacity,
             inDensity,
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
-            inCompare
+            inCompare,
+            mintSizeValue(mint, mintSizeBy)
           )
         })
       }
@@ -682,7 +708,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs])
+  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs, mintSizeBy])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,
@@ -699,7 +725,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         buildBaseLayers,
         addLayerControl,
         addStaticMajorRivers,
-        addStaticRoutes,
+        addStaticTangRoutes,
         setLabelLayerForLang,
       } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
@@ -711,10 +737,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       L.control.zoom({ position: 'topright' }).addTo(map)
 
       const baseLayers = buildBaseLayers(L)
-      const { cyclosm, labelsEn, labelsZh } = baseLayers
+      const { cyclosm, labelsEn, labelsZh, placeLabels } = baseLayers
       cyclosm.addTo(map)
-      labelLayersRef.current = { labelsEn, labelsZh }
-      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       // The layer control is reserved for the dedicated Map Visualizations
       // pages (fullControls, default true), desktop only — on mobile, or
@@ -722,11 +746,20 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       // (e.g. the /mints overview map), it drops back to the same "just the
       // bilingual labels + static major rivers and routes" baseline every
       // other map on the site uses.
+      //
+      // Only the control build makes place names switchable, so only it routes
+      // them through the `placeLabels` group; the static path puts them
+      // straight on the map, where they're permanent.
       const isMobile = window.matchMedia('(max-width: 768px)').matches
+      const labelHost = isMobile || props.fullControls === false ? map : placeLabels
+      labelLayersRef.current = { labelsEn, labelsZh, host: labelHost }
+      setLabelLayerForLang(labelHost, labelsEn, labelsZh, lang)
+
       if (isMobile || props.fullControls === false) {
         addStaticMajorRivers(L, map)
-        addStaticRoutes(L, map)
+        addStaticTangRoutes(L, map)
       } else {
+        placeLabels.addTo(map)
         addLayerControl(L, map, baseLayers, {
           collapsed: true,
           position: 'bottomright',
@@ -829,11 +862,12 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         // position tracking (the `_leaflet_pos` crash), so skip them here
         // too even though callers are expected to have filtered already.
         const plottableMints = props.mintPoints.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng))
-        const maxQty = Math.max(...plottableMints.map((m) => m.totalQty), 1)
+        const sizeBy = props.sizeBy ?? 'coins'
+        const maxSize = Math.max(...plottableMints.map((m) => mintSizeValue(m, sizeBy)), 1)
         plottableMints.forEach((mint) => {
           bounds.push([mint.lat, mint.lng])
 
-          const size = siteSizeByQuantity(mint.totalQty, maxQty, sizeRange.min, sizeRange.max)
+          const size = siteSizeByQuantity(mintSizeValue(mint, sizeBy), maxSize, sizeRange.min, sizeRange.max)
           const marker = L.marker([mint.lat, mint.lng], {
             icon: L.divIcon({
               className: '',
@@ -883,7 +917,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     const layers = labelLayersRef.current
     if (!map || !layers) return
     import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
-      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
+      setLabelLayerForLang(layers.host, layers.labelsEn, layers.labelsZh, lang)
     })
   }, [lang])
 

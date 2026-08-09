@@ -128,6 +128,7 @@ export function toMintPoints(stats: MintStat[]): MintPoint[] {
     lat: m.lat,
     lng: m.lng,
     totalQty: m.coinCount,
+    findCount: m.findCount,
     inscriptions: m.inscriptions,
     modern_location_en: m.modern_location_en,
   }))
