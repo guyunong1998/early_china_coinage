@@ -21,7 +21,17 @@ export type SiteHeatState =
   | { kind: 'no-filter' }
   | { kind: 'no-data' }
   | { kind: 'pure' }
-  | { kind: 'ratio'; ratio: number; matchedQty: number; totalQty: number; contextCount: number }
+  | {
+      kind: 'ratio'
+      ratio: number
+      matchedQty: number
+      totalQty: number
+      contextCount: number
+      /** Mint Town only: find-record count matching the active filter, so
+       * circle size can follow the selected type's own finds rather than the
+       * mint's overall findCount. */
+      matchedFindCount?: number
+    }
   | { kind: 'unquantified' }
 
 function coalesceQuantity(find: HeatmapFind): number | null {

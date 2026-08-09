@@ -413,8 +413,8 @@ export const DICTIONARY = {
   },
   'map.sizeBy.label': { en: 'Size by', zh: '大小依据' },
   'map.sizeBy.labelHint': {
-    en: 'Circle size shows mint-town importance. Combined takes the geometric mean of log(coin total + 1) and log(find occurrences + 1), so volume and frequency balance each other; then sizes are stretched across a wide range so ranks stay easy to tell apart. Coin total sums recorded quantities; find occurrences count find records attributed to that mint.',
-    zh: '圆圈大小表示铸地重要程度。「综合」取 log(钱币总数+1) 与 log(发现次数+1) 的几何平均，使数量与频次互相制衡，再映射到较宽的尺寸区间以便区分等级。「钱币总数」为归属数量合计；「发现次数」为归属出土记录条数。',
+    en: 'Circle size shows mint-town importance. Combined takes the geometric mean of log(coin total + 1) and log(find occurrences + 1), so volume and frequency balance each other; then sizes are stretched across a wide range so ranks stay easy to tell apart. With a coin-type filter active, size follows that type’s own matched coins/finds at the mint (not the mint’s overall total).',
+    zh: '圆圈大小表示铸地重要程度。「综合」取 log(钱币总数+1) 与 log(发现次数+1) 的几何平均，使数量与频次互相制衡，再映射到较宽的尺寸区间以便区分等级。启用币种筛选时，大小按该铸地匹配所选币种的数量/次数计算，而非铸地全部出土总量。',
   },
   'map.sizeBy.combined': { en: 'Combined', zh: '综合' },
   'map.sizeBy.coins': { en: 'Coin total', zh: '钱币总数' },

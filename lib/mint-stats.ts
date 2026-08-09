@@ -1,7 +1,7 @@
 import { findMintByNameZh } from '@/lib/mint-directory'
 import {
   coinMatchesTypologyFilter,
-  emptyTypologySelection,
+  getMatchingHierarchyIds,
   type InscriptionSourceRow,
   type TypologyFilterSelection,
   type TypologyOptionCounts,
@@ -65,16 +65,25 @@ export function computeMintStatsFromFinds(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[],
   matchedIds: Set<string> | null,
-  mints: MintInfo[]
+  mints: MintInfo[],
+  /** Filter-restyle paths only need coin/find counts — skip inscription
+   * collection + zh sorting (noticeable on every typology keystroke). */
+  options?: { includeInscriptions?: boolean }
 ): { mapped: MintStat[]; unmapped: MintStat[] } {
+  const includeInscriptions = options?.includeInscriptions !== false
   const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
   const groups = new Map<
     string,
-    { findCount: number; coinCount: number; inscriptions: Set<string>; siteCodes: Set<string> }
+    { findCount: number; coinCount: number; inscriptions: Set<string> | null; siteCodes: Set<string> }
   >()
 
   mints.forEach((mint) => {
-    groups.set(mint.name_zh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
+    groups.set(mint.name_zh, {
+      findCount: 0,
+      coinCount: 0,
+      inscriptions: includeInscriptions ? new Set() : null,
+      siteCodes: new Set(),
+    })
   })
 
   finds.forEach((find) => {
@@ -85,7 +94,12 @@ export function computeMintStatsFromFinds(
     if (!mintZh) return
 
     if (!groups.has(mintZh)) {
-      groups.set(mintZh, { findCount: 0, coinCount: 0, inscriptions: new Set(), siteCodes: new Set() })
+      groups.set(mintZh, {
+        findCount: 0,
+        coinCount: 0,
+        inscriptions: includeInscriptions ? new Set() : null,
+        siteCodes: new Set(),
+      })
     }
     if (matchedIds && !matchedIds.has(issueId)) return
 
@@ -93,8 +107,10 @@ export function computeMintStatsFromFinds(
     group.findCount += 1
     group.coinCount += findQuantity(find)
     if (find.site_code) group.siteCodes.add(find.site_code)
-    const insc = coinIssue!.inscription?.trim()
-    if (insc) group.inscriptions.add(insc)
+    if (includeInscriptions) {
+      const insc = coinIssue!.inscription?.trim()
+      if (insc) group.inscriptions!.add(insc)
+    }
   })
 
   const stats: MintStat[] = [...groups.entries()]
@@ -109,7 +125,9 @@ export function computeMintStatsFromFinds(
         findCount: g.findCount,
         coinCount: g.coinCount,
         siteCount: g.siteCodes.size,
-        inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+        inscriptions: includeInscriptions
+          ? [...g.inscriptions!].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+          : [],
         state_zh: mint?.state_zh ?? null,
         state_en: mint?.state_en ?? null,
         modern_location_en: mint?.modern_location_en ?? null,
@@ -245,12 +263,19 @@ export function getMatchingAnsSpecimensMulti(
   entries: TypologySelectionEntry[]
 ): AnsSpecimen[] | null {
   if (entries.length === 0) return null
+  // Precompute each entry's hierarchy id set once — coinMatchesTypologyFilter
+  // would otherwise re-scan hierarchyRows for every specimen × entry.
+  const entryMatchers = entries.map((entry) => ({
+    sel: entry.sel,
+    hierarchyIds: entry.sel.level1 ? getMatchingHierarchyIds(hierarchyRows, entry.sel) : null,
+  }))
   return specimens.filter((s) =>
-    entries.some((entry) =>
+    entryMatchers.some(({ sel, hierarchyIds }) =>
       coinMatchesTypologyFilter(
         { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
         hierarchyRows,
-        entry.sel
+        sel,
+        hierarchyIds
       )
     )
   )
@@ -266,24 +291,59 @@ export function buildAnsTypologySpecimenCounts(
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
-  function countFor(matchSel: TypologyFilterSelection): number {
-    return specimens.filter((s) =>
-      coinMatchesTypologyFilter(
-        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
-        hierarchyRows,
-        matchSel
-      )
-    ).length
+  // One pass over specimens (same idea as buildTypologySpecimenCounts) —
+  // per-option filter scans were O(options × specimens × hierarchy).
+  const hierarchyById = new Map(hierarchyRows.map((r) => [r.id, r]))
+  const levelPrefix: string[] = []
+  for (const key of LEVEL_KEYS) {
+    const v = sel[key]
+    if (!v) break
+    levelPrefix.push(v)
+  }
+
+  const levelMaps = new Map<number, Map<string, number>>()
+  for (let depth = 1; depth <= 5; depth++) levelMaps.set(depth, new Map())
+  const inscriptionMap = new Map<string, number>()
+
+  for (const s of specimens) {
+    const row = s.hierarchy_id ? hierarchyById.get(s.hierarchy_id) : undefined
+    const path: string[] = []
+    if (row) {
+      for (const v of [row.level1_zh, row.level2_zh, row.level3_zh, row.level4_zh, row.level5_zh]) {
+        if (!v) break
+        path.push(v)
+      }
+    }
+
+    for (let depth = 1; depth <= 5; depth++) {
+      let prefixOk = true
+      for (let i = 0; i < depth - 1; i++) {
+        const required = sel[LEVEL_KEYS[i]]
+        if (!required || path[i] !== required) {
+          prefixOk = false
+          break
+        }
+      }
+      if (!prefixOk) continue
+      const value = path[depth - 1]
+      if (!value) continue
+      const m = levelMaps.get(depth)!
+      m.set(value, (m.get(value) ?? 0) + 1)
+    }
+
+    if (!s.inscription_id) continue
+    if (levelPrefix.length === 0) {
+      inscriptionMap.set(s.inscription_id, (inscriptionMap.get(s.inscription_id) ?? 0) + 1)
+      continue
+    }
+    if (levelPrefix.every((v, i) => path[i] === v)) {
+      inscriptionMap.set(s.inscription_id, (inscriptionMap.get(s.inscription_id) ?? 0) + 1)
+    }
   }
 
   return {
-    level: (depth, value) => {
-      const levelSel = emptyTypologySelection()
-      for (let i = 0; i < depth - 1; i++) levelSel[LEVEL_KEYS[i]] = sel[LEVEL_KEYS[i]]
-      levelSel[LEVEL_KEYS[depth - 1]] = value
-      return countFor(levelSel)
-    },
-    inscription: (inscriptionId) => countFor({ ...sel, inscriptionId }),
+    level: (depth, value) => levelMaps.get(depth)?.get(value) ?? 0,
+    inscription: (inscriptionId) => inscriptionMap.get(inscriptionId) ?? 0,
   }
 }
 

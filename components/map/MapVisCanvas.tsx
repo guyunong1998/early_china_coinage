@@ -40,6 +40,25 @@ import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
 import { toEnglishName } from '@/lib/name-translation'
 import type { MapSite } from '@/lib/types'
 
+/** Shared Leaflet (+ leaflet.heat) load — restyle used to re-import on every
+ * filter change, which showed up as multi-frame jank. */
+type LeafletLib = typeof import('leaflet')
+let leafletReady: Promise<LeafletLib> | null = null
+function loadLeaflet(): Promise<LeafletLib> {
+  if (!leafletReady) {
+    leafletReady = import('leaflet').then(async (mod) => {
+      // @types/leaflet is `export =`; runtime ESM interop may expose the API
+      // on `.default` — prefer that when present (matches prior restyle path).
+      const L = ((mod as { default?: LeafletLib }).default ?? mod) as LeafletLib
+      const g = globalThis as typeof globalThis & { L?: LeafletLib }
+      g.L = L
+      await import('leaflet.heat')
+      return L
+    })
+  }
+  return leafletReady
+}
+
 /**
  * Presentation-layer state: `pure` (from context-heatmap.ts) only means "every
  * find in this context/site matches" — it says nothing about how many coins
@@ -352,7 +371,7 @@ function mintDotSizeRange(): { min: number; max: number } {
   const styles = getComputedStyle(document.documentElement)
   const min = parseFloat(styles.getPropertyValue('--map-mint-qty-size-min'))
   const max = parseFloat(styles.getPropertyValue('--map-mint-qty-size-max'))
-  return { min: Number.isFinite(min) ? min : 10, max: Number.isFinite(max) ? max : 56 }
+  return { min: Number.isFinite(min) ? min : 6, max: Number.isFinite(max) ? max : 48 }
 }
 
 /** log(1+n): keeps zeros at zero and still moves the needle for small counts. */
@@ -360,40 +379,84 @@ function log1p(n: number) {
   return Math.log1p(Math.max(0, n))
 }
 
+/** Coin/find totals a mint circle should size by: the active filter's own
+ * match at that mint when a filter is on (邯郸 with only part of its coins
+ * matching → size from the matched part), otherwise the mint's full totals. */
+export function mintSizeMetrics(
+  mint: MintPoint,
+  state: SiteHeatState | DisplayState | undefined
+): { coins: number; finds: number } {
+  if (!state || state.kind === 'no-filter') {
+    return { coins: mint.totalQty, finds: mint.findCount }
+  }
+  if (state.kind === 'no-data') {
+    return { coins: 0, finds: 0 }
+  }
+  if (state.kind === 'pure' || state.kind === 'single-find') {
+    // Every recorded coin/find at this mint matches the filter.
+    return { coins: mint.totalQty, finds: mint.findCount }
+  }
+  if (state.kind === 'ratio') {
+    return {
+      coins: state.matchedQty,
+      finds:
+        state.matchedFindCount ??
+        // Fallback if a caller didn't attach find counts — scale by ratio.
+        Math.max(1, Math.round(mint.findCount * state.ratio)),
+    }
+  }
+  // unquantified
+  return { coins: mint.totalQty * 0.2, finds: Math.max(1, mint.findCount * 0.2) }
+}
+
 /**
- * Raw mint importance score (already in log space).
+ * Raw mint importance score.
  *
- * - `coins` / `finds`: log1p of that channel alone.
- * - `combined`: geometric mean of the two log1p scores — balances coin
- *   volume against find frequency so a single huge hoard and many tiny
- *   finds each contribute, without either raw magnitude dominating.
+ * - `coins`: log1p — coin totals are heavily skewed by big hoards.
+ * - `finds`: √n — find-occurrence counts have a narrower range; sqrt keeps
+ *   them readable without the log crush that made most circles look alike.
+ * - `combined`: geometric mean of log1p(coins) and log1p(finds).
+ *
+ * Pass `metrics` to size by a filter's matched subset instead of the mint's
+ * full totals (see `mintSizeMetrics`).
  */
-export function mintImportanceScore(mint: MintPoint, sizeBy: MintSizeBy): number {
-  const coins = log1p(mint.totalQty)
-  const finds = log1p(mint.findCount)
-  if (sizeBy === 'coins') return coins
-  if (sizeBy === 'finds') return finds
-  return Math.sqrt(coins * finds)
+export function mintImportanceScore(
+  mint: MintPoint,
+  sizeBy: MintSizeBy,
+  metrics?: { coins: number; finds: number }
+): number {
+  const { coins: coinQty, finds: findQty } = metrics ?? {
+    coins: mint.totalQty,
+    finds: mint.findCount,
+  }
+  if (sizeBy === 'coins') return log1p(coinQty)
+  if (sizeBy === 'finds') return Math.sqrt(Math.max(0, findQty))
+  return Math.sqrt(log1p(coinQty) * log1p(findQty))
 }
 
 /**
  * Map a mint's importance score to a pixel diameter.
  *
- * Scores are divided by the list max (linear in log-space), then raised to
- * SIZE_GAMMA (< 1) so mid/high ranks don't collapse into a narrow band of
- * near-identical circles after the log compression.
+ * Scores are divided by the list max, then raised to a sizeBy-specific
+ * gamma. Find occurrences use gamma ≥ 1 so mid ranks stay distinct; coin /
+ * combined stay slightly compressed (< 1) after their log scoring.
  */
-const MINT_SIZE_GAMMA = 0.6
+const MINT_SIZE_GAMMA: Record<MintSizeBy, number> = {
+  coins: 0.6,
+  combined: 0.6,
+  finds: 1.15,
+}
 
 function mintSizePx(
   mint: MintPoint,
   sizeBy: MintSizeBy,
   maxScore: number,
-  sizeRange: { min: number; max: number }
+  sizeRange: { min: number; max: number },
+  state?: SiteHeatState | DisplayState
 ): number {
-  const score = mintImportanceScore(mint, sizeBy)
+  const score = mintImportanceScore(mint, sizeBy, mintSizeMetrics(mint, state))
   if (score <= 0 || maxScore <= 0) return sizeRange.min
-  const t = Math.pow(score / maxScore, MINT_SIZE_GAMMA)
+  const t = Math.pow(score / maxScore, MINT_SIZE_GAMMA[sizeBy])
   return Math.round(sizeRange.min + t * (sizeRange.max - sizeRange.min))
 }
 
@@ -605,14 +668,11 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   useEffect(() => {
     if (!mapRef.current) return
 
-    import('leaflet').then(async ({ default: L }) => {
+    // Reuse a single Leaflet (+ leaflet.heat) load — re-importing on every
+    // filter keystroke was the main source of filter jank.
+    loadLeaflet().then((L) => {
       const map = mapRef.current
       if (!map) return
-
-      // Ensure leaflet.heat attaches to this Leaflet instance
-      const g = globalThis as typeof globalThis & { L?: typeof L }
-      g.L = L
-      await import('leaflet.heat')
 
       const inDensity = viewMode === 'density'
       const inCompare = viewMode === 'compare'
@@ -621,6 +681,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       if (props.kind === 'sites') {
         const { sites, siteStates } = props
+        const siteByCode = new Map(sites.map((s) => [s.site_code, s]))
         // Anchored to the same quantity each marker is actually sized by
         // (effectiveQty) rather than raw site totals, so a narrow filter's
         // dots use the full min–max size range instead of bunching at
@@ -635,7 +696,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           1
         )
         pointMarkersRef.current.forEach((marker, code) => {
-          const site = sites.find((s) => s.site_code === code)
+          const site = siteByCode.get(code)
           if (!site) return
           const totalQty = site.total_quantity_for_map ?? 0
           const rawState = siteStates?.get(code)
@@ -655,10 +716,19 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         })
       } else {
         const { mintPoints, mintStates } = props
+        const mintByZh = new Map(mintPoints.map((m) => [m.mint_zh, m]))
         const mintRange = mintDotSizeRange()
-        const maxScore = Math.max(...mintPoints.map((m) => mintImportanceScore(m, mintSizeBy)), 0)
+        // Max is over each mint's *effective* (filter-matched) metrics, so a
+        // partial match like 邯郸 sizes against other matched amounts, not
+        // against unrelated mint-wide totals.
+        const maxScore = Math.max(
+          ...mintPoints.map((m) =>
+            mintImportanceScore(m, mintSizeBy, mintSizeMetrics(m, mintStates?.get(m.mint_zh)))
+          ),
+          0
+        )
         pointMarkersRef.current.forEach((marker, mintZh) => {
-          const mint = mintPoints.find((m) => m.mint_zh === mintZh)
+          const mint = mintByZh.get(mintZh)
           if (!mint) return
           const rawState = mintStates?.get(mintZh)
           applyHeatMarkerStyle(
@@ -673,7 +743,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
             inCompare,
             showNoData,
-            mintSizePx(mint, mintSizeBy, maxScore, mintRange)
+            mintSizePx(mint, mintSizeBy, maxScore, mintRange, rawState)
           )
         })
       }
@@ -812,7 +882,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     let cancelled = false
 
     async function init() {
-      const { default: L } = await import('leaflet')
+      const L = await loadLeaflet()
       const {
         buildBaseLayers,
         addLayerControl,

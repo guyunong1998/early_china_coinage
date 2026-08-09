@@ -42,10 +42,10 @@
   --map-dot-qty-size-min: 14px;
   --map-dot-qty-size-max: 40px;
 
-  /* Mint Town importance sizing — wider than find-site dots so log-balanced
-     coin-total × find-count ranks stay visually distinct. */
-  --map-mint-qty-size-min: 10px;
-  --map-mint-qty-size-max: 56px;
+  /* Mint Town importance sizing — wider span so Find occurrences (and the
+     other size-by modes) can separate mid vs high ranks visually. */
+  --map-mint-qty-size-min: 6px;
+  --map-mint-qty-size-max: 48px;
 
   /* Overall opacity of the density heat-layer gradient (MapVisCanvas.tsx's
      density view mode, and the homepage's always-on CoinFilterMap density

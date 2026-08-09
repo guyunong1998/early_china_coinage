@@ -155,14 +155,17 @@ export function getMatchingHierarchyIds(
 export function coinMatchesTypologyFilter(
   coin: Pick<CoinIssueDisplay, 'coin_type_hierarchy_id' | 'inscription_id'>,
   hierarchyRows: CoinTypeHierarchyRow[],
-  sel: TypologyFilterSelection
+  sel: TypologyFilterSelection,
+  /** Optional precomputed hierarchy id set for `sel` — avoids re-scanning
+   * `hierarchyRows` on every coin when the caller is filtering in a loop. */
+  matchedHierarchyIds?: Set<string> | null
 ): boolean {
   if (!sel.level1) {
     if (!sel.inscriptionId) return false
     return coin.inscription_id === sel.inscriptionId
   }
 
-  const matchedIds = getMatchingHierarchyIds(hierarchyRows, sel)
+  const matchedIds = matchedHierarchyIds ?? getMatchingHierarchyIds(hierarchyRows, sel)
   if (!matchedIds || !coin.coin_type_hierarchy_id || !matchedIds.has(coin.coin_type_hierarchy_id)) return false
 
   if (sel.inscriptionId) return coin.inscription_id === sel.inscriptionId
@@ -178,7 +181,24 @@ export function getMatchingCoinIssueIds(
   sel: TypologyFilterSelection
 ): Set<string> | null {
   if (!hasTypologyFilter(sel)) return null
-  return new Set(coinIssues.filter((c) => coinMatchesTypologyFilter(c, hierarchyRows, sel)).map((c) => c.id))
+  if (!sel.level1) {
+    const ids = new Set<string>()
+    for (const c of coinIssues) {
+      if (c.inscription_id === sel.inscriptionId) ids.add(c.id)
+    }
+    return ids
+  }
+  // Compute hierarchy matches once — the previous filter()+coinMatches path
+  // re-scanned hierarchyRows for every coin issue.
+  const matchedHierarchyIds = getMatchingHierarchyIds(hierarchyRows, sel)
+  if (!matchedHierarchyIds) return new Set()
+  const ids = new Set<string>()
+  for (const c of coinIssues) {
+    if (!c.coin_type_hierarchy_id || !matchedHierarchyIds.has(c.coin_type_hierarchy_id)) continue
+    if (sel.inscriptionId && c.inscription_id !== sel.inscriptionId) continue
+    ids.add(c.id)
+  }
+  return ids
 }
 
 type SiteLevelFields = {
@@ -344,6 +364,107 @@ function buildTypologyOptionCounts(
   }
 }
 
+/**
+ * One-pass aggregation for dropdown option counts. The previous path called
+ * getMatchingCoinIssueIds + a full finds scan once per option, which made
+ * every typology dropdown change O(options × finds × hierarchy).
+ */
+function buildTypologyCountsFromFinds(
+  finds: HeatmapFind[],
+  coinIssues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  sel: TypologyFilterSelection,
+  mode: 'sites' | 'specimens'
+): TypologyOptionCounts {
+  const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
+  const hierarchyById = new Map(hierarchyRows.map((r) => [r.id, r]))
+  const levelPrefix = selectionPath(sel)
+
+  const levelMaps = new Map<number, Map<string, number | Set<string>>>()
+  for (let depth = 1; depth <= 5; depth++) levelMaps.set(depth, new Map())
+  const inscriptionMap = new Map<string, number | Set<string>>()
+
+  const addLevel = (depth: number, value: string, siteCode: string | null, qty: number) => {
+    const m = levelMaps.get(depth)!
+    if (mode === 'sites') {
+      if (!siteCode) return
+      let set = m.get(value) as Set<string> | undefined
+      if (!set) {
+        set = new Set()
+        m.set(value, set)
+      }
+      set.add(siteCode)
+    } else {
+      m.set(value, ((m.get(value) as number | undefined) ?? 0) + qty)
+    }
+  }
+
+  const addInscription = (inscriptionId: string, siteCode: string | null, qty: number) => {
+    if (mode === 'sites') {
+      if (!siteCode) return
+      let set = inscriptionMap.get(inscriptionId) as Set<string> | undefined
+      if (!set) {
+        set = new Set()
+        inscriptionMap.set(inscriptionId, set)
+      }
+      set.add(siteCode)
+    } else {
+      inscriptionMap.set(inscriptionId, ((inscriptionMap.get(inscriptionId) as number | undefined) ?? 0) + qty)
+    }
+  }
+
+  finds.forEach((find) => {
+    if (!find.coin_issues_id) return
+    const qty = mode === 'specimens' ? findQuantity(find) : 0
+    if (mode === 'specimens' && qty <= 0) return
+    const coin = coinIssueById.get(find.coin_issues_id)
+    if (!coin) return
+    const row = coin.coin_type_hierarchy_id ? hierarchyById.get(coin.coin_type_hierarchy_id) : undefined
+    const path = row ? rowPath(row) : []
+    const siteCode = find.site_code
+
+    for (let depth = 1; depth <= 5; depth++) {
+      // Same prefix rules as buildTypologyOptionCounts' levelSel: depth-1
+      // options ignore the current selection; deeper options require the
+      // staged levels above to be set and to match this coin's path.
+      let prefixOk = true
+      for (let i = 0; i < depth - 1; i++) {
+        const required = sel[LEVEL_KEYS[i]]
+        if (!required || path[i] !== required) {
+          prefixOk = false
+          break
+        }
+      }
+      if (!prefixOk) continue
+      const value = path[depth - 1]
+      if (!value) continue
+      addLevel(depth, value, siteCode, qty)
+    }
+
+    if (!coin.inscription_id) return
+    if (levelPrefix.length === 0) {
+      addInscription(coin.inscription_id, siteCode, qty)
+      return
+    }
+    if (pathStartsWith(path, levelPrefix)) {
+      addInscription(coin.inscription_id, siteCode, qty)
+    }
+  })
+
+  return {
+    level: (depth, value) => {
+      const entry = levelMaps.get(depth)?.get(value)
+      if (!entry) return 0
+      return mode === 'sites' ? (entry as Set<string>).size : (entry as number)
+    },
+    inscription: (inscriptionId) => {
+      const entry = inscriptionMap.get(inscriptionId)
+      if (!entry) return 0
+      return mode === 'sites' ? (entry as Set<string>).size : (entry as number)
+    },
+  }
+}
+
 /** Distinct find-site counts — used on Find Site, where "how many places"
  * is the natural read of the map. */
 export function buildTypologySiteCounts(
@@ -352,15 +473,7 @@ export function buildTypologySiteCounts(
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
-  return buildTypologyOptionCounts(sel, (matchSel) => {
-    const matchedIds = getMatchingCoinIssueIds(coinIssues, hierarchyRows, matchSel)
-    if (!matchedIds) return 0
-    const sites = new Set<string>()
-    finds.forEach((f) => {
-      if (f.coin_issues_id && f.site_code && matchedIds.has(f.coin_issues_id)) sites.add(f.site_code)
-    })
-    return sites.size
-  })
+  return buildTypologyCountsFromFinds(finds, coinIssues, hierarchyRows, sel, 'sites')
 }
 
 /** Total recorded specimen quantity (summed across matching finds, via the
@@ -374,15 +487,7 @@ export function buildTypologySpecimenCounts(
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
-  return buildTypologyOptionCounts(sel, (matchSel) => {
-    const matchedIds = getMatchingCoinIssueIds(coinIssues, hierarchyRows, matchSel)
-    if (!matchedIds) return 0
-    let total = 0
-    finds.forEach((f) => {
-      if (f.coin_issues_id && matchedIds.has(f.coin_issues_id)) total += findQuantity(f)
-    })
-    return total
-  })
+  return buildTypologyCountsFromFinds(finds, coinIssues, hierarchyRows, sel, 'specimens')
 }
 
 /** Coin_issues.id values matching ANY entry (OR logic, for Points/Density
@@ -394,9 +499,11 @@ export function getMatchingCoinIssueIdsMulti(
 ): Set<string> | null {
   if (entries.length === 0) return null
   const result = new Set<string>()
-  coinIssues.forEach((c) => {
-    if (entries.some((entry) => coinMatchesTypologyFilter(c, hierarchyRows, entry.sel))) result.add(c.id)
-  })
+  for (const entry of entries) {
+    const ids = getMatchingCoinIssueIds(coinIssues, hierarchyRows, entry.sel)
+    if (!ids) continue
+    ids.forEach((id) => result.add(id))
+  }
   return result
 }
 

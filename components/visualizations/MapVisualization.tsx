@@ -16,10 +16,11 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import {
   MapVisCanvas,
   mintImportanceScore,
+  mintSizeMetrics,
   type ComparePoint,
   type MintSizeBy,
   type PinPoint,
@@ -310,6 +311,13 @@ function useTypologyMultiSelect(
   )
 
   const stagedKey = useMemo(() => (hasTypologyFilter(staged) ? typologySelectionKey(staged) : null), [staged])
+  // Defer the live staged pick's map impact so the typology dropdowns stay
+  // responsive while matchedIds / marker restyle catch up a frame later.
+  const deferredStaged = useDeferredValue(staged)
+  const deferredStagedKey = useMemo(
+    () => (hasTypologyFilter(deferredStaged) ? typologySelectionKey(deferredStaged) : null),
+    [deferredStaged]
+  )
 
   const colorByValue = useMemo(() => {
     const map = new Map<string, string>()
@@ -321,12 +329,16 @@ function useTypologyMultiSelect(
   }, [order, slotById, stagedKey, stagedSlot])
 
   const entries = useMemo<TypologySelectionEntry[]>(() => {
-    if (!stagedKey || order.includes(stagedKey)) return committedEntries
+    if (!deferredStagedKey || order.includes(deferredStagedKey)) return committedEntries
     return [
       ...committedEntries,
-      { key: stagedKey, sel: staged, label: describeTypologySelection(staged, coinIssues, hierarchyRows) },
+      {
+        key: deferredStagedKey,
+        sel: deferredStaged,
+        label: describeTypologySelection(deferredStaged, coinIssues, hierarchyRows),
+      },
     ]
-  }, [committedEntries, stagedKey, order, staged, coinIssues, hierarchyRows])
+  }, [committedEntries, deferredStagedKey, order, deferredStaged, coinIssues, hierarchyRows])
 
   function addAnother() {
     if (!stagedKey || stagedSlot === null) return
@@ -1012,7 +1024,7 @@ export function MintTownVisualization({
   // The same aggregation narrowed to the active filter, used only to read
   // off each mint's matched coin count.
   const matchedStats = useMemo(
-    () => computeMintStatsFromFinds(finds, coinIssues, matchedIds, mints),
+    () => computeMintStatsFromFinds(finds, coinIssues, matchedIds, mints, { includeInscriptions: false }),
     [finds, coinIssues, matchedIds, mints]
   )
 
@@ -1024,29 +1036,33 @@ export function MintTownVisualization({
   // whole mint instead of per find-context.
   const mintStates = useMemo(() => {
     if (!matchedIds) return null
-    const matchedByMint = new Map(matchedStats.mapped.map((m) => [m.mint_zh, m.coinCount]))
+    const matchedByMint = new Map(matchedStats.mapped.map((m) => [m.mint_zh, m]))
     const states = new Map<string, SiteHeatState>()
     totalStats.mapped.forEach((mint) => {
       const total = mint.coinCount
-      const matched = matchedByMint.get(mint.mint_zh) ?? 0
+      const matched = matchedByMint.get(mint.mint_zh)
+      const matchedCoins = matched?.coinCount ?? 0
       // "no-data" means the active filter matches nothing at this mint —
       // not "this mint has zero coins recorded" (total is basically always
       // >0 for a mapped mint, which made foundInSummary's count constant
       // regardless of the filter).
-      if (matched <= 0) {
+      if (matchedCoins <= 0) {
         states.set(mint.mint_zh, { kind: 'no-data' })
         return
       }
-      if (matched >= total) {
+      if (matchedCoins >= total) {
         states.set(mint.mint_zh, { kind: 'pure' })
         return
       }
       states.set(mint.mint_zh, {
         kind: 'ratio',
-        ratio: matched / total,
-        matchedQty: matched,
+        ratio: matchedCoins / total,
+        matchedQty: matchedCoins,
         totalQty: total,
         contextCount: 1,
+        // Lets circle size follow the selected type's own find count at
+        // this mint (e.g. 邯郸) instead of the mint's overall finds.
+        matchedFindCount: matched?.findCount ?? 0,
       })
     })
     return states
@@ -1055,10 +1071,9 @@ export function MintTownVisualization({
   const density = useMemo(() => {
     const points = mintPoints.map((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      // Unfiltered density follows Size-by via the same log importance
-      // score as circle diameter (expm1 maps it back to a qty-like weight
-      // that heatWeight's log10 curve understands).
-      const score = mintImportanceScore(mint, sizeBy)
+      // Same filter-aware metrics as circle diameter (expm1 maps the log
+      // score back to a qty-like weight heatWeight's log10 curve understands).
+      const score = mintImportanceScore(mint, sizeBy, mintSizeMetrics(mint, state))
       const weightQty = Math.expm1(score)
       return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, weightQty) }
     })
@@ -1455,25 +1470,28 @@ export function AnsMintTownVisualization({
 
   const mintStates = useMemo(() => {
     if (!matchedSpecimens) return null
-    const matchedByMint = new Map(matchedStats.mapped.map((m) => [m.mint_zh, m.coinCount]))
+    const matchedByMint = new Map(matchedStats.mapped.map((m) => [m.mint_zh, m]))
     const states = new Map<string, SiteHeatState>()
     totalStats.mapped.forEach((mint) => {
       const total = mint.coinCount
-      const matched = matchedByMint.get(mint.mint_zh) ?? 0
-      if (matched <= 0) {
+      const matched = matchedByMint.get(mint.mint_zh)
+      const matchedCoins = matched?.coinCount ?? 0
+      if (matchedCoins <= 0) {
         states.set(mint.mint_zh, { kind: 'no-data' })
         return
       }
-      if (matched >= total) {
+      if (matchedCoins >= total) {
         states.set(mint.mint_zh, { kind: 'pure' })
         return
       }
       states.set(mint.mint_zh, {
         kind: 'ratio',
-        ratio: matched / total,
-        matchedQty: matched,
+        ratio: matchedCoins / total,
+        matchedQty: matchedCoins,
         totalQty: total,
         contextCount: 1,
+        // ANS treats each specimen as one find, so findCount === coinCount.
+        matchedFindCount: matched?.findCount ?? matchedCoins,
       })
     })
     return states
@@ -1482,7 +1500,8 @@ export function AnsMintTownVisualization({
   const density = useMemo(() => {
     const points = mintPoints.map((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, mint.totalQty) }
+      const { coins } = mintSizeMetrics(mint, state)
+      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, coins) }
     })
     return buildDensityLayer(points)
   }, [mintPoints, mintStates])
