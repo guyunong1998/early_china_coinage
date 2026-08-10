@@ -11,7 +11,7 @@ import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
 import { displayValue, formatNumber, splitCsv } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
-import { getAllSites, getCoinIssues, getFindsForHeatmap, searchSites } from '@/lib/queries'
+import { getAllSites, getCoinIssues, getFindsForSiteCodes, searchSites } from '@/lib/queries'
 import type { HeatmapFind } from '@/lib/types'
 import {
   buildFacetOptions,
@@ -84,7 +84,8 @@ function toArray(value: string | string[] | undefined): string[] {
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const q = params.q ?? ''
+  // Trim so whitespace-only q doesn't call searchSites([]) and show "no results".
+  const q = (params.q ?? '').trim()
   const precision = parsePrecisionFilter(params.precision)
 
   const filters: FilterState = {
@@ -109,10 +110,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const currentPage = Math.max(1, Number(params.page) || 1)
 
-  const [baseResults, coinIssues, allFinds] = await Promise.all([
+  const [baseResults, coinIssues] = await Promise.all([
     q ? searchSites(q) : getAllSites(),
     getCoinIssues(),
-    getFindsForHeatmap(),
   ])
 
   // English lookups so filter items can show both languages regardless of
@@ -190,6 +190,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const page = Math.min(currentPage, totalPages)
   const pageResults = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // Only the visible page's finds are needed for per-card pies — avoid
+  // pulling the entire finds table on every search request.
+  const allFinds = await getFindsForSiteCodes(pageResults.map((s) => s.site_code))
 
   // Simplified per-site pie data (level2 coin type only, no inscription
   // breakdown) for the visible page — cheap since it's just an in-memory

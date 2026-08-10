@@ -19,11 +19,17 @@ export function SearchableCheckboxList({
 
   return (
     <div>
+      {/* type="text" + Enter preventDefault: this box only filters the checkbox
+          list. type="search" inside the outer /search form made Enter submit
+          the page and discard the typed filter text (felt like search was broken). */}
       <input
-        type="search"
+        type="text"
         placeholder={t('filters.searchPlaceholder')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.preventDefault()
+        }}
         className="mb-2 w-full rounded border border-brand/30 px-2 py-1.5 text-sm outline-none focus:border-brand"
       />
       <div className="max-h-52 space-y-1 overflow-y-auto">

@@ -184,14 +184,34 @@ export function flattenPeriod(row: any) {
 }
 
 async function attachPeriods(sites: MapSite[]): Promise<SearchSite[]> {
-  const { data, error } = await supabase.from('sites').select('site_code, periods(period_zh, period_en)')
-  if (error) throw error
+  try {
+    // Paginate — sites exceed PostgREST's default 1000-row cap, and a single
+    // unpaginated select silently dropped periods for later rows.
+    const data = await fetchAllPages<{
+      site_code: string
+      periods:
+        | { period_zh: string | null; period_en: string | null }
+        | { period_zh: string | null; period_en: string | null }[]
+        | null
+    }>((from, to) =>
+      supabase
+        .from('sites')
+        .select('site_code, periods(period_zh, period_en)')
+        .order('site_code')
+        .range(from, to)
+    )
 
-  const periodBySiteCode = new Map((data ?? []).map((row) => [row.site_code, flattenPeriod(row)]))
-  return sites.map((site) => {
-    const period = periodBySiteCode.get(site.site_code)
-    return { ...site, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
-  })
+    const periodBySiteCode = new Map(data.map((row) => [row.site_code, flattenPeriod(row)]))
+    return sites.map((site) => {
+      const period = periodBySiteCode.get(site.site_code)
+      return { ...site, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
+    })
+  } catch (err) {
+    // Don't take down /search (or any attachPeriods caller) if the periods
+    // embed/migration is missing — degrade to null periods instead.
+    console.error('attachPeriods failed; continuing without period labels:', err)
+    return sites.map((site) => ({ ...site, period_zh: null, period_en: null }))
+  }
 }
 
 function textIncludes(value: string | null | undefined, query: string): boolean {
@@ -462,9 +482,17 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
       textIncludes(site.level3_types_zh, trimmed) ||
       textIncludes(site.level4_types_zh, trimmed) ||
       textIncludes(site.level5_types_zh, trimmed) ||
+      textIncludes(site.level1_types_en, trimmed) ||
+      textIncludes(site.level2_types_en, trimmed) ||
+      textIncludes(site.level3_types_en, trimmed) ||
+      textIncludes(site.level4_types_en, trimmed) ||
+      textIncludes(site.level5_types_en, trimmed) ||
       textIncludes(site.inscriptions, trimmed) ||
+      textIncludes(site.inscriptions_en, trimmed) ||
       textIncludes(site.states_zh, trimmed) ||
+      textIncludes(site.states_en, trimmed) ||
       textIncludes(site.mints_zh, trimmed) ||
+      textIncludes(site.mints_en, trimmed) ||
       textIncludes(site.site_code, trimmed)
 
     if (directMatch) return true
@@ -666,18 +694,62 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
       .range(from, to)
   )
 
-  return rows.map((row) => {
-    const context = Array.isArray(row.contexts) ? row.contexts[0] : row.contexts
-    return {
-      coin_issues_id: row.coin_issues_id,
-      context_code: row.context_code,
-      quantity_total: row.quantity_total,
-      quantity_min: row.quantity_min,
-      quantity_estimated: row.quantity_estimated,
-      presence: typeof row.presence === 'boolean' ? row.presence : null,
-      site_code: context?.site_code ?? '',
-    }
-  })
+  return rows.map(mapHeatmapFindRow)
+}
+
+/** Same shape as getFindsForHeatmap, but only finds whose context belongs to
+ * one of `siteCodes` — used by /search so result-list pies don't force a
+ * full finds table scan on every query. */
+export async function getFindsForSiteCodes(siteCodes: string[]): Promise<HeatmapFind[]> {
+  if (siteCodes.length === 0) return []
+  const unique = [...new Set(siteCodes.filter(Boolean))]
+  // PostgREST `.in` URL length grows with the list; chunk to stay safe.
+  const CHUNK = 200
+  const all: HeatmapFind[] = []
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK)
+    const rows = await fetchAllPages<{
+      coin_issues_id: string | null
+      context_code: string | null
+      quantity_total: number | null
+      quantity_min: number | null
+      quantity_estimated: number | null
+      presence: string | boolean | null
+      contexts: { site_code: string } | { site_code: string }[]
+    }>((from, to) =>
+      supabase
+        .from('finds')
+        .select(
+          'coin_issues_id, context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
+        )
+        .in('contexts.site_code', chunk)
+        .order('find_code')
+        .range(from, to)
+    )
+    all.push(...rows.map(mapHeatmapFindRow))
+  }
+  return all
+}
+
+function mapHeatmapFindRow(row: {
+  coin_issues_id: string | null
+  context_code: string | null
+  quantity_total: number | null
+  quantity_min: number | null
+  quantity_estimated: number | null
+  presence: string | boolean | null
+  contexts: { site_code: string } | { site_code: string }[]
+}): HeatmapFind {
+  const context = Array.isArray(row.contexts) ? row.contexts[0] : row.contexts
+  return {
+    coin_issues_id: row.coin_issues_id,
+    context_code: row.context_code,
+    quantity_total: row.quantity_total,
+    quantity_min: row.quantity_min,
+    quantity_estimated: row.quantity_estimated,
+    presence: typeof row.presence === 'boolean' ? row.presence : null,
+    site_code: context?.site_code ?? '',
+  }
 }
 
 export type MintTypeOption = {
