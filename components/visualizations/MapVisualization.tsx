@@ -1344,7 +1344,7 @@ function MuseumMapOverlay({
               onChange={onTabChange}
               options={[
                 { value: 'mint' as const, label: <T k="visualizations.tabs.mintTown" /> },
-                { value: 'search' as const, label: <T k="search.title" /> },
+                { value: 'search' as const, label: <T k="museum.tabs.search" /> },
               ]}
             />
           </div>

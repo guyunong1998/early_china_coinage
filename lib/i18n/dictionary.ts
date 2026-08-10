@@ -7,7 +7,7 @@ export const DICTIONARY = {
 
   // ── header / nav ──────────────────────────────────────────────────────
   'nav.about': { en: 'About', zh: '关于' },
-  'nav.search': { en: 'Browse', zh: '搜索' },
+  'nav.search': { en: 'Search', zh: '搜索' },
   'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Museum Collections', zh: '博物馆藏品' },
@@ -25,7 +25,7 @@ export const DICTIONARY = {
     zh: '先秦至汉初中国钱币出土记录检索——遗址、出土单位、类型学与地理分布。',
   },
   'hero.searchHint': {
-    en: 'Search, sort, and filter find sites…',
+    en: 'Search by site name, province, coin type, inscription, or site code.',
     zh: '可按遗址名称、省份、币种、铭文或遗址编号搜索。',
   },
 
@@ -109,13 +109,13 @@ export const DICTIONARY = {
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
 
   // ── search page ───────────────────────────────────────────────────────
-  'search.title': { en: 'Browse Find Sites', zh: '搜索' },
+  'search.title': { en: 'Search', zh: '搜索' },
   'search.description': {
     en: 'Browse sites by name, province, coin type, inscription, or site code.',
     zh: '按遗址名称、省份、币种、铭文或遗址编号浏览。',
   },
   'search.placeholder': {
-    en: 'Search, sort, and filter find sites…',
+    en: 'Search by site, province, type, inscription…',
     zh: '按遗址、省份、币种、铭文搜索…',
   },
   'search.placeholderCompact': { en: 'Search sites…', zh: '搜索遗址…' },
@@ -304,6 +304,10 @@ export const DICTIONARY = {
   },
 
   // ── museum collections page ──────────────────────────────────────────────
+  // Museum Collections in-panel tabs (Mint Town vs accession-number Search).
+  // Kept separate from search.title so renaming the find-site Search page
+  // never relabels this tab again.
+  'museum.tabs.search': { en: 'Search', zh: '搜索' },
   'museum.search.hint': {
     en: 'Search ANS museum specimens by accession number. Each result links to its record in the ANS Online Collection.',
     zh: '按藏品编号搜索 ANS 博物馆标本。每条结果链接至其在 ANS 在线藏品库中的记录。',
