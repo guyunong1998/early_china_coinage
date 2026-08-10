@@ -17,10 +17,10 @@ export const metadata = {
   description: 'Every documented coin type, grouped by the typology hierarchy, with find-site counts.',
 }
 
-// Same "spade, knife & round coins compared" demo the homepage carousel
-// leads with — its screenshot doubles as this page's map preview since the
-// subject matches (a coin-type Compare view), rather than rendering a
-// second live map just to sit unfiltered.
+// Same "spade, knife, round & ant-nose coins compared" demo the homepage
+// carousel leads with — its screenshot doubles as this page's map preview
+// since the subject matches (a coin-type Compare view), rather than
+// rendering a second live map just to sit unfiltered.
 const OVERVIEW_DEMO = DEMO_VISUALIZATIONS.find((d) => d.id === 'spade-knife-round-compare')!
 
 export default async function CoinTypesPage() {

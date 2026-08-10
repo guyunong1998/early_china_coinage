@@ -54,10 +54,13 @@ export type DemoVisualization = {
 export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
   {
     id: 'spade-knife-round-compare',
-    title: { zh: '布币、刀币、圜钱对比', en: 'Spade, knife & round coins compared' },
+    title: {
+      zh: '布币、刀币、圜钱、蚁鼻钱对比',
+      en: 'Spade, knife, round & ant-nose coins compared',
+    },
     description: {
-      zh: '对比布币、刀币、圜钱三大币种在各出土遗址中的分布情况',
-      en: 'Compares spade, knife, and round coin distributions across every recorded find site',
+      zh: '对比布币、刀币、圜钱、蚁鼻钱在各出土遗址中的分布情况',
+      en: 'Compares spade, knife, round, and ant-nose coin distributions across every recorded find site',
     },
     via: {
       zh: '按币种，对比视图',
@@ -68,7 +71,12 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
       page: 'find-site',
       mode: 'type',
       view: 'compare',
-      types: [typeSel('钱币', '布币'), typeSel('钱币', '刀币'), typeSel('钱币', '圜钱')],
+      types: [
+        typeSel('钱币', '布币'),
+        typeSel('钱币', '刀币'),
+        typeSel('钱币', '圜钱'),
+        typeSel('钱币', '蚁鼻钱'),
+      ],
     },
   },
   {
