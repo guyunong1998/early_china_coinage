@@ -11,7 +11,7 @@ import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
 import { displayValue, formatNumber, splitCsv } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
-import { getAllSites, getCoinIssues, getFindsForSiteCodes, searchSites } from '@/lib/queries'
+import { filterSitesByQuery, getAllSites, getCoinIssues, getFindsForSiteCodes } from '@/lib/queries'
 import type { HeatmapFind } from '@/lib/types'
 import {
   buildFacetOptions,
@@ -29,6 +29,11 @@ import {
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const PAGE_SIZE = 20
+
+// Vercel serverless default can be too tight when /search cold-loads the full
+// site + coin_issues catalogs; give the route breathing room on plans that
+// allow it (ignored on shorter-cap hobby tiers).
+export const maxDuration = 60
 
 // Same glossary/format used by the map popups (CoinMap.tsx, CoinFilterMap.tsx,
 // CoinTypeHeatmapMap.tsx) so the result list matches what clicking a dot shows.
@@ -110,10 +115,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const currentPage = Math.max(1, Number(params.page) || 1)
 
-  const [baseResults, coinIssues] = await Promise.all([
-    q ? searchSites(q) : getAllSites(),
-    getCoinIssues(),
-  ])
+  // Fetch each catalog once — never call searchSites() here (it re-fetches
+  // both), which previously doubled Supabase work and timed out on Vercel.
+  const [allSites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
+  const baseResults = q ? filterSitesByQuery(allSites, coinIssues, q) : allSites
 
   // English lookups so filter items can show both languages regardless of
   // the UI language toggle (which only affects labels/buttons/descriptions).
@@ -375,7 +380,51 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 <T k="map.title" />
               </div>
               <div className="panel-body overflow-hidden">
-                <CoinMapSection sites={filtered} height="360px" fitBounds />
+                {/* Slim payload for the client map — full SearchSite rows for
+                    every hit bloat the RSC response (~1–2MB) and can stall
+                    the browser / Vercel edge when opening unfiltered /search. */}
+                <CoinMapSection
+                  sites={filtered
+                    .filter((s) => s.lat != null && s.lng != null)
+                    .map((s) => ({
+                      site_code: s.site_code,
+                      site_name_zh: s.site_name_zh,
+                      site_name_en: s.site_name_en,
+                      province_zh: s.province_zh,
+                      province_en: s.province_en,
+                      city_zh: s.city_zh,
+                      city_en: s.city_en,
+                      county_zh: s.county_zh,
+                      county_en: s.county_en,
+                      location_detail_zh: s.location_detail_zh,
+                      location_detail_en: s.location_detail_en,
+                      lat: s.lat,
+                      lng: s.lng,
+                      precision_level: s.precision_level,
+                      site_type_zh: s.site_type_zh,
+                      site_type_en: s.site_type_en,
+                      find_record_count: s.find_record_count,
+                      total_quantity_for_map: s.total_quantity_for_map,
+                      level1_types_zh: null,
+                      level2_types_zh: s.level2_types_zh,
+                      level3_types_zh: null,
+                      level4_types_zh: null,
+                      level5_types_zh: null,
+                      level1_types_en: null,
+                      level2_types_en: null,
+                      level3_types_en: null,
+                      level4_types_en: null,
+                      level5_types_en: null,
+                      inscriptions: null,
+                      states_zh: null,
+                      mints_zh: null,
+                      inscriptions_en: null,
+                      states_en: null,
+                      mints_en: null,
+                    }))}
+                  height="360px"
+                  fitBounds
+                />
               </div>
             </div>
 

@@ -448,11 +448,16 @@ export async function getSources(sourceCodes: string[]): Promise<Source[]> {
  * 2. Site period isn't on the view at all — it's joined in from `sites` — so it
  *    can't be expressed as a single SQL OR clause against v_coin_map_sites.
  */
-export async function searchSites(query: string): Promise<SearchSite[]> {
+/** Pure filter used by /search — keeps network IO in the page so sites +
+ * coinIssues are fetched once (searchSites used to re-fetch both, which
+ * could push Vercel hobby's ~10s function limit and make /search hang). */
+export function filterSitesByQuery(
+  sites: SearchSite[],
+  coinIssues: CoinIssueDisplay[],
+  query: string
+): SearchSite[] {
   const trimmed = query.trim().toLowerCase()
-  if (!trimmed) return []
-
-  const [sites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
+  if (!trimmed) return sites
 
   const zhTerms = new Set<string>()
   coinIssues.forEach((c) => {
@@ -510,6 +515,13 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
         splitCsv(site.mints_zh).includes(term)
     )
   })
+}
+
+export async function searchSites(query: string): Promise<SearchSite[]> {
+  const trimmed = query.trim()
+  if (!trimmed) return []
+  const [sites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
+  return filterSitesByQuery(sites, coinIssues, trimmed)
 }
 
 export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
@@ -699,36 +711,72 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
 
 /** Same shape as getFindsForHeatmap, but only finds whose context belongs to
  * one of `siteCodes` — used by /search so result-list pies don't force a
- * full finds table scan on every query. */
+ * full finds table scan on every query.
+ *
+ * Two-step (contexts → finds by context_code) instead of nested
+ * `.in('contexts.site_code', …)`, which is unreliable/slow on PostgREST and
+ * was a likely cause of Vercel function timeouts on /search. */
 export async function getFindsForSiteCodes(siteCodes: string[]): Promise<HeatmapFind[]> {
   if (siteCodes.length === 0) return []
   const unique = [...new Set(siteCodes.filter(Boolean))]
-  // PostgREST `.in` URL length grows with the list; chunk to stay safe.
-  const CHUNK = 200
-  const all: HeatmapFind[] = []
-  for (let i = 0; i < unique.length; i += CHUNK) {
-    const chunk = unique.slice(i, i + CHUNK)
-    const rows = await fetchAllPages<{
-      coin_issues_id: string | null
-      context_code: string | null
-      quantity_total: number | null
-      quantity_min: number | null
-      quantity_estimated: number | null
-      presence: string | boolean | null
-      contexts: { site_code: string } | { site_code: string }[]
-    }>((from, to) =>
-      supabase
-        .from('finds')
-        .select(
-          'coin_issues_id, context_code, quantity_total, quantity_min, quantity_estimated, presence, contexts!inner(site_code)'
-        )
-        .in('contexts.site_code', chunk)
-        .order('find_code')
-        .range(from, to)
-    )
-    all.push(...rows.map(mapHeatmapFindRow))
+  const CHUNK = 150
+
+  try {
+    const siteByContext = new Map<string, string>()
+    for (let i = 0; i < unique.length; i += CHUNK) {
+      const siteChunk = unique.slice(i, i + CHUNK)
+      const contexts = await fetchAllPages<{ context_code: string; site_code: string }>((from, to) =>
+        supabase
+          .from('contexts')
+          .select('context_code, site_code')
+          .in('site_code', siteChunk)
+          .order('context_code')
+          .range(from, to)
+      )
+      contexts.forEach((c) => {
+        if (c.context_code) siteByContext.set(c.context_code, c.site_code)
+      })
+    }
+
+    const contextCodes = [...siteByContext.keys()]
+    if (contextCodes.length === 0) return []
+
+    const all: HeatmapFind[] = []
+    for (let i = 0; i < contextCodes.length; i += CHUNK) {
+      const contextChunk = contextCodes.slice(i, i + CHUNK)
+      const rows = await fetchAllPages<{
+        coin_issues_id: string | null
+        context_code: string | null
+        quantity_total: number | null
+        quantity_min: number | null
+        quantity_estimated: number | null
+        presence: string | boolean | null
+      }>((from, to) =>
+        supabase
+          .from('finds')
+          .select('coin_issues_id, context_code, quantity_total, quantity_min, quantity_estimated, presence')
+          .in('context_code', contextChunk)
+          .order('find_code')
+          .range(from, to)
+      )
+      rows.forEach((row) => {
+        all.push({
+          coin_issues_id: row.coin_issues_id,
+          context_code: row.context_code,
+          quantity_total: row.quantity_total,
+          quantity_min: row.quantity_min,
+          quantity_estimated: row.quantity_estimated,
+          presence: typeof row.presence === 'boolean' ? row.presence : null,
+          site_code: (row.context_code && siteByContext.get(row.context_code)) || '',
+        })
+      })
+    }
+    return all
+  } catch (err) {
+    // Pies are optional chrome — never take down /search if this path fails.
+    console.error('getFindsForSiteCodes failed; continuing without result pies:', err)
+    return []
   }
-  return all
 }
 
 function mapHeatmapFindRow(row: {
