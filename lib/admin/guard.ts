@@ -38,14 +38,30 @@ export async function assertAuthorized(): Promise<void> {
 }
 
 /**
- * Client to use for admin writes. Locally there's no login to scope a
- * session to, so writes go through the service-role client (bypasses RLS)
- * exactly as before. In production, writes go through the caller's own
- * session-scoped client instead -- RLS write policies + is_admin() are the
- * real gate there, not this client's identity -- so SUPABASE_SERVICE_ROLE_KEY
- * is never read in production (see getSupabaseAdmin's lazy construction).
+ * Client to use for admin writes.
+ *
+ * - Production: caller's session-scoped client; RLS + is_admin() enforce.
+ * - Dev with SUPABASE_SERVICE_ROLE_KEY: service-role client (no login).
+ * - Dev without that key: fall back to a signed-in admin session if present;
+ *   otherwise throw a clear setup error (instead of createClient's cryptic
+ *   "supabaseKey is required", which crashed Add citation with a 500).
  */
 export async function getWriteClient() {
-  if (process.env.NODE_ENV !== 'production') return getSupabaseAdmin()
-  return createServerSupabaseClient()
+  if (process.env.NODE_ENV === 'production') {
+    return createServerSupabaseClient()
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (serviceRoleKey) return getSupabaseAdmin()
+
+  const sessionClient = await createServerSupabaseClient()
+  const { data: claims } = await sessionClient.auth.getClaims()
+  if (claims?.claims?.email) {
+    const { data, error } = await sessionClient.rpc('is_admin')
+    if (!error && data === true) return sessionClient
+  }
+
+  throw new Error(
+    'Local editing needs SUPABASE_SERVICE_ROLE_KEY in .env.local (Supabase → Project Settings → API → service_role), or sign in as an admin. Restart npm run dev after adding the key.'
+  )
 }

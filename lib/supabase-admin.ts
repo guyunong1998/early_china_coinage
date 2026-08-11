@@ -21,8 +21,16 @@ let cached: SupabaseClient | null = null
  */
 export function getSupabaseAdmin(): SupabaseClient {
   if (!cached) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+    if (!supabaseUrl || !serviceRoleKey) {
+      // createClient(url, undefined) throws a cryptic "supabaseKey is required"
+      // — surface the real fix instead so Add citation / other admin forms
+      // can show it as a formError.
+      throw new Error(
+        'Missing SUPABASE_SERVICE_ROLE_KEY in .env.local. Copy the service_role key from Supabase → Project Settings → API, then restart npm run dev.'
+      )
+    }
     cached = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })

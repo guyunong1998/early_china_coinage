@@ -24,6 +24,7 @@ Required environment variables (`.env.local`, see that file for the current temp
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (required for **local** admin editing — Add citation, create/edit sources, etc. Get it from Supabase → Project Settings → API → `service_role`. Never expose this key in client code or commit it.)
 - `GOOGLE_SHEET_MINTS_CSV_URL` (optional — `/mints` falls back to the static local mint dossier list without it)
 
 Other scripts: `npm run build`, `npm run start`, `npm run lint`.

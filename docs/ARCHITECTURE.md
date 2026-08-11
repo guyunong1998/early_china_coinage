@@ -227,6 +227,7 @@ Vercel, deploying this Next.js App Router project with no custom configuration (
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (local admin writes only — Add citation / edit forms; never ship to the browser)
 - `GOOGLE_SHEET_MINTS_CSV_URL` (optional — `/mints` falls back to the static `MINT_TOWNS` list without it)
 
 Most pages render per-request (dynamic Server Components hitting Supabase live); `/mints` opts into ISR (`export const revalidate = 3600`) since its Google Sheets source changes rarely. There are no serverless/edge functions beyond what Next.js's own RSC rendering provides — the whole "backend" is those server components plus Supabase.
