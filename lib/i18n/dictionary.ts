@@ -7,7 +7,7 @@ export const DICTIONARY = {
 
   // ── header / nav ──────────────────────────────────────────────────────
   'nav.about': { en: 'About', zh: '关于' },
-  'nav.search': { en: 'Search', zh: '搜索' },
+  'nav.search': { en: 'Browse', zh: '搜索' },
   'nav.map': { en: 'Map Visualizations', zh: '地图可视化' },
   'nav.mints': { en: 'Mints', zh: '铸币地' },
   'nav.spadeHeatmap': { en: 'Museum Collections', zh: '博物馆藏品' },
