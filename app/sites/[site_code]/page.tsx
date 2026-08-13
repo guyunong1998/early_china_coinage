@@ -152,6 +152,48 @@ function biBlock(zh: string | null | undefined, en: string | null | undefined) {
   )
 }
 
+type BilingualPair = { zh: string; en: string | null }
+
+/** Distinct zh→en pairs pulled straight off each find's own coin_issues
+ * join — unlike the pre-joined `inscriptions`/`states_zh` CSV columns on
+ * the map-summary view (two independently aggregated strings with no
+ * guaranteed shared ordering), pairing zh and en from the same row is
+ * always correct. */
+function collectPairs(items: { zh: string | null | undefined; en: string | null | undefined }[]): BilingualPair[] {
+  const seen = new Map<string, string | null>()
+  items.forEach(({ zh, en }) => {
+    const z = zh?.trim()
+    if (z && !seen.has(z)) seen.set(z, en?.trim() || null)
+  })
+  return [...seen.entries()]
+    .map(([zh, en]) => ({ zh, en }))
+    .sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
+}
+
+/** A '、'-joined list of "zh (en)" pairs — same per-item reading as
+ * linkedList's coin-type/mint labels, for fields (inscriptions, states)
+ * that don't resolve to a linkable detail page of their own. */
+function bilingualList(pairs: BilingualPair[]) {
+  if (pairs.length === 0) return <span className="text-gray-400">—</span>
+  return (
+    <>
+      {pairs.map(({ zh, en }, i) => (
+        <span key={zh}>
+          {i > 0 && '、'}
+          <span className="text-gray-800">{zh}</span>
+          {en && en !== zh && <span className="ml-1 text-xs italic text-gray-400">({en})</span>}
+        </span>
+      ))}
+    </>
+  )
+}
+
+/** level1 buckets ('钱币' Coin, '钱范' Coin Mould) are the taxonomy's generic
+ * top category, not a specific type — every other classification label on
+ * a site is already one of their descendants, so showing these alongside
+ * them is redundant noise rather than information. */
+const GENERIC_LEVEL1_LABELS = new Set(['钱币', '钱范'])
+
 /** Union of the site's populated coin_type_hierarchy levels (level1..level5 —
  * Coin/Mould, Category, Type, Subtype, Variant), deduped and flattened into
  * one bilingual list — the level split is a taxonomy implementation detail,
@@ -252,8 +294,14 @@ export default async function SitePage({ params }: PageProps) {
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
   const classification = mergeLevelTypes(summary)
-  const classificationItems = classification.zh ? classification.zh.split('、') : []
+  const classificationItems = classification.zh
+    ? classification.zh.split('、').filter((label) => !GENERIC_LEVEL1_LABELS.has(label))
+    : []
   const mintItems = splitCsv(summary?.mints_zh)
+  const inscriptionPairs = collectPairs(
+    finds.map((f) => ({ zh: f.coin_issues?.inscription, en: f.coin_issues?.inscription_en }))
+  )
+  const statePairs = collectPairs(finds.map((f) => ({ zh: f.coin_issues?.state_zh, en: f.coin_issues?.state_en })))
 
   function resolveCoinType(labelZh: string) {
     const node = catalogNodes
@@ -266,6 +314,26 @@ export default async function SitePage({ params }: PageProps) {
     const mint = findMintByNameZh(mints, labelZh)
     return { en: mint?.name_en ?? null, href: mint ? `/mints/${mint.mint_code}` : null }
   }
+
+  // For linking each find row's Type/Mint cell in the Finds tab straight to
+  // its /coin-types and /mints record, keyed by the ids coin_issues already
+  // carries rather than by label text (exact, no name-matching ambiguity).
+  // A hierarchy_id can belong to more than one node's matchedHierarchyIds
+  // (a node and its ancestors) — keep the deepest, same tie-break as
+  // resolveCoinType above.
+  const deepestNodeByHierarchyId = new Map<string, (typeof catalogNodes)[number]>()
+  catalogNodes.forEach((node) => {
+    node.matchedHierarchyIds.forEach((id) => {
+      const existing = deepestNodeByHierarchyId.get(id)
+      if (!existing || LEVEL_RANK[node.level] > LEVEL_RANK[existing.level]) {
+        deepestNodeByHierarchyId.set(id, node)
+      }
+    })
+  })
+  const coinTypeHrefByHierarchyId = new Map(
+    [...deepestNodeByHierarchyId.entries()].map(([id, node]) => [id, `/coin-types/${node.slug}`])
+  )
+  const mintHrefByMintId = new Map(mints.map((m) => [m.id, `/mints/${m.mint_code}`]))
 
   const mintOrigins =
     summary?.lat != null && summary.lng != null ? buildMintOrigins(finds, mints) : null
@@ -343,7 +411,7 @@ export default async function SitePage({ params }: PageProps) {
 
           {/* Keep description area visible: prefer remark, fallback to description */}
           <div className="mt-4 border-t border-gray-100 pt-3 text-sm">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-700">
               <T k="site.descriptionLabel" />
             </p>
             {biBlock(infoTextZh, infoTextEn)}
@@ -356,10 +424,10 @@ export default async function SitePage({ params }: PageProps) {
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
               <Row labelKey="site.row.classification">{linkedList(classificationItems, resolveCoinType)}</Row>
-              <Row labelKey="siteTabs.row.inscriptions">{bi(summary?.inscriptions, summary?.inscriptions_en)}</Row>
+              <Row labelKey="siteTabs.row.inscriptions">{bilingualList(inscriptionPairs)}</Row>
             </dl>
             <dl>
-              <Row labelKey="siteTabs.row.states">{bi(summary?.states_zh, summary?.states_en)}</Row>
+              <Row labelKey="siteTabs.row.states">{bilingualList(statePairs)}</Row>
               <Row labelKey="siteTabs.row.mints">{linkedList(mintItems, resolveMint)}</Row>
               <Row labelKey="siteTabs.row.precision" hintKey="siteTabs.row.precisionHint">
                 {formatNumber(site.precision_level ?? summary?.precision_level)}
@@ -421,6 +489,8 @@ export default async function SitePage({ params }: PageProps) {
           structuredSourceLinks={structuredSourceLinks}
           sourcesByCode={sourcesByCode}
           resolvedTargets={resolvedTargets}
+          coinTypeHrefByHierarchyId={coinTypeHrefByHierarchyId}
+          mintHrefByMintId={mintHrefByMintId}
         />
       </div>
     </div>

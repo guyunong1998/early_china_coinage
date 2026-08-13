@@ -93,23 +93,6 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
           </ul>
         </div>
       </div>
-
-      <div className="border-t border-dashed border-brand/30 bg-gray-50 px-4 py-3">
-        <p className="text-xs text-gray-500">
-          <strong className="text-gray-700">How to add content:</strong> Everything shown on this
-          page — description, geolocation, state, modern location, location note, sources, and
-          images — lives directly on the{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">mints</code> /{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">images</code> tables
-          in Supabase. Edit the row for{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">{mint.mint_code}</code>{' '}
-          there, and place new image files in{' '}
-          <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-            public/images/mints/
-          </code>
-          .
-        </p>
-      </div>
     </section>
   )
 }

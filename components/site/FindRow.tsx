@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { createFind, deleteFind, updateFind } from '@/lib/admin/sites-actions'
 import type { ActionState } from '@/lib/admin/types'
 import type { Find } from '@/lib/types'
@@ -20,6 +21,19 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
       {a}
       <span className="ml-2 text-sm italic text-gray-400">{b}</span>
     </span>
+  )
+}
+
+/** Wraps `bi(...)`'s content in a link when `href` resolves, so a find
+ * row's Type/Mint cell reads the same "zh (en)" way whether or not it's
+ * clickable — only the hover color/underline changes. */
+function biLinked(zh: string | null | undefined, en: string | null | undefined, href: string | null) {
+  const content = bi(zh, en)
+  if (!href) return content
+  return (
+    <Link href={href} className="hover:text-brand hover:underline">
+      {content}
+    </Link>
   )
 }
 
@@ -48,6 +62,8 @@ export function FindRow({
   contextOptions,
   isDevMode,
   coinIssueOptions,
+  coinTypeHrefByHierarchyId,
+  mintHrefByMintId,
   onSaved,
   onDeleted,
   isNew = false,
@@ -62,6 +78,13 @@ export function FindRow({
   contextOptions: { context_code: string; label: string }[]
   isDevMode: boolean
   coinIssueOptions: ComboOption[]
+  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[slug], for
+   * linking the Type cell. Omitted rows (or unmatched ids) render as
+   * plain text. */
+  coinTypeHrefByHierarchyId?: Map<string, string>
+  /** find.coin_issues.mint_id → /mints/[mint_code], for linking the Mint
+   * cell. */
+  mintHrefByMintId?: Map<string, string>
   onSaved?: (find: Find) => void
   onDeleted?: () => void
   isNew?: boolean
@@ -90,20 +113,26 @@ export function FindRow({
       onDeleted,
     })
 
+  const typeHref = current.coin_issues?.coin_type_hierarchy_id
+    ? coinTypeHrefByHierarchyId?.get(current.coin_issues.coin_type_hierarchy_id) ?? null
+    : null
+  const mintHref = current.coin_issues?.mint_id ? mintHrefByMintId?.get(current.coin_issues.mint_id) ?? null : null
+
   if (!isDevMode) {
     return (
       <tr className="align-top hover:bg-gray-50">
         <td className="py-2 pr-4 font-mono text-xs">{current.find_code}</td>
         <td className="py-2 pr-4 text-gray-500">{current.context_code}</td>
         <td className="py-2 pr-4">
-          {bi(
+          {biLinked(
             current.coin_issues?.minor_type_zh ?? current.coin_issues?.major_type_zh ?? current.description_zh,
-            current.coin_issues?.minor_type_en ?? current.coin_issues?.major_type_en ?? current.description_en
+            current.coin_issues?.minor_type_en ?? current.coin_issues?.major_type_en ?? current.description_en,
+            typeHref
           )}
         </td>
         <td className="py-2 pr-4">{bi(current.coin_issues?.inscription, current.coin_issues?.inscription_en)}</td>
         <td className="py-2 pr-4">{bi(current.coin_issues?.state_zh, current.coin_issues?.state_en)}</td>
-        <td className="py-2 pr-4">{bi(current.coin_issues?.mint_zh, current.coin_issues?.mint_en)}</td>
+        <td className="py-2 pr-4">{biLinked(current.coin_issues?.mint_zh, current.coin_issues?.mint_en, mintHref)}</td>
         <td className="py-2 text-right tabular-nums">
           {formatNumber(current.quantity_total ?? current.quantity_min ?? current.quantity_estimated)}
         </td>
@@ -117,14 +146,15 @@ export function FindRow({
         <td className="py-2 pr-4 font-mono text-xs">{current.find_code}</td>
         <td className="py-2 pr-4 text-gray-500">{current.context_code}</td>
         <td className="py-2 pr-4">
-          {bi(
+          {biLinked(
             current.coin_issues?.minor_type_zh ?? current.coin_issues?.major_type_zh ?? current.description_zh,
-            current.coin_issues?.minor_type_en ?? current.coin_issues?.major_type_en ?? current.description_en
+            current.coin_issues?.minor_type_en ?? current.coin_issues?.major_type_en ?? current.description_en,
+            typeHref
           )}
         </td>
         <td className="py-2 pr-4">{bi(current.coin_issues?.inscription, current.coin_issues?.inscription_en)}</td>
         <td className="py-2 pr-4">{bi(current.coin_issues?.state_zh, current.coin_issues?.state_en)}</td>
-        <td className="py-2 pr-4">{bi(current.coin_issues?.mint_zh, current.coin_issues?.mint_en)}</td>
+        <td className="py-2 pr-4">{biLinked(current.coin_issues?.mint_zh, current.coin_issues?.mint_en, mintHref)}</td>
         <td className="py-2 text-right tabular-nums">
           <div className="flex items-center justify-end gap-2">
             {formatNumber(current.quantity_total ?? current.quantity_min ?? current.quantity_estimated)}

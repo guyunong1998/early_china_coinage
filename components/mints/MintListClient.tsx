@@ -173,11 +173,6 @@ export function MintListClient({
                       {lang === 'zh' || !type.en ? type.zh : type.en}
                     </span>
                   ))}
-                  {mint.description_en.length <= 60 && (
-                    <span className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-400">
-                      <T k="mintList.inPreparation" />
-                    </span>
-                  )}
                 </div>
 
                 <span className="mt-4 text-xs text-brand opacity-0 transition group-hover:opacity-100">

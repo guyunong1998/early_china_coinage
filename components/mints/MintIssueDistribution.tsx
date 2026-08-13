@@ -15,12 +15,13 @@ import type { MapSite } from '@/lib/types'
 import type { MintTypeOption } from '@/lib/queries'
 
 type MintIssueDistributionProps = {
+  // null when the mint town's own location isn't established yet.
   mint: {
     name_zh: string
     name_en: string
     lat: number
     lng: number
-  }
+  } | null
   sites: MapSite[]
   siteTypeKeys: Record<string, string[]>
   typeOptions: MintTypeOption[]
@@ -58,7 +59,7 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
       <MintIssueDistributionMapCanvas mint={mint} sites={filteredSites} />
 
       <p className="text-xs text-gray-500">
-        <T k="mintDetail.issueDistribution.caption" />
+        <T k={mint ? 'mintDetail.issueDistribution.caption' : 'mintDetail.issueDistribution.captionNoMint'} />
       </p>
     </div>
   )

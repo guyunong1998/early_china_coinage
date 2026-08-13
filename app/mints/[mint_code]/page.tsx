@@ -212,23 +212,22 @@ export default async function MintDetailPage({ params }: PageProps) {
           <p className="text-sm text-gray-500">
             No findspot records linked to this mint in the current database.
           </p>
-        ) : mint.lat != null && mint.lng != null ? (
+        ) : (
           <MintIssueDistribution
-            mint={{
-              name_zh: mint.name_zh,
-              name_en: mint.name_en,
-              lat: mint.lat,
-              lng: mint.lng,
-            }}
+            mint={
+              mint.lat != null && mint.lng != null
+                ? {
+                    name_zh: mint.name_zh,
+                    name_en: mint.name_en,
+                    lat: mint.lat,
+                    lng: mint.lng,
+                  }
+                : null
+            }
             sites={distribution.sites}
             siteTypeKeys={distribution.siteTypeKeys}
             typeOptions={distribution.typeOptions}
           />
-        ) : (
-          <p className="text-sm text-gray-500">
-            {distribution.sites.length} findspot record(s) exist for coins issued by this mint, but the
-            mint&apos;s own location is not yet established, so the distribution map cannot be centred.
-          </p>
         )}
       </Panel>
 
@@ -277,14 +276,6 @@ export default async function MintDetailPage({ params }: PageProps) {
           }
         />
       </Panel>
-
-      {/* Editing note */}
-      <p className="mt-4 text-xs text-gray-400">
-        Everything on this page — description, geolocation, citation, state, modern location,
-        location note, images, and references — comes from the{' '}
-        <code className="font-mono">mints</code> / <code className="font-mono">images</code> tables
-        in Supabase.
-      </p>
     </div>
   )
 }

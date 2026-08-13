@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from 'react'
+
 export type PieChild = {
   label: string
   labelEn?: string | null
@@ -183,6 +187,27 @@ export function CoinTypePieChart({
   size?: number
   showLegend?: boolean
 }) {
+  // Row budget for the legend: a type with a single inscription folds into
+  // one row, so only types with >1 inscription contribute extra rows beyond
+  // their own. Within budget, inscriptions default open; over budget, they
+  // default closed (behind the toggle) so the legend doesn't sprawl — types
+  // themselves are never hidden or capped either way.
+  const totalRows = data.length + data.reduce((sum, g) => sum + (g.children.length > 1 ? g.children.length : 0), 0)
+  const defaultExpanded = totalRows <= 10
+
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(() =>
+    defaultExpanded ? new Set(data.filter((g) => g.children.length > 1).map((g) => g.label)) : new Set()
+  )
+
+  function toggleType(label: string) {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
   const total = data.reduce((sum, d) => sum + d.value, 0)
   if (total <= 0) return null
 
@@ -262,11 +287,40 @@ export function CoinTypePieChart({
       </svg>
 
       {showLegend && (
-      <ul className="min-w-[180px] space-y-1.5 text-xs">
-        {groups.map((g) => (
+      <ul className="min-w-[220px] flex-1 space-y-1.5 text-xs">
+        {groups.map((g) => {
+          const hasInscriptions = g.children.length > 1
+          const isExpanded = expandedTypes.has(g.label)
+          return (
           <li key={g.label}>
-            <div className="flex items-start justify-between gap-2 font-semibold">
+            <div
+              className={`flex items-start justify-between gap-2 font-semibold ${
+                hasInscriptions ? 'cursor-pointer select-none hover:text-brand' : ''
+              }`}
+              role={hasInscriptions ? 'button' : undefined}
+              tabIndex={hasInscriptions ? 0 : undefined}
+              aria-expanded={hasInscriptions ? isExpanded : undefined}
+              onClick={hasInscriptions ? () => toggleType(g.label) : undefined}
+              onKeyDown={
+                hasInscriptions
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleType(g.label)
+                      }
+                    }
+                  : undefined
+              }
+            >
               <span className="flex items-start gap-1.5">
+                <span
+                  className={`mt-0.5 w-3 shrink-0 text-center text-[9px] text-gray-400 transition-transform ${
+                    hasInscriptions ? '' : 'invisible'
+                  } ${isExpanded ? 'rotate-90' : ''}`}
+                  aria-hidden="true"
+                >
+                  ▶
+                </span>
                 <span
                   className="mt-0.5 inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
                   style={{ backgroundColor: g.color }}
@@ -282,8 +336,8 @@ export function CoinTypePieChart({
                 {g.value} · {Math.round((g.value / total) * 100)}%
               </span>
             </div>
-            {g.children.length > 1 && (
-              <ul className="ml-4 mt-0.5 space-y-0.5">
+            {hasInscriptions && isExpanded && (
+              <ul className="ml-[34px] mt-0.5 space-y-0.5">
                 {g.children.map((c) => (
                   <li key={c.label} className="flex items-start justify-between gap-2 text-gray-600">
                     <span className="flex items-start gap-1.5">
@@ -306,7 +360,8 @@ export function CoinTypePieChart({
               </ul>
             )}
           </li>
-        ))}
+          )
+        })}
       </ul>
       )}
     </div>

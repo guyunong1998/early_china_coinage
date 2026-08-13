@@ -137,6 +137,12 @@ type SiteDetailTabsProps = {
   structuredSourceLinks?: SourceLink[]
   sourcesByCode?: Map<string, Source>
   resolvedTargets?: Map<string, ResolvedTarget>
+  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[slug], for
+   * linking a find row's Type cell straight to its catalog entry. */
+  coinTypeHrefByHierarchyId?: Map<string, string>
+  /** find.coin_issues.mint_id → /mints/[mint_code], for linking a find
+   * row's Mint cell straight to its mint-town record. */
+  mintHrefByMintId?: Map<string, string>
 }
 
 // ── bilingual helpers (same pattern as site page) ─────────────────────────
@@ -182,6 +188,8 @@ export function SiteDetailTabs({
   structuredSourceLinks = [],
   sourcesByCode = new Map(),
   resolvedTargets = new Map(),
+  coinTypeHrefByHierarchyId = new Map(),
+  mintHrefByMintId = new Map(),
 }: SiteDetailTabsProps) {
   const [contexts, setContexts] = useState(initialContexts)
   const [finds, setFinds] = useState(initialFinds)
@@ -325,7 +333,16 @@ export function SiteDetailTabs({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
+        <table className="min-w-full table-fixed text-left text-sm">
+          <colgroup>
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[11%]" />
+            <col className="w-[16%]" />
+            <col className="w-[17%]" />
+            <col className="w-[20%]" />
+            <col className="w-[18%]" />
+          </colgroup>
           <thead className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
               <th className="py-2 pr-4">Find</th>
@@ -353,6 +370,8 @@ export function SiteDetailTabs({
                   contextOptions={contextOptions}
                   isDevMode={isDevMode}
                   coinIssueOptions={coinIssueOptions}
+                  coinTypeHrefByHierarchyId={coinTypeHrefByHierarchyId}
+                  mintHrefByMintId={mintHrefByMintId}
                   onSaved={replaceFind}
                   onDeleted={() => removeFind(find.id)}
                 />
@@ -365,31 +384,32 @@ export function SiteDetailTabs({
   )
 
 
+  const contextFilter = hasMultipleContexts && (
+    <div className="flex items-center gap-2 text-sm">
+      <label htmlFor="context-filter" className="font-semibold text-gray-700">
+        Filter by contexts:
+      </label>
+      <select
+        id="context-filter"
+        value={selectedContext}
+        onChange={(e) => setSelectedContext(e.target.value)}
+        className="rounded border border-brand/30 bg-white px-2 py-1 text-sm outline-none focus:border-brand"
+      >
+        <option value="all">All contexts</option>
+        {contexts.map((ctx) => (
+          <option key={ctx.context_code} value={ctx.context_code}>
+            {ctx.context_code}
+            {ctx.context_name_zh ? ` · ${ctx.context_name_zh}` : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+
   return (
     <div className="space-y-3">
-      {hasMultipleContexts && (
-        <div className="border border-brand/20 bg-white px-3 py-2 text-sm">
-          <label htmlFor="context-filter" className="mr-2 font-semibold text-gray-700">
-            Archaeological unit:
-          </label>
-          <select
-            id="context-filter"
-            value={selectedContext}
-            onChange={(e) => setSelectedContext(e.target.value)}
-            className="rounded border border-brand/30 bg-white px-2 py-1 text-sm outline-none focus:border-brand"
-          >
-            <option value="all">All contexts</option>
-            {contexts.map((ctx) => (
-              <option key={ctx.context_code} value={ctx.context_code}>
-                {ctx.context_code}
-                {ctx.context_name_zh ? ` · ${ctx.context_name_zh}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <Tabs
+        headerExtra={contextFilter}
         tabs={[
           {
             id: 'contexts',

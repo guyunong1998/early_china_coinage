@@ -17,12 +17,15 @@ import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { MapSite } from '@/lib/types'
 
 type MintIssueDistributionMapCanvasProps = {
+  // null when the mint town's own location isn't established yet — the map
+  // still renders, just without a mint pin/connector lines, centered on
+  // whatever findspots are available.
   mint: {
     name_zh: string
     name_en: string
     lat: number
     lng: number
-  }
+  } | null
   sites: MapSite[]
 }
 
@@ -61,7 +64,13 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
-      const map = L.map(containerRef.current).setView([mint.lat, mint.lng], 6)
+      const firstSite = sites.find((s) => s.lat != null && s.lng != null)
+      const initialCenter: [number, number] = mint
+        ? [mint.lat, mint.lng]
+        : firstSite
+          ? [firstSite.lat as number, firstSite.lng as number]
+          : [35, 105]
+      const map = L.map(containerRef.current).setView(initialCenter, 6)
       mapRef.current = map
 
       // Single-page map: no layer-switcher or river-mode controls (those are
@@ -73,39 +82,45 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
-      const bounds: [number, number][] = [[mint.lat, mint.lng]]
+      const bounds: [number, number][] = mint ? [[mint.lat, mint.lng]] : []
 
       // Mint center marker — a dropped pin, since this map only ever shows
       // exactly one mint (see dropPinHtml's own doc comment / SinglePointMap).
-      L.marker([mint.lat, mint.lng], {
-        icon: L.divIcon({
-          className: '',
-          html: dropPinHtml(MINT_ISSUE_YELLOW),
-          iconSize: [PIN_WIDTH, PIN_HEIGHT],
-          iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
-          popupAnchor: [0, -PIN_HEIGHT],
-        }),
-      })
-        .addTo(map)
-        .bindPopup(
-          `<div style="font-family:sans-serif;font-size:13px">
-            <strong>Mint town</strong><br/>
-            ${mint.name_zh} ${mint.name_en}
-          </div>`
-        )
+      // Skipped entirely when the mint town's own location isn't established.
+      if (mint) {
+        L.marker([mint.lat, mint.lng], {
+          icon: L.divIcon({
+            className: '',
+            html: dropPinHtml(MINT_ISSUE_YELLOW),
+            iconSize: [PIN_WIDTH, PIN_HEIGHT],
+            iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+            popupAnchor: [0, -PIN_HEIGHT],
+          }),
+        })
+          .addTo(map)
+          .bindPopup(
+            `<div style="font-family:sans-serif;font-size:13px">
+              <strong>Mint town</strong><br/>
+              ${mint.name_zh} ${mint.name_en}
+            </div>`
+          )
+      }
 
       sites.forEach((site) => {
         if (site.lat == null || site.lng == null) return
         bounds.push([site.lat, site.lng])
 
-        // Dashed line connecting the mint to each findspot of its coins.
-        L.polyline(
-          [
-            [mint.lat, mint.lng],
-            [site.lat, site.lng],
-          ],
-          { color: MINT_LINE_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
-        ).addTo(map)
+        // Dashed line connecting the mint to each findspot of its coins —
+        // only when the mint's own location is known.
+        if (mint) {
+          L.polyline(
+            [
+              [mint.lat, mint.lng],
+              [site.lat, site.lng],
+            ],
+            { color: MINT_LINE_COLOR, weight: 1.5, opacity: 0.55, dashArray: '4 5' }
+          ).addTo(map)
+        }
 
         L.marker([site.lat, site.lng], {
           icon: L.divIcon({
@@ -126,7 +141,9 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
           )
       })
 
-      map.fitBounds(bounds, { padding: [30, 30] })
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [30, 30] })
+      }
     }
 
     init()
@@ -138,7 +155,7 @@ export function MintIssueDistributionMapCanvas({ mint, sites }: MintIssueDistrib
     // `lang` is deliberately omitted: the separate [lang] effect below swaps
     // the label layer without rebuilding the whole map on toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sites, mint.lat, mint.lng, mint.name_en, mint.name_zh])
+  }, [sites, mint?.lat, mint?.lng, mint?.name_en, mint?.name_zh])
 
   // Swap the place-name label layer whenever the language toggle changes,
   // without rebuilding the whole map.

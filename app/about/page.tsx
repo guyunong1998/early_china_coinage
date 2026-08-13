@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AuthStatus } from '@/components/auth/AuthStatus'
 import { DataCard } from '@/components/ui/DataCard'
 import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const GITHUB_URL = 'https://github.com/guyunong1998/early_china_coinage'
 
@@ -12,12 +13,21 @@ type TeamMember = {
   affiliation: string
   email: string
   photo: string
-  /** The cropped photo's own pixel dimensions -- cropped to its non-transparent
-   * content only (see scripts/ or the crop step itself), never further cropped
-   * on display, so next/image needs its real aspect ratio here. */
-  photoWidth: number
-  photoHeight: number
 }
+
+type SiteFunction = {
+  href: string
+  labelKey: DictionaryKey
+  descKey: DictionaryKey
+}
+
+const SITE_FUNCTIONS: SiteFunction[] = [
+  { href: '/mints', labelKey: 'about.usage.mints.label', descKey: 'about.usage.mints.desc' },
+  { href: '/coin-types', labelKey: 'about.usage.coinTypes.label', descKey: 'about.usage.coinTypes.desc' },
+  { href: '/museum-collections', labelKey: 'about.usage.museum.label', descKey: 'about.usage.museum.desc' },
+  { href: '/visualizations', labelKey: 'about.usage.map.label', descKey: 'about.usage.map.desc' },
+  { href: '/search', labelKey: 'about.usage.search.label', descKey: 'about.usage.search.desc' },
+]
 
 // title/affiliation/email left blank on purpose — edit these in place once
 // they're final, rather than waiting on a placeholder string.
@@ -28,8 +38,6 @@ const TEAM_MEMBERS: TeamMember[] = [
     affiliation: 'Ph.D, UCLA',
     email: 'guyunong1998@g.ucla.edu',
     photo: '/images/yunong.jpg',
-    photoWidth: 1105,
-    photoHeight: 2053,
   },
   {
     name: 'Sophia Ling',
@@ -37,8 +45,6 @@ const TEAM_MEMBERS: TeamMember[] = [
     affiliation: 'M.S, Columbia University',
     email: 'sl4909@columbia.edu',
     photo: '/images/sophia.jpg',
-    photoWidth: 1106,
-    photoHeight: 2047,
   },
 ]
 
@@ -53,13 +59,26 @@ export default function AboutPage() {
       </p>
 
       <div className="mt-8 space-y-6">
-        <DataCard title={<T k="about.scope.title" />}>
-          <p className="text-sm leading-7 text-gray-700">
-            <T k="about.scope.body" />
-          </p>
-          <p className="text-sm leading-7 text-gray-700 mt-4">
-            <T k="about.functions.body" />
-          </p>
+        <DataCard title={<T k="about.usage.title" />}>
+          <div className="divide-y divide-brand/10">
+            {SITE_FUNCTIONS.map((fn) => (
+              <Link
+                key={fn.href}
+                href={fn.href}
+                className="group flex items-baseline justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <span>
+                  <span className="font-serif text-sm font-semibold text-brand group-hover:underline">
+                    <T k={fn.labelKey} />
+                  </span>
+                  <span className="ml-2 text-sm text-gray-600">
+                    <T k={fn.descKey} />
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs text-brand opacity-0 transition group-hover:opacity-100">→</span>
+              </Link>
+            ))}
+          </div>
         </DataCard>
 
 
@@ -85,13 +104,15 @@ export default function AboutPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {TEAM_MEMBERS.map((member) => (
               <div key={member.name} className="panel flex flex-col items-center p-5 text-center">
-                <Image
-                  src={member.photo}
-                  alt={member.name}
-                  width={member.photoWidth}
-                  height={member.photoHeight}
-                  className="h-48 w-auto rounded-lg border-brand/15"
-                />
+                <div className="relative h-48 w-48 overflow-hidden rounded-lg border border-brand/15">
+                  <Image
+                    src={member.photo}
+                    alt={member.name}
+                    fill
+                    sizes="192px"
+                    className="object-cover"
+                  />
+                </div>
                 <h3 className="mt-3 font-serif text-lg font-semibold text-gray-900">{member.name}</h3>
                 <p className="mt-1 min-h-[1.25rem] text-sm text-gray-600">{member.title}</p>
                 <p className="mt-0.5 min-h-[1.25rem] text-sm text-gray-500">{member.affiliation}</p>
@@ -108,9 +129,24 @@ export default function AboutPage() {
         </DataCard>
 
         <DataCard title={<T k="about.collab.title" />} id="collaborations">
-          <p className="text-sm leading-7 text-gray-700">
-            <T k="about.collab.body" />
-          </p>
+          <div className="mt-2 flex flex-wrap gap-6">
+            <a
+              href="https://numismatics.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-2 transition hover:opacity-80"
+            >
+              <Image
+                src="/images/logos/ans-logo.svg"
+                alt="American Numismatic Society"
+                width={96}
+                height={96}
+              />
+              <span className="text-sm font-semibold text-gray-800">
+                <T k="about.collab.ans" />
+              </span>
+            </a>
+          </div>
         </DataCard>
 
         <DataCard title={<T k="about.resources.title" />}>
