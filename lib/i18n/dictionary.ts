@@ -179,10 +179,10 @@ export const DICTIONARY = {
   'filters.mode.any': { en: 'Any', zh: '任一' },
   'filters.mode.all': { en: 'All', zh: '全部' },
   'search.sortBy': { en: 'Sort by', zh: '排序方式' },
-  'search.sort.interest': { en: 'Interest', zh: '综合关注度' },
+  'search.sort.interest': { en: 'General', zh: '综合' },
   'search.sortHint.interest': {
-    en: 'Default. interest = coefficient × normalize(finds) + coefficient × normalize(states) + coefficient × normalize(coin types) + coefficient × normalize(mints) + coefficient × completeness. Each of finds/states/coin types/mints is scaled to 0–10 (normalize(x) = min(x, cap)/cap × 10, capped at a value near the top of what real sites reach); completeness is its own 0–4 score (1 point each for having a description, a note, a known site type, and location detail) and is left unscaled. Every coefficient defaults to 1, so no factor is favored — highest total first.',
-    zh: '默认排序。综合关注度 = 系数 × 标准化(发现记录数) + 系数 × 标准化(诸侯国数量) + 系数 × 标准化(币种数量) + 系数 × 标准化(铸造地数量) + 系数 × 完整度。发现记录数/诸侯国数量/币种数量/铸造地数量各自换算为0–10分（标准化(x) = min(x, 上限)/上限 × 10，上限取自实际数据中较高的水平）；完整度则保留原始0–4分（有描述、有备注、遗址类型已知、有具体位置说明各计1分），不作换算。各项系数默认均为1，即不偏重任一因素，总分由高到低排列。',
+    en: 'Default. Combines finds, states, coin types, mints, and whether the site has a description into one score, highest first. Sites with only a single coin sort last.',
+    zh: '默认排序。综合发现记录数、诸侯国数量、币种数量、铸造地数量，以及是否有描述得出总分，由高到低排列；仅出土一枚钱币的遗址排在最后。',
   },
   'search.sort.name': { en: 'Name', zh: '名称' },
   'search.sortHint.name': { en: 'Alphabetical by site name.', zh: '按遗址名称字母顺序排列。' },
@@ -275,6 +275,7 @@ export const DICTIONARY = {
   'site.descriptionLabel': { en: 'Description', zh: '描述' },
   'site.row.classification': { en: 'Coin Types', zh: '钱币类型' },
   'site.classification.title': { en: 'Record Classification', zh: '记录分类' },
+  'site.mintOrigins.title': { en: 'Coin Mint Origins', zh: '钱币铸地来源' },
   'site.mintOrigins.caption': {
     en: 'Pin: this findspot. Dots: mint towns that issued coins found here, connected by dashed lines.',
     zh: '大头针：此发现地点。圆点：铸造此处钱币的铸地，以虚线相连。',
@@ -287,9 +288,19 @@ export const DICTIONARY = {
   // ── site detail tabs ──────────────────────────────────────────────────
   'siteTabs.context.label': { en: 'Context:', zh: '出土单位：' },
   'siteTabs.context.all': { en: 'All contexts', zh: '全部出土单位' },
+  'siteTabs.filterByContexts': { en: 'Filter by contexts:', zh: '按出土单位筛选：' },
   'siteTabs.tab.details': { en: 'Details', zh: '详情' },
   'siteTabs.tab.contexts': { en: 'Contexts', zh: '出土单位' },
+  'siteTabs.tab.contextsHint': {
+    en: 'A context is one excavated unit within this site — for example, a single tomb within a cemetery site.',
+    zh: '出土单位指该遗址内的一个发掘单元——例如墓地遗址中的单座墓葬。',
+  },
   'siteTabs.tab.finds': { en: 'Finds', zh: '出土记录' },
+  'siteTabs.tab.findsHint': {
+    en: 'A find is a group of coins from the same issue — the same state, mint, and type, sharing the same inscription (and reverse inscription).',
+    zh: '出土记录指同一批次的一组钱币——具有相同诸侯国、铸地与类型，且铭文（及背文）相同。',
+  },
+  'siteTabs.tab.sources': { en: 'Sources & Citations', zh: '文献与引用' },
   'siteTabs.tab.references': { en: 'References', zh: '参考文献' },
   'siteTabs.row.majorTypes': { en: 'Major types', zh: '大类' },
   'siteTabs.row.minorTypes': { en: 'Minor types', zh: '小类' },

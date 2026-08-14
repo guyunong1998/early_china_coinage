@@ -63,44 +63,37 @@ function hasText(...values: (string | null | undefined)[]) {
 }
 
 /** How filled-out a site's own record is, independent of how many coins or
- * finds it has — a record with a description, a note, a known site type,
- * and location detail is more useful to land on than four bare fields. Each
- * of the four checks contributes at most 1. Deliberately left on its own
- * 0–4 scale rather than normalized to 0–10 like the other four factors
- * (see normalize() below) — it's already a small, complete set of concrete
- * yes/no facts, not an open-ended count that needs compressing. */
-function completenessScore(
-  s: Pick<
-    SearchSite,
-    'description_zh' | 'description_en' | 'note_zh' | 'note_en' | 'site_type_zh' | 'location_detail_zh' | 'location_detail_en'
-  >
-) {
-  let score = 0
-  if (hasText(s.description_zh, s.description_en)) score += 1
-  if (hasText(s.note_zh, s.note_en)) score += 1
-  if (!isUnknownText(s.site_type_zh)) score += 1
-  if (hasText(s.location_detail_zh, s.location_detail_en)) score += 1
-  return score
+ * finds it has — a site with a written description is more useful to land
+ * on than a bare set of fields. Deliberately left on its own 0–1 scale
+ * rather than normalized to 0–10 like the other four factors (see
+ * normalize() below) — it's a single concrete yes/no fact, not an
+ * open-ended count that needs compressing. */
+function completenessScore(s: Pick<SearchSite, 'description_zh' | 'description_en'>) {
+  return hasText(s.description_zh, s.description_en) ? 1 : 0
 }
 
-/** Scales a raw count onto a fixed 0–10 range so factors with very
- * different natural scales (a handful of states vs. dozens of finds) don't
- * let the biggest-magnitude one dominate the interest sum just by being
- * counted in bigger units. `cap` is the value that reaches 10; anything at
- * or above it clamps to 10 rather than stretching the scale to fit rare
- * outliers. */
+/** Scales a raw count onto a fixed 0–1 range on a log curve, so factors
+ * with very different natural scales (a handful of states vs. dozens of
+ * finds) don't let the biggest-magnitude one dominate the interest sum,
+ * and so the long tail of count-like data (most sites low, a few very
+ * high — see the distribution notes above INTEREST_CAPS) doesn't crowd
+ * every typical site into a narrow sliver near 0 the way a linear scale
+ * would. log1p(x) = log(1+x), so a count of 0 still maps to 0. `cap` is
+ * the value that reaches 1; anything at or above it clamps to 1 rather
+ * than exceeding the scale — outliers past the cap still tie at the top,
+ * same as they would under any bounded scale, log or linear. */
 function normalize(value: number, cap: number) {
-  return Math.min(value, cap) / cap * 10
+  return Math.min(Math.log1p(value) / Math.log1p(cap), 1)
 }
 
 // Caps chosen from the live data's actual distribution (checked directly
-// against Supabase) so a "10" means "genuinely near the top for this
+// against Supabase) so a "1" means "genuinely near the top for this
 // measure", not an arbitrary round number:
 //   finds:      p95 ≈ 16, p99 ≈ 50, max = 385  → cap 20
 //   states:     max = 5                        → cap 5 (uses the full range)
 //   coin types: p95 ≈ 7,  p99 ≈ 10, max = 18    → cap 10
 //   mints:      p95 ≈ 7,  p99 ≈ 24, max = 63    → cap 10
-// A handful of extreme outliers (385 finds, 63 mints) clamp at 10 rather
+// A handful of extreme outliers (385 finds, 63 mints) clamp at 1 rather
 // than compressing everyone else toward 0.
 const INTEREST_CAPS = { finds: 20, states: 5, coinTypes: 10, mints: 10 }
 
@@ -108,7 +101,7 @@ const INTEREST_CAPS = { finds: 20, states: 5, coinTypes: 10, mints: 10 }
 // dimension is deliberately favored over another. Adjust these to shift
 // emphasis (e.g. raise coinTypes to foreground numismatic diversity over
 // raw find volume).
-const INTEREST_COEFFICIENTS = { finds: 1, states: 1, coinTypes: 1, mints: 1, completeness: 1 }
+const INTEREST_COEFFICIENTS = { finds: 1, states: 1, coinTypes: 4, mints: 2, completeness: 2 }
 
 export function sortSites<
   T extends Pick<
@@ -126,30 +119,34 @@ export function sortSites<
     | 'mints_zh'
     | 'description_zh'
     | 'description_en'
-    | 'note_zh'
-    | 'note_en'
-    | 'site_type_zh'
-    | 'location_detail_zh'
-    | 'location_detail_en'
   >,
 >(sites: T[], sort: SortOption): T[] {
   const sorted = [...sites]
   switch (sort) {
     case 'interest': {
       // interest = Σ coefficient × normalize(rawCount, cap), for finds/
-      // states/coinTypes/mints (each scaled to 0–10 — see normalize() and
-      // INTEREST_CAPS above), plus coefficient × completeness (its own
-      // native 0–4 scale, not normalized). All coefficients are 1 by
-      // default (INTEREST_COEFFICIENTS above), so no factor is deliberately
-      // favored — a site that's genuinely broad across every dimension,
-      // and well-documented, naturally floats to the top. Same explanation
-      // shown to users via search.sortHint.interest.
-      const score = (s: T) =>
-        INTEREST_COEFFICIENTS.finds * normalize(s.find_record_count ?? 0, INTEREST_CAPS.finds) +
-        INTEREST_COEFFICIENTS.states * normalize(splitCsv(s.states_zh).length, INTEREST_CAPS.states) +
-        INTEREST_COEFFICIENTS.coinTypes * normalize(coinTypeCount(s), INTEREST_CAPS.coinTypes) +
-        INTEREST_COEFFICIENTS.mints * normalize(splitCsv(s.mints_zh).length, INTEREST_CAPS.mints) +
-        INTEREST_COEFFICIENTS.completeness * completenessScore(s)
+      // states/coinTypes/mints (each log-scaled to 0–1 — see normalize()
+      // and INTEREST_CAPS above), plus coefficient × completeness (has a
+      // description or not, already a native 0–1 fact). Coefficients
+      // (INTEREST_COEFFICIENTS above) weight each factor's contribution —
+      // a site that's genuinely broad across every dimension, and has a
+      // description, naturally floats to the top. Same explanation shown
+      // to users via search.sortHint.interest.
+      //
+      // A site with exactly one coin total is the least interesting case
+      // by definition, regardless of how the other factors happen to
+      // land (e.g. it could still have a description) — sink it below
+      // every other score instead of letting it land in the middle.
+      const score = (s: T) => {
+        if (s.total_quantity_for_map === 1) return -Infinity
+        return (
+          INTEREST_COEFFICIENTS.finds * normalize(s.find_record_count ?? 0, INTEREST_CAPS.finds) +
+          INTEREST_COEFFICIENTS.states * normalize(splitCsv(s.states_zh).length, INTEREST_CAPS.states) +
+          INTEREST_COEFFICIENTS.coinTypes * normalize(coinTypeCount(s), INTEREST_CAPS.coinTypes) +
+          INTEREST_COEFFICIENTS.mints * normalize(splitCsv(s.mints_zh).length, INTEREST_CAPS.mints) +
+          INTEREST_COEFFICIENTS.completeness * completenessScore(s)
+        )
+      }
       sorted.sort((a, b) => score(b) - score(a))
       break
     }

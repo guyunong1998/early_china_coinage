@@ -5,6 +5,7 @@ import type { ActionState } from '@/lib/admin/types'
 import type { Context } from '@/lib/types'
 import { EditableSection } from '@/components/edit/EditableSection'
 import { FieldLabel, fieldInputClass } from '@/components/edit/FieldRow'
+import { formatNumber } from '@/lib/format'
 
 function bi(zh: string | null | undefined, en: string | null | undefined) {
   const a = zh?.trim()
@@ -96,7 +97,18 @@ function FieldLine({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-function ContextDisplay({ ctx, breakdownSlot }: { ctx: Context; breakdownSlot?: React.ReactNode }) {
+function ContextDisplay({
+  ctx,
+  breakdownSlot,
+  totalCoins,
+}: {
+  ctx: Context
+  breakdownSlot?: React.ReactNode
+  /** Sum of quantified finds' counts for this context — null when the
+   * context has no find records at all, distinct from 0 (has finds, but
+   * none of them carry a quantity). */
+  totalCoins?: number | null
+}) {
   return (
     <div className="grid gap-4 md:grid-cols-12">
       {/* Text column — fixed half so the chart column alongside it is
@@ -114,6 +126,7 @@ function ContextDisplay({ ctx, breakdownSlot }: { ctx: Context; breakdownSlot?: 
             <FieldLine label="State">{bi(ctx.context_type_zh, ctx.context_type_en)}</FieldLine>
           )}
           {(ctx.period_zh || ctx.period_en) && <FieldLine label="Period">{bi(ctx.period_zh, ctx.period_en)}</FieldLine>}
+          {totalCoins != null && <FieldLine label="Coins">{formatNumber(totalCoins)}</FieldLine>}
         </div>
         {(ctx.description_zh || ctx.description_en) && (
           <div className="mt-2 text-sm">{biBlock(ctx.description_zh, ctx.description_en)}</div>
@@ -149,6 +162,7 @@ export function ContextCard({
   siteCode,
   isDevMode,
   breakdownSlot,
+  totalCoins,
   onSaved,
   onDeleted,
   isNew = false,
@@ -160,6 +174,7 @@ export function ContextCard({
   siteCode: string
   isDevMode: boolean
   breakdownSlot?: React.ReactNode
+  totalCoins?: number | null
   onSaved?: (ctx: Context) => void
   onDeleted?: () => void
   isNew?: boolean
@@ -195,7 +210,7 @@ export function ContextCard({
         }
         onDeleted={onDeleted}
         deleteInFormOnly
-        renderDisplay={(c) => <ContextDisplay ctx={c} breakdownSlot={breakdownSlot} />}
+        renderDisplay={(c) => <ContextDisplay ctx={c} breakdownSlot={breakdownSlot} totalCoins={totalCoins} />}
         renderForm={(c) => (
           <>
             <input type="hidden" name="id" value={c.id} />

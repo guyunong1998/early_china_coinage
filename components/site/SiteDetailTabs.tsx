@@ -8,6 +8,7 @@ import { CitationsSection } from '@/components/sources/CitationsSection'
 import { ClickHint } from '@/components/ui/ClickHint'
 import { Tabs } from '@/components/ui/Tabs'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
 import type { CoinIssueDisplay, Context, Find, Source, SourceLink } from '@/lib/types'
 
@@ -128,6 +129,42 @@ function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
   return groups.length > 0 ? groups : null
 }
 
+type UnquantifiedType = {
+  typeZh: string
+  typeEn: string | null
+  inscriptionZh: string
+  inscriptionEn: string | null
+  recordCount: number
+}
+
+/**
+ * The complement of buildContextBreakdown: every type/inscription combo
+ * that shows up only in presence-only finds (no recorded quantity), so it
+ * never contributes to the pie chart or the context's coin total. Surfaced
+ * separately — a site can have real inscription diversity that's otherwise
+ * invisible because none of those particular finds were ever counted.
+ */
+function buildUnquantifiedTypes(findsForContext: Find[]): UnquantifiedType[] {
+  const withoutQuantity = findsForContext.filter((f) => findQuantity(f) == null || (findQuantity(f) ?? 0) <= 0)
+
+  const byKey = new Map<string, UnquantifiedType>()
+  withoutQuantity.forEach((find) => {
+    const type = coinTypeLabel(find)
+    const insc = inscriptionLabel(find)
+    const key = `${type.zh}__${insc.zh}`
+    const existing = byKey.get(key)
+    if (existing) {
+      existing.recordCount += 1
+    } else {
+      byKey.set(key, { typeZh: type.zh, typeEn: type.en, inscriptionZh: insc.zh, inscriptionEn: insc.en, recordCount: 1 })
+    }
+  })
+
+  return [...byKey.values()].sort(
+    (a, b) => a.typeZh.localeCompare(b.typeZh, 'zh-CN') || a.inscriptionZh.localeCompare(b.inscriptionZh, 'zh-CN')
+  )
+}
+
 type SiteDetailTabsProps = {
   siteCode: string
   contexts: Context[]
@@ -191,6 +228,7 @@ export function SiteDetailTabs({
   coinTypeHrefByHierarchyId = new Map(),
   mintHrefByMintId = new Map(),
 }: SiteDetailTabsProps) {
+  const { t } = useLanguage()
   const [contexts, setContexts] = useState(initialContexts)
   const [finds, setFinds] = useState(initialFinds)
   const [addingContext, setAddingContext] = useState(false)
@@ -271,11 +309,13 @@ export function SiteDetailTabs({
         </div>
       )}
       {filteredContexts.length === 0 ? (
-        <p className="text-sm text-gray-500 italic">No contexts recorded for this site.</p>
+        <p className="text-sm text-gray-500 italic">{t('siteTabs.noContexts')}</p>
       ) : (
         filteredContexts.map((ctx) => {
           const findsForContext = finds.filter((f) => f.context_code === ctx.context_code)
           const breakdown = buildContextBreakdown(findsForContext)
+          const unquantifiedTypes = buildUnquantifiedTypes(findsForContext)
+          const totalCoins = findsForContext.reduce((sum, f) => sum + (findQuantity(f) ?? 0), 0)
 
           return (
             <ContextCard
@@ -283,15 +323,25 @@ export function SiteDetailTabs({
               ctx={ctx}
               siteCode={siteCode}
               isDevMode={isDevMode}
+              totalCoins={findsForContext.length > 0 ? totalCoins : null}
               onSaved={replaceContext}
               onDeleted={() => removeContext(ctx.id)}
               breakdownSlot={
-                breakdown && (
+                (breakdown || unquantifiedTypes.length > 0) && (
                   <div className="border-t border-gray-100 pt-3 md:border-t-0 md:border-l md:pl-4 md:pt-0">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      币种构成 / Coin types 
+                      币种构成 / Coin types
                     </p>
-                    <CoinTypePieChart data={breakdown} />
+                    <CoinTypePieChart
+                      data={breakdown ?? []}
+                      unquantified={unquantifiedTypes.map((t) => ({
+                        label: t.typeZh,
+                        labelEn: t.typeEn,
+                        inscriptionLabel: t.inscriptionZh,
+                        inscriptionLabelEn: t.inscriptionEn,
+                        count: t.recordCount,
+                      }))}
+                    />
                   </div>
                 )
               }
@@ -345,20 +395,20 @@ export function SiteDetailTabs({
           </colgroup>
           <thead className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="py-2 pr-4">Find</th>
-              <th className="py-2 pr-4">Context</th>
-              <th className="py-2 pr-4">Type</th>
-              <th className="py-2 pr-4">Inscription</th>
-              <th className="py-2 pr-4">State</th>
-              <th className="py-2 pr-4">Mint</th>
-              <th className="py-2 text-right">Qty</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.find')}</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.context')}</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.type')}</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.inscription')}</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.state')}</th>
+              <th className="py-2 pr-4">{t('siteTabs.table.mint')}</th>
+              <th className="py-2 text-right">{t('siteTabs.table.qty')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredFinds.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-4 text-center text-sm italic text-gray-400">
-                  No find records for this site.
+                  {t('siteTabs.noFinds')}
                 </td>
               </tr>
             ) : (
@@ -387,7 +437,7 @@ export function SiteDetailTabs({
   const contextFilter = hasMultipleContexts && (
     <div className="flex items-center gap-2 text-sm">
       <label htmlFor="context-filter" className="font-semibold text-gray-700">
-        Filter by contexts:
+        {t('siteTabs.filterByContexts')}
       </label>
       <select
         id="context-filter"
@@ -395,7 +445,7 @@ export function SiteDetailTabs({
         onChange={(e) => setSelectedContext(e.target.value)}
         className="rounded border border-brand/30 bg-white px-2 py-1 text-sm outline-none focus:border-brand"
       >
-        <option value="all">All contexts</option>
+        <option value="all">{t('siteTabs.context.all')}</option>
         {contexts.map((ctx) => (
           <option key={ctx.context_code} value={ctx.context_code}>
             {ctx.context_code}
@@ -413,25 +463,17 @@ export function SiteDetailTabs({
         tabs={[
           {
             id: 'contexts',
-            label: tabLabel(
-              'Contexts',
-              filteredContexts.length,
-              'A context is one excavated unit within this site — for example, a single tomb within a cemetery site.'
-            ),
+            label: tabLabel(t('siteTabs.tab.contexts'), filteredContexts.length, t('siteTabs.tab.contextsHint')),
             content: contextsContent,
           },
           {
             id: 'finds',
-            label: tabLabel(
-              'Finds',
-              filteredFinds.length,
-              'A find is a group of coins from the same issue — the same state, mint, and type, sharing the same inscription (and reverse inscription).'
-            ),
+            label: tabLabel(t('siteTabs.tab.finds'), filteredFinds.length, t('siteTabs.tab.findsHint')),
             content: findsContent,
           },
           {
             id: 'source-links',
-            label: `Sources & Citations (${structuredSourceLinks.length})`,
+            label: `${t('siteTabs.tab.sources')} (${structuredSourceLinks.length})`,
             content: (
               <CitationsSection
                 targetType="site"

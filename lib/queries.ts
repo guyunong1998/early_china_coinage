@@ -23,13 +23,11 @@ export type SearchSite = MapSite & {
   period_zh: string | null
   period_en: string | null
   // Carried along for /search's "interest" sort (lib/search-filters.ts),
-  // which rewards a well-documented record — not exposed on the
-  // v_coin_map_sites view MapSite otherwise comes from, so these are
+  // which rewards a site that has a description — not exposed on the
+  // v_coin_map_sites view MapSite otherwise comes from, so this is
   // fetched from `sites` alongside period in attachSiteDetails below.
   description_zh: string | null
   description_en: string | null
-  note_zh: string | null
-  note_en: string | null
 }
 
 /** Without generated Database types, supabase-js/postgrest-js can't always
@@ -198,14 +196,12 @@ async function attachSiteDetails(sites: MapSite[]): Promise<SearchSite[]> {
   try {
     // Paginate — sites exceed PostgREST's default 1000-row cap, and a single
     // unpaginated select silently dropped periods for later rows. Bundles
-    // description/note alongside period (rather than a second query) since
-    // both come off the same `sites` row keyed by the same site_code.
+    // description alongside period (rather than a second query) since both
+    // come off the same `sites` row keyed by the same site_code.
     const data = await fetchAllPages<{
       site_code: string
       description_zh: string | null
       description_en: string | null
-      note_zh: string | null
-      note_en: string | null
       periods:
         | { period_zh: string | null; period_en: string | null }
         | { period_zh: string | null; period_en: string | null }[]
@@ -213,7 +209,7 @@ async function attachSiteDetails(sites: MapSite[]): Promise<SearchSite[]> {
     }>((from, to) =>
       supabase
         .from('sites')
-        .select('site_code, description_zh, description_en, note_zh, note_en, periods(period_zh, period_en)')
+        .select('site_code, description_zh, description_en, periods(period_zh, period_en)')
         .order('site_code')
         .range(from, to)
     )
@@ -227,8 +223,6 @@ async function attachSiteDetails(sites: MapSite[]): Promise<SearchSite[]> {
         period_en: details?.period_en ?? null,
         description_zh: details?.description_zh ?? null,
         description_en: details?.description_en ?? null,
-        note_zh: details?.note_zh ?? null,
-        note_en: details?.note_en ?? null,
       }
     })
   } catch (err) {
@@ -241,8 +235,6 @@ async function attachSiteDetails(sites: MapSite[]): Promise<SearchSite[]> {
       period_en: null,
       description_zh: null,
       description_en: null,
-      note_zh: null,
-      note_en: null,
     }))
   }
 }

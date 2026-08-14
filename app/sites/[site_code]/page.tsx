@@ -439,7 +439,7 @@ export default async function SitePage({ params }: PageProps) {
 
       {mintOrigins && mintOrigins.matched.length > 0 && (
         <div className="mt-6">
-          <DataCard title="Coin Mint Origins">
+          <DataCard title={<T k="site.mintOrigins.title" />}>
             <div className="space-y-2">
               <HoardMintOriginsMap
                 site={{
