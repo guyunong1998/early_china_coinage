@@ -315,6 +315,20 @@ export function buildBaseLayers(L: LeafletNS) {
     maxZoom: 19,
   })
 
+  // 高德 / AutoNavi — Chinese street map with built-in zh labels. Tiles are
+  // GCJ-02; our find/mint coordinates are WGS84, so markers can sit a short
+  // distance off roads/cities inside China (same caveat as any GCJ basemap
+  // under Leaflet's default CRS). Still useful for reading present-day
+  // Chinese place names next to CyclOSM/OSM.
+  const amap = L.tileLayer(
+    'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    {
+      subdomains: ['1', '2', '3', '4'],
+      attribution: '© <a href="https://www.amap.com/">高德地图</a> / AutoNavi',
+      maxZoom: 18,
+    }
+  )
+
   // Transparent English/romanized place-name overlay (Esri's reference
   // layer). Neither base layer (the Stamen terrain background nor the
   // satellite imagery) carries any place labels of its own, so one of these
@@ -333,9 +347,11 @@ export function buildBaseLayers(L: LeafletNS) {
   // Esri/Stadia/CartoDB's own label tiles only ever render English/pinyin
   // regardless of language. A small hand-picked city list sidesteps that —
   // same plain "dot + text" look as the English layer, no road clutter.
+  // (When the 高德 basemap is selected it already draws its own zh labels;
+  // this overlay may then sit on top — acceptable for the language toggle.)
   const labelsZh = buildPlaceLabelsLayer(L)
 
-  return { cawm, satellite, cyclosm, osm, labelsEn, labelsZh }
+  return { cawm, satellite, cyclosm, osm, amap, labelsEn, labelsZh }
 }
 
 export type BaseLayers = ReturnType<typeof buildBaseLayers>
@@ -407,7 +423,7 @@ export function addLayerControl(
   layers: BaseLayers,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
-  const { cawm, satellite, cyclosm, osm } = layers
+  const { cawm, satellite, cyclosm, osm, amap } = layers
   const position = options?.position ?? 'topright'
 
   const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
@@ -426,7 +442,13 @@ export function addLayerControl(
     .layers(
       // CyclOSM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
-      { CyclOSM: cyclosm, 'Ancient World Map': cawm, Satellite: satellite, OpenStreetMap: osm },
+      {
+        CyclOSM: cyclosm,
+        '高德地图': amap,
+        'Ancient World Map': cawm,
+        Satellite: satellite,
+        OpenStreetMap: osm,
+      },
       {
         'Major rivers': majorRivers,
         'Minor rivers': minorRivers,
