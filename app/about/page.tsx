@@ -35,7 +35,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: 'Yunong Gu',
     title: '',
-    affiliation: 'Ph.D, UCLA',
+    affiliation: 'Ph.D Candidate, UCLA',
     email: 'guyunong1998@g.ucla.edu',
     photo: '/images/yunong.jpg',
   },

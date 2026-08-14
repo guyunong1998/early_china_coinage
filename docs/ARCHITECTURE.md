@@ -77,7 +77,7 @@ Data that either never changes, is small enough to just ship, or is derived once
 | River overlays for the map base layers | `public/data/rivers-major.geojson`, `rivers-minor.geojson` | `scripts/clip-rivers-to-china.js`, clipped from Natural Earth 1:10m data |
 | Mint-town photos, coin specimen photography | `public/images/mints/`, `public/images/type_imgs/` | Static files, matched by filename prefix at request time (`lib/coin-images.ts`) |
 
-Map **tiles** and **city/county boundary polygons** are the one runtime "external" dependency that isn't Supabase: base tiles come from OpenStreetMap and Esri ArcGIS (`lib/map-layers.ts`), and precise city/county boundary outlines are fetched live from Nominatim (`lib/city-boundaries.ts`), cached in-memory per session.
+Map **tiles** and **city/county boundary polygons** are the one runtime "external" dependency that isn't Supabase: base tiles come from OpenStreetMap / CyclOSM, Esri ArcGIS (satellite + English labels), the Consortium of Ancient World Mappers terrain, and 高德 / AutoNavi (`lib/map-layers.ts`), and precise city/county boundary outlines are fetched live from Nominatim (`lib/city-boundaries.ts`), cached in-memory per session.
 
 **Rule of thumb:** if it's about a specific archaeological find, coin issue, or museum specimen, it's in Supabase. If it's reference/gazetteer data (which mint is where, what the typology tree looks like) or media, it's local.
 

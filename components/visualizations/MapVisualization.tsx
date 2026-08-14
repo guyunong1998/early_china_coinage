@@ -1141,6 +1141,7 @@ export function MintTownVisualization({
         mintStates={mintStates}
         viewMode={viewMode}
         densityLatLngs={density.latLngs}
+        filterActive={filterActive}
         showNoData={showNoData}
         comparePoints={comparePoints}
         sizeBy={sizeBy}
@@ -1564,6 +1565,7 @@ export function AnsMintTownVisualization({
         mintStates={mintStates}
         viewMode={viewMode}
         densityLatLngs={density.latLngs}
+        filterActive={filterActive}
         pins={pins}
         comparePoints={comparePoints}
       />
