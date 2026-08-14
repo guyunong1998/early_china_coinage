@@ -53,6 +53,11 @@ function loadLeaflet(): Promise<LeafletLib> {
       const g = globalThis as typeof globalThis & { L?: LeafletLib }
       g.L = L
       await import('leaflet.heat')
+      // Clustering for the big Find Site / Mint Town canvases — same plugin
+      // CoinMap already uses for search-result maps.
+      await import('leaflet.markercluster')
+      await import('leaflet.markercluster/dist/MarkerCluster.css')
+      await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
       return L
     })
   }
@@ -181,11 +186,14 @@ function formatCoinTypeBilingual(value: string | null) {
  * ratio bar or a legend swatch, which should stay fully saturated. `no-data`
  * always keeps its own dedicated `NO_DATA_ALPHA`, regardless of `opacity`.
  */
+/** Unfiltered overview uses the heat ramp's top stop (same red as a 100%
+ * filter match). Clustering keeps the national zoom from reading as a solid
+ * carpet of dots; individual points stay this red when you zoom in or when
+ * no type/mint filter is active. */
 function stateColor(state: DisplayState, opacity = 1): string {
   switch (state.kind) {
     case 'no-filter':
-      // Default/unfiltered look matches the "100% match" color everywhere.
-      return hexToRgba(ratioToColor(1), opacity)
+      return hexToRgba(ratioToColor(1), Math.min(1, opacity * 0.75))
     case 'no-data':
       return hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA)
     case 'unquantified':
@@ -476,6 +484,27 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
   `
 }
 
+type MarkerClusterLike = import('leaflet').LayerGroup & {
+  addLayer: (layer: import('leaflet').Layer) => void
+  removeLayer: (layer: import('leaflet').Layer) => void
+  hasLayer: (layer: import('leaflet').Layer) => boolean
+}
+
+/** Put a marker on the cluster group, directly on the map, or nowhere.
+ * Clears the other host first so MarkerCluster counts stay honest and we
+ * don't end up with a duplicate icon after toggling filter → uncluster. */
+function syncMarkerHost(
+  marker: Marker,
+  map: import('leaflet').Map,
+  cluster: MarkerClusterLike | null,
+  host: 'cluster' | 'map' | 'none'
+) {
+  if (cluster?.hasLayer(marker)) cluster.removeLayer(marker)
+  if (map.hasLayer(marker)) map.removeLayer(marker)
+  if (host === 'cluster' && cluster) cluster.addLayer(marker)
+  else if (host === 'map') marker.addTo(map)
+}
+
 /** Recomputes a marker's icon/opacity/z-index/popup from its current heat
  * state — the one piece of restyle logic shared by both sites and mints.
  * `hidden` is Compare view's escape hatch: the ordinary per-site markers
@@ -485,6 +514,7 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
 function applyHeatMarkerStyle(
   L: typeof import('leaflet'),
   marker: Marker,
+  map: import('leaflet').Map,
   rawState: SiteHeatState | undefined,
   totalQty: number,
   maxQty: number,
@@ -496,9 +526,14 @@ function applyHeatMarkerStyle(
   showNoData = true,
   /** When set, use this pixel diameter directly (mint Size-by already applied
    * its own log scoring). Density / no-data branches still win over it. */
-  sizePx: number | null = null
+  sizePx: number | null = null,
+  cluster: MarkerClusterLike | null = null,
+  /** Overview (no filter): cluster. Active filter in Points: individual map
+   * dots. Density / Compare: none (other layers own the canvas). */
+  host: 'cluster' | 'map' | 'none' = 'cluster'
 ) {
   if (hidden) {
+    syncMarkerHost(marker, map, cluster, 'none')
     marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
     marker.setOpacity(0)
     return
@@ -507,10 +542,13 @@ function applyHeatMarkerStyle(
   const state = toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty)
 
   if (!showNoData && state.kind === 'no-data') {
+    syncMarkerHost(marker, map, cluster, 'none')
     marker.setIcon(L.divIcon({ className: '', html: '', iconSize: [0, 0], iconAnchor: [0, 0] }))
     marker.setOpacity(0)
     return
   }
+
+  syncMarkerHost(marker, map, cluster, host)
   const isStaticNoData = !inDensity && state.kind === 'no-data'
   const color = inDensity
     ? state.kind === 'no-data'
@@ -610,6 +648,9 @@ type MintsCanvasProps = {
   mintStates: Map<string, SiteHeatState> | null
   viewMode: ViewMode
   densityLatLngs: [number, number, number][]
+  /** When true (coin-type filter on), Points view shows individual dots
+   * instead of national-zoom clusters — same behavior as SitesCanvasProps. */
+  filterActive?: boolean
   /** See SitesCanvasProps.showNoData. */
   showNoData?: boolean
   /** User-selected points (Museum Collections search) — see PinPoint. */
@@ -641,6 +682,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
   const compareMarkersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
+  const clusterGroupRef = useRef<import('leaflet').LayerGroup | null>(null)
   // Flips true once the init effect's async `import('leaflet')` has actually
   // created `mapRef.current` — the restyle effect below bails out if the map
   // doesn't exist yet, which it never does on the very first run (init's map
@@ -656,7 +698,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const statesForRestyle = props.kind === 'sites' ? props.siteStates : props.mintStates
   const sitesForRestyle = props.kind === 'sites' ? props.sites : null
   const modeForSites = props.kind === 'sites' ? props.mode : null
-  const filterActiveForSites = props.kind === 'sites' ? props.filterActive : null
+  const filterActive =
+    props.kind === 'sites' ? props.filterActive : (props.filterActive ?? false)
   const sitesForInit = props.kind === 'sites' ? props.sites : null
   const pins = props.pins ?? []
   const comparePoints = props.comparePoints ?? []
@@ -676,8 +719,17 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       const inDensity = viewMode === 'density'
       const inCompare = viewMode === 'compare'
+      // Unfiltered overview clusters; once a filter is on, Points view shows
+      // individual ratio-colored dots so matches aren't buried in count bubbles.
+      const wantCluster = viewMode === 'points' && !filterActive
+      const markerHost: 'cluster' | 'map' | 'none' = wantCluster
+        ? 'cluster'
+        : viewMode === 'points'
+          ? 'map'
+          : 'none'
       const sizeRange = dotSizeRange()
       const pointOpacity = readHeatmapOpacity()
+      const cluster = clusterGroupRef.current as MarkerClusterLike | null
 
       if (props.kind === 'sites') {
         const { sites, siteStates } = props
@@ -703,6 +755,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           applyHeatMarkerStyle(
             L,
             marker,
+            map,
             rawState,
             totalQty,
             maxQty,
@@ -711,7 +764,10 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             inDensity,
             buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t),
             inCompare,
-            showNoData
+            showNoData,
+            null,
+            cluster,
+            markerHost
           )
         })
       } else {
@@ -734,6 +790,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           applyHeatMarkerStyle(
             L,
             marker,
+            map,
             rawState,
             mint.totalQty,
             1,
@@ -743,9 +800,20 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
             inCompare,
             showNoData,
-            mintSizePx(mint, mintSizeBy, maxScore, mintRange, rawState)
+            mintSizePx(mint, mintSizeBy, maxScore, mintRange, rawState),
+            cluster,
+            markerHost
           )
         })
+      }
+
+      // Cluster group only belongs on the map in the unfiltered Points overview.
+      if (cluster) {
+        if (wantCluster) {
+          if (!map.hasLayer(cluster)) map.addLayer(cluster)
+        } else if (map.hasLayer(cluster)) {
+          map.removeLayer(cluster)
+        }
       }
 
       // User-selected pins (Museum Collections search, Find Site's "by
@@ -870,7 +938,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs, mintSizeBy, showNoData])
+  }, [mapReady, statesForRestyle, sitesForRestyle, modeForSites, pins, comparePoints, t, viewMode, densityLatLngs, mintSizeBy, showNoData, filterActive])
 
   // Build the map + initial markers once. For `sites`, re-runs if the site
   // list itself changes (e.g. a precision-filter navigation). For `mints`,
@@ -922,8 +990,30 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       }
 
       const bounds: [number, number][] = []
-      const initialColor = hexToRgba(ratioToColor(1), readHeatmapOpacity())
+      // Placeholder style until restyle runs — same heat red as no-filter.
+      const initialColor = hexToRgba(ratioToColor(1), readHeatmapOpacity() * 0.75)
       const sizeRange = dotSizeRange()
+
+      // Cluster nearby points so the China-wide Find Site / Mint Town views
+      // aren't a solid carpet of dots at national zoom. Individuals still
+      // appear once the user zooms in (disableClusteringAtZoom).
+      type ClusterFactory = {
+        markerClusterGroup: (options?: {
+          showCoverageOnHover?: boolean
+          maxClusterRadius?: number
+          disableClusteringAtZoom?: number
+          spiderfyOnMaxZoom?: boolean
+        }) => import('leaflet').LayerGroup & {
+          addLayer: (layer: import('leaflet').Layer) => void
+        }
+      }
+      const clusterGroup = (L as typeof L & ClusterFactory).markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 56,
+        disableClusteringAtZoom: 10,
+        spiderfyOnMaxZoom: true,
+      })
+      clusterGroupRef.current = clusterGroup
 
       if (props.kind === 'sites') {
         const { sites } = props
@@ -940,12 +1030,12 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
               iconSize: [size, size],
               iconAnchor: [size / 2, size / 2],
             }),
-          })
-            .addTo(map)
-            .bindPopup(buildPopupHtml(site, { kind: 'no-filter' }, t))
+          }).bindPopup(buildPopupHtml(site, { kind: 'no-filter' }, t))
 
+          clusterGroup.addLayer(marker)
           pointMarkersRef.current.set(site.site_code, marker)
         })
+        map.addLayer(clusterGroup)
 
         const candidateCities = new Map<string, { cityZh: string; provinceZh?: string | null }>()
         sites.forEach((site) => {
@@ -1031,12 +1121,12 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
               iconSize: [size, size],
               iconAnchor: [size / 2, size / 2],
             }),
-          })
-            .addTo(map)
-            .bindPopup(buildMintPopupHtml(mint, { kind: 'no-filter' }, t))
+          }).bindPopup(buildMintPopupHtml(mint, { kind: 'no-filter' }, t))
 
+          clusterGroup.addLayer(marker)
           pointMarkersRef.current.set(mint.mint_zh, marker)
         })
+        map.addLayer(clusterGroup)
       }
 
       if (cancelled) return
@@ -1056,6 +1146,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       cancelled = true
       setMapReady(false)
       heatLayerRef.current = null
+      clusterGroupRef.current = null
       mapRef.current?.remove()
       mapRef.current = null
       pointMarkers.clear()
@@ -1083,7 +1174,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     if (!map) return
     const id = window.setTimeout(() => map.invalidateSize(), 80)
     return () => window.clearTimeout(id)
-  }, [viewMode, filterActiveForSites, modeForSites])
+  }, [viewMode, filterActive, modeForSites])
 
   useEffect(() => {
     function onResize() {
@@ -1096,7 +1187,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0"
+      className="map-vis-canvas absolute inset-0"
       style={height !== '100%' ? { height } : undefined}
     />
   )

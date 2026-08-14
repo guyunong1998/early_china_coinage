@@ -315,6 +315,21 @@ button:not(:disabled):hover {
   font-weight: 700;
 }
 
+/* Find Site / Mint Town overview clusters — heat-ramp red (#a01515 = ratio
+   100%), not brand green, so they match the unfiltered map dots. Search
+   maps above keep the brand tint. */
+.map-vis-canvas .marker-cluster-small,
+.map-vis-canvas .marker-cluster-medium,
+.map-vis-canvas .marker-cluster-large {
+  background-color: color-mix(in srgb, #a01515 25%, transparent);
+}
+
+.map-vis-canvas .marker-cluster-small div,
+.map-vis-canvas .marker-cluster-medium div,
+.map-vis-canvas .marker-cluster-large div {
+  background-color: color-mix(in srgb, #a01515 85%, transparent);
+}
+
 /* Hero banner: a left-to-right sweep from --hero-gradient-start to
    --hero-gradient-end (edit those two variables above to retint). The
    coins SVG itself is rendered as a plain <img> in HeroBanner.tsx, not here —
