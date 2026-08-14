@@ -6,11 +6,13 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import type { SortOption } from '@/lib/search-filters'
 
 const OPTIONS: { value: SortOption; labelKey: DictionaryKey; hintKey: DictionaryKey }[] = [
+  { value: 'interest', labelKey: 'search.sort.interest', hintKey: 'search.sortHint.interest' },
   { value: 'name', labelKey: 'search.sort.name', hintKey: 'search.sortHint.name' },
   { value: 'quantity', labelKey: 'search.sort.quantity', hintKey: 'search.sortHint.quantity' },
   { value: 'province', labelKey: 'search.sort.province', hintKey: 'search.sortHint.province' },
   { value: 'finds', labelKey: 'search.sort.finds', hintKey: 'search.sortHint.finds' },
   { value: 'coinTypes', labelKey: 'search.sort.coinTypes', hintKey: 'search.sortHint.coinTypes' },
+  { value: 'mints', labelKey: 'search.sort.mints', hintKey: 'search.sortHint.mints' },
   { value: 'states', labelKey: 'search.sort.states', hintKey: 'search.sortHint.states' },
 ]
 

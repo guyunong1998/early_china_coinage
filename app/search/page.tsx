@@ -6,6 +6,7 @@ import { SearchFiltersToggle } from '@/components/search/SearchFiltersToggle'
 import { SearchResultCard } from '@/components/search/SearchResultCard'
 import { CoinMapSection } from '@/components/map/CoinMapSection'
 import { CoinTypePieChart, type PieGroup } from '@/components/site/CoinTypePieChart'
+import { colorForType } from '@/lib/coin-type-colors'
 import { T } from '@/components/i18n/T'
 import { TranslatedInput } from '@/components/i18n/TranslatedInput'
 import { isUnknownText, countSitesByPrecision, parsePrecisionFilter } from '@/lib/city-boundaries'
@@ -45,17 +46,36 @@ const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
   金版: 'Gold Plate',
 }
 
+/** Same "zh (en)" reading as the Province/City/County fields above it, with
+ * the English gloss grayed the same way — a plain-string join here would
+ * lose that per-item styling and read inconsistently with the rest of the
+ * card. Each label also gets a color swatch from colorForType — the exact
+ * same function the adjacent per-site pie chart uses for its slices — so a
+ * type's dot here always matches its slice color there. */
 function formatCoinTypeBilingual(value: string | null | undefined) {
-  if (!value) return '—'
-  return value
+  const items = (value ?? '')
     .split(/[、,，]/)
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((zh) => {
-      const en = COIN_TYPE_TRANSLATIONS[zh]
-      return en ? `${zh} (${en})` : zh
-    })
-    .join('、')
+  if (items.length === 0) return <T k="search.field.coinTypeUnclassified" />
+  return (
+    <>
+      {items.map((zh, i) => {
+        const en = COIN_TYPE_TRANSLATIONS[zh]
+        return (
+          <span key={`${zh}-${i}`}>
+            {i > 0 && '、'}
+            <span
+              className="mr-1 inline-block h-2 w-2 rounded-full align-middle"
+              style={{ backgroundColor: colorForType(zh) }}
+            />
+            {zh}
+            {en && <span className="text-gray-400"> ({en})</span>}
+          </span>
+        )
+      })}
+    </>
+  )
 }
 
 type PageProps = {
@@ -230,7 +250,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
       const label = info?.zh ?? '未知'
       const existing = totals.get(label)
       if (existing) existing.value += qty
-      else totals.set(label, { label, labelEn: info?.en, value: qty })
+      else totals.set(label, { label, labelEn: info?.en ?? (info ? null : 'Unclassified'), value: qty })
     })
     return [...totals.values()].map((g) => ({ ...g, children: [] }))
   }
@@ -261,7 +281,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
     if (filters.onlySingle) p.set('onlySingle', '1')
     if (filters.excludeSingle) p.set('excludeSingle', '1')
     if (filters.precision !== 'all') p.set('precision', filters.precision)
-    if (sort !== 'name') p.set('sort', sort)
+    if (sort !== 'interest') p.set('sort', sort)
     Object.entries(overrides).forEach(([key, value]) => {
       if (value === undefined) p.delete(key)
       else p.set(key, value)

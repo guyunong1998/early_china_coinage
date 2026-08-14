@@ -146,6 +146,7 @@ export const DICTIONARY = {
   'search.field.city': { en: 'City:', zh: '市：' },
   'search.field.county': { en: 'County:', zh: '县：' },
   'search.field.coinType': { en: 'Coin type:', zh: '币类：' },
+  'search.field.coinTypeUnclassified': { en: 'Unclassified', zh: '未分类' },
   'search.field.quantity': { en: 'Quantity:', zh: '数量：' },
   'search.types': { en: 'Types:', zh: '类型：' },
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
@@ -178,6 +179,11 @@ export const DICTIONARY = {
   'filters.mode.any': { en: 'Any', zh: '任一' },
   'filters.mode.all': { en: 'All', zh: '全部' },
   'search.sortBy': { en: 'Sort by', zh: '排序方式' },
+  'search.sort.interest': { en: 'Interest', zh: '综合关注度' },
+  'search.sortHint.interest': {
+    en: 'Default. interest = coefficient × normalize(finds) + coefficient × normalize(states) + coefficient × normalize(coin types) + coefficient × normalize(mints) + coefficient × completeness. Each of finds/states/coin types/mints is scaled to 0–10 (normalize(x) = min(x, cap)/cap × 10, capped at a value near the top of what real sites reach); completeness is its own 0–4 score (1 point each for having a description, a note, a known site type, and location detail) and is left unscaled. Every coefficient defaults to 1, so no factor is favored — highest total first.',
+    zh: '默认排序。综合关注度 = 系数 × 标准化(发现记录数) + 系数 × 标准化(诸侯国数量) + 系数 × 标准化(币种数量) + 系数 × 标准化(铸造地数量) + 系数 × 完整度。发现记录数/诸侯国数量/币种数量/铸造地数量各自换算为0–10分（标准化(x) = min(x, 上限)/上限 × 10，上限取自实际数据中较高的水平）；完整度则保留原始0–4分（有描述、有备注、遗址类型已知、有具体位置说明各计1分），不作换算。各项系数默认均为1，即不偏重任一因素，总分由高到低排列。',
+  },
   'search.sort.name': { en: 'Name', zh: '名称' },
   'search.sortHint.name': { en: 'Alphabetical by site name.', zh: '按遗址名称字母顺序排列。' },
   'search.sort.quantity': { en: 'Quantity', zh: '数量' },
@@ -192,10 +198,15 @@ export const DICTIONARY = {
     en: 'Total find records at the site, highest first.',
     zh: '按该遗址的出土记录总数排列，由多到少。',
   },
-  'search.sort.coinTypes': { en: 'Coin types', zh: '币种数量' },
+  'search.sort.coinTypes': { en: 'Number of types', zh: '币种数量' },
   'search.sortHint.coinTypes': {
     en: 'Distinct coin-type classifications recorded there, summed across all typology levels, highest first.',
     zh: '按该遗址记录的各分类层级币种总数（各层级相加）排列，由多到少。',
+  },
+  'search.sort.mints': { en: 'Number of mints', zh: '铸造地数量' },
+  'search.sortHint.mints': {
+    en: 'Number of different mints represented among the coins found there, highest first.',
+    zh: '按该遗址所出钱币涉及的铸造地数目排列，由多到少。',
   },
   'search.sort.states': { en: 'Number of states', zh: '诸侯国数量' },
   'search.sortHint.states': {

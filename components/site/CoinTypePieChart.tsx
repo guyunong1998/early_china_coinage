@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { colorForType, shadesOf } from '@/lib/coin-type-colors'
 
 export type PieChild = {
   label: string
@@ -15,57 +16,20 @@ export type PieGroup = {
   children: PieChild[]
 }
 
-const PALETTE = [
-  '#006d71', // brand teal
-  '#c0392b', // terracotta red
-  '#d4a017', // ochre
-  '#4a7c59', // olive green
-  '#7c5295', // plum
-  '#2f7fbf', // slate blue
-  '#a0522d', // sienna
-  '#8b8b3d', // bronze-green
-]
-
-/**
- * Permanent color per level2 type, so a slice's color is a property of the
- * type itself rather than of where it lands in a particular card's data
- * (the old `PALETTE[i % PALETTE.length]` scheme reassigned colors every
- * time the set of types present, or their order, changed). Every mould
- * label (level2_zh ending in 范) shares its coin counterpart's hue one
- * shade lighter — a spade coin and the mould that cast it are the same
- * real-world type, not unrelated categories, so they read as a family.
- */
-const TYPE_COLORS: Record<string, string> = {
-  布币: '#006d71', // spade coin — brand teal
-  布币范: '#5aa9ac', // spade coin mould
-  刀币: '#c0392b', // knife coin — terracotta red
-  刀币范: '#dd8a7f', // knife coin mould
-  圜钱: '#d4a017', // round coin — ochre
-  圜钱范: '#e8c467', // round coin mould
-  蚁鼻钱: '#7c5295', // cowrie coin — plum
-  蚁鼻钱范: '#b696cb', // cowrie coin mould
-  金版: '#2f7fbf', // gold plate — slate blue
-  金饼: '#a0522d', // gold cake — sienna
-  马蹄金: '#4a7c59', // horse-hoof gold — olive green
-  钱范: '#8b8b3d', // coin mould (collapsed, no per-type breakdown) — bronze-green
-}
-
-/** Deterministic string hash, so a type absent from TYPE_COLORS (a new
- *  hierarchy entry, or '未知') still always renders the same fallback
- *  color instead of one that drifts with array order. */
-function hashString(s: string) {
-  let hash = 0
-  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0
-  return hash
-}
-
-function colorForType(label: string): string {
-  return TYPE_COLORS[label] ?? PALETTE[hashString(label) % PALETTE.length]
+// Math.cos/Math.sin can differ in their last bit between the server's V8
+// and the browser's — same JS, different machine — which turned into a
+// hydration mismatch: the `d` attribute's server- and client-rendered
+// strings disagreed at the ~13th significant digit. Rounding collapses
+// that noise below the threshold that would ever show up as a different
+// string, and three decimal places is already far finer than this chart
+// ever renders at (max size ~150px).
+function round(n: number) {
+  return Math.round(n * 1000) / 1000
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  return { x: round(cx + r * Math.cos(rad)), y: round(cy + r * Math.sin(rad)) }
 }
 
 /** Pie slice from the center out to radius r. */
@@ -102,63 +66,6 @@ function describeRingSlice(
 // Avoids a degenerate SVG arc (zero-length) when a slice spans the full circle.
 function clampSpan(startAngle: number, endAngle: number) {
   return endAngle - startAngle >= 359.99 ? startAngle + 359.99 : endAngle
-}
-
-function hexToHsl(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  let h = 0
-  const l = (max + min) / 2
-  const d = max - min
-  let s = 0
-  if (d !== 0) {
-    s = d / (1 - Math.abs(2 * l - 1))
-    switch (max) {
-      case r:
-        h = ((g - b) / d) % 6
-        break
-      case g:
-        h = (b - r) / d + 2
-        break
-      default:
-        h = (r - g) / d + 4
-    }
-    h *= 60
-    if (h < 0) h += 360
-  }
-  return { h, s: s * 100, l: l * 100 }
-}
-
-function hslToHex(h: number, s: number, l: number) {
-  const sN = s / 100
-  const lN = l / 100
-  const c = (1 - Math.abs(2 * lN - 1)) * sN
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = lN - c / 2
-  let [r, g, b] = [0, 0, 0]
-  if (h < 60) [r, g, b] = [c, x, 0]
-  else if (h < 120) [r, g, b] = [x, c, 0]
-  else if (h < 180) [r, g, b] = [0, c, x]
-  else if (h < 240) [r, g, b] = [0, x, c]
-  else if (h < 300) [r, g, b] = [x, 0, c]
-  else [r, g, b] = [c, 0, x]
-  const toHex = (v: number) =>
-    Math.round((v + m) * 255)
-      .toString(16)
-      .padStart(2, '0')
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
-}
-
-/** Generates `count` shades of a base color, spread across a lightness band, to keep child slices visually tied to their parent's hue. */
-function shadesOf(baseHex: string, count: number) {
-  const { h, s } = hexToHsl(baseHex)
-  const minL = 32
-  const maxL = 78
-  if (count <= 1) return [hslToHex(h, s, 48)]
-  return Array.from({ length: count }, (_, i) => hslToHex(h, s, minL + (i / (count - 1)) * (maxL - minL)))
 }
 
 type RenderChild = PieChild & { color: string; startAngle: number; endAngle: number }

@@ -19,7 +19,18 @@ import type {
 const MAP_SITE_FIELDS =
   'site_code, site_name_zh, site_name_en, province_zh, province_en, city_zh, city_en, county_zh, county_en, location_detail_zh, location_detail_en, lat, lng, precision_level, site_type_zh, site_type_en, find_record_count, total_quantity_for_map, level1_types_zh, level2_types_zh, level3_types_zh, level4_types_zh, level5_types_zh, level1_types_en, level2_types_en, level3_types_en, level4_types_en, level5_types_en, inscriptions, states_zh, mints_zh, inscriptions_en, states_en, mints_en'
 
-export type SearchSite = MapSite & { period_zh: string | null; period_en: string | null }
+export type SearchSite = MapSite & {
+  period_zh: string | null
+  period_en: string | null
+  // Carried along for /search's "interest" sort (lib/search-filters.ts),
+  // which rewards a well-documented record — not exposed on the
+  // v_coin_map_sites view MapSite otherwise comes from, so these are
+  // fetched from `sites` alongside period in attachSiteDetails below.
+  description_zh: string | null
+  description_en: string | null
+  note_zh: string | null
+  note_en: string | null
+}
 
 /** Without generated Database types, supabase-js/postgrest-js can't always
  * infer a to-one embed's cardinality from the select string alone and
@@ -183,12 +194,18 @@ export function flattenPeriod(row: any) {
   return { ...rest, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
 }
 
-async function attachPeriods(sites: MapSite[]): Promise<SearchSite[]> {
+async function attachSiteDetails(sites: MapSite[]): Promise<SearchSite[]> {
   try {
     // Paginate — sites exceed PostgREST's default 1000-row cap, and a single
-    // unpaginated select silently dropped periods for later rows.
+    // unpaginated select silently dropped periods for later rows. Bundles
+    // description/note alongside period (rather than a second query) since
+    // both come off the same `sites` row keyed by the same site_code.
     const data = await fetchAllPages<{
       site_code: string
+      description_zh: string | null
+      description_en: string | null
+      note_zh: string | null
+      note_en: string | null
       periods:
         | { period_zh: string | null; period_en: string | null }
         | { period_zh: string | null; period_en: string | null }[]
@@ -196,21 +213,37 @@ async function attachPeriods(sites: MapSite[]): Promise<SearchSite[]> {
     }>((from, to) =>
       supabase
         .from('sites')
-        .select('site_code, periods(period_zh, period_en)')
+        .select('site_code, description_zh, description_en, note_zh, note_en, periods(period_zh, period_en)')
         .order('site_code')
         .range(from, to)
     )
 
-    const periodBySiteCode = new Map(data.map((row) => [row.site_code, flattenPeriod(row)]))
+    const detailsBySiteCode = new Map(data.map((row) => [row.site_code, flattenPeriod(row)]))
     return sites.map((site) => {
-      const period = periodBySiteCode.get(site.site_code)
-      return { ...site, period_zh: period?.period_zh ?? null, period_en: period?.period_en ?? null }
+      const details = detailsBySiteCode.get(site.site_code)
+      return {
+        ...site,
+        period_zh: details?.period_zh ?? null,
+        period_en: details?.period_en ?? null,
+        description_zh: details?.description_zh ?? null,
+        description_en: details?.description_en ?? null,
+        note_zh: details?.note_zh ?? null,
+        note_en: details?.note_en ?? null,
+      }
     })
   } catch (err) {
-    // Don't take down /search (or any attachPeriods caller) if the periods
-    // embed/migration is missing — degrade to null periods instead.
-    console.error('attachPeriods failed; continuing without period labels:', err)
-    return sites.map((site) => ({ ...site, period_zh: null, period_en: null }))
+    // Don't take down /search (or any attachSiteDetails caller) if the
+    // periods embed/migration is missing — degrade to nulls instead.
+    console.error('attachSiteDetails failed; continuing without period/description labels:', err)
+    return sites.map((site) => ({
+      ...site,
+      period_zh: null,
+      period_en: null,
+      description_zh: null,
+      description_en: null,
+      note_zh: null,
+      note_en: null,
+    }))
   }
 }
 
@@ -358,7 +391,7 @@ export async function getAllSites(): Promise<SearchSite[]> {
     ),
     getPrecisionSupplementSites(),
   ])
-  return attachPeriods(mergeMapSites(sites, supplements))
+  return attachSiteDetails(mergeMapSites(sites, supplements))
 }
 
 export async function getDatabaseStats(): Promise<DatabaseStats> {
