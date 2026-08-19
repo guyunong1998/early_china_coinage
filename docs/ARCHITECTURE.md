@@ -83,7 +83,7 @@ Two clearly separate sources. Getting this distinction right is the key to answe
 
 Reads go through `lib/supabase.ts` (a single `createClient(...)` instance using the **public anon key** — safe to expose because RLS grants that key `SELECT` only, on public, non-sensitive catalogue data; it has no write policies at all). Every read-side Supabase call in the app lives in one of two files:
 
-- **`lib/queries.ts`** — the main query surface. Tables/views it reads: `sites`, `contexts`, `finds` (joined to `coin_issues`), `coin_issues` (joined to `mints`, `states`, `inscriptions`, `coin_type_hierarchy`), `coin_type_hierarchy`, `mints`, `sources`, `source_links`, and the view **`v_coin_map_sites`** (a flattened, map-ready projection of sites — this is what most map pages actually query instead of the raw `sites` table).
+- **`lib/queries.ts`** — the main query surface. Tables it reads directly: `sites`, `contexts`, `finds` (joined to `coin_issues` where the embed needs live PostgREST FK detection — see below), `coin_type_hierarchy`, `mints`, `sources`, `source_links`. Three views do the repeated-join work instead of hand-joining every call: **`v_coin_map_sites`** (a flattened, map-ready projection of sites — this is what most map pages query instead of the raw `sites` table), **`v_coin_issues_flat`** (`coin_issues` pre-joined to `mints`/`states`/`inscriptions`/`coin_type_hierarchy`, major/minor type already derived in SQL — `getCoinIssues()` and `getMintFindspotsData()` read this instead of embedding + `flattenCoinIssue()`-ing by hand), and **`v_source_link_targets`** (every site/context/find/coin_item/mint pre-resolved to a label + href, keyed by `(target_type, target_code)` — see below).
 - **`lib/ans-museum-data.ts`** — one function, `getAnsSpecimens()`, reading the **`ans_data`** table (joined to `mints`/`states`), which backs the Museum Collections page.
 
 Both files are imported **only from `page.tsx` files** (server components) — never from a `'use client'` file — so the actual query execution always happens server-side even though the anon key itself is public. Writes are a separate story: `lib/admin/*-actions.ts` (Server Actions) go through `lib/admin/guard.ts`'s `getWriteClient()` instead — either a session-scoped client that RLS gates by `is_admin()`, or (dev only) the service-role client in `lib/supabase-admin.ts` — never `lib/supabase.ts`. See §3.
@@ -92,7 +92,9 @@ Supabase's PostgREST API caps a single response at 1000 rows. `queries.ts` expor
 
 The core find-provenance chain is `sites` → `contexts` (an archaeological findspot within a site — a tomb, hoard pit, stratum) → `finds` (a reported coin group from one context, per one source — quantity fields like `quantity_total`/`quantity_min`/`quantity_estimated` live here) → `coin_items` (individually catalogued specimens within a find, with their own measurements/condition/photos). Every quantity shown in the UI still comes from the `finds`-level quantity fields directly (see `getFindsForHeatmap` in `lib/queries.ts` and `computeSiteHeatStates` in `lib/context-heatmap.ts`), not from counting `coin_items` rows — most finds have quantities but no itemized `coin_items` at all. `coin_items` itself is now touched in exactly one narrow place: `lib/admin/target-search.ts`'s search-as-you-type lookup for `/sources`' "attach a citation to a coin item" picker — it's still not browsable or displayed as its own record anywhere.
 
-`source_links` — a generic polymorphic join table (`source_code` × `target_type`/`target_code`, `target_type` one of `site`/`context`/`find`/`coin_item`/`mint`) — used to be unused; it now backs the `/sources` page and the site/mint "Sources & Citations" panels end-to-end: read via `getAllSourceLinks()` (all links, for `/sources`), `getSourceLinksForSite()`/`getSourceLinksForMint()` (scoped, for the detail pages), resolved to a display target via `lib/admin/resolve-source-link-target.ts`, written via `lib/admin/source-links-actions.ts`.
+`source_links` — a generic polymorphic join table (`source_code` × `target_type`/`target_code`, `target_type` one of `site`/`context`/`find`/`coin_item`/`mint`) — used to be unused; it now backs the `/sources` page and the site/mint "Sources & Citations" panels end-to-end: read via `getAllSourceLinks()` (all links, for `/sources`), `getSourceLinksForSite()`/`getSourceLinksForMint()` (scoped, for the detail pages), resolved to a display target via `lib/admin/resolve-source-link-target.ts` (one query per `target_type` against `v_source_link_targets`, chunked to stay under PostgREST's request-size limit — previously five separate hand-joined queries, one per target table), written via `lib/admin/source-links-actions.ts`.
+
+Not every join could move into a view: `getSiteFinds()` and the `finds`-embedding admin actions (`createFind`/`updateFind` in `sites-actions.ts`) still embed `coin_issues(...)` directly via PostgREST's `finds.coin_issues_id → coin_issues.id` foreign key — `v_coin_issues_flat` has no real FK for PostgREST to embed through (it's a view, not a table), so those call sites keep the `COIN_ISSUE_FIELDS` select string + `flattenCoinIssue()` pattern rather than the view.
 
 Two tables still aren't read by the running app at all:
 - `ans_data_upload` (raw import staging) — reconciled by hand into `ans_data` via `scripts/reconcile-ans-data.sql`, run in the Supabase SQL editor whenever new ANS catalogue data comes in. `scripts/append-new-coin-issues.sql` is the same kind of manual, one-off tool.
@@ -120,7 +122,7 @@ Grouped by job rather than alphabetically:
 
 **Data access — reads**
 - `supabase.ts` — the anon read client (only place outside `lib/supabase/` and `lib/supabase-admin.ts` that `createClient` is called)
-- `queries.ts` — nearly every Supabase query in the app; also owns `fetchAllPages`, the flatten-a-joined-row helpers (e.g. `flattenCoinIssue`), and derived aggregate queries like `getMintFindspotsData`
+- `queries.ts` — nearly every Supabase query in the app; also owns `fetchAllPages`, the flatten-a-joined-row helpers (`flattenCoinIssue`, still used for the two `coin_issues` embeds that can't move to a view — see §4a), and derived aggregate queries like `getMintFindspotsData` (now reading `v_coin_issues_flat` directly rather than embedding + flattening)
 - `ans-museum-data.ts` — the one `ans_data` query (kept separate from `queries.ts` since it's a different table family, feeding Museum Collections specifically)
 
 **Data access — writes & auth** (see §3 for the full picture)
@@ -131,7 +133,7 @@ Grouped by job rather than alphabetically:
 - `admin/*-actions.ts` (`sites-actions.ts`, `mints-actions.ts`, `coin-issues-actions.ts`, `taxonomy-actions.ts`, `sources-actions.ts`, `source-links-actions.ts`) — the Server Actions themselves, one file per table family
 - `admin/schemas.ts` — the Zod schemas every action validates `FormData` against before writing
 - `admin/target-search.ts` / `target-search-action.ts` — search-as-you-type for `AddSourceLinkForm`'s citation-target picker
-- `admin/resolve-source-link-target.ts` — turns a `source_links` row's `target_type`/`target_code` into a display label + href
+- `admin/resolve-source-link-target.ts` — turns a `source_links` row's `target_type`/`target_code` into a display label + href, via `v_source_link_targets`
 - `auth/actions.ts` — `signInWithGoogle`, `signInWithPassword`, `signOut` (Server Actions backing `/login` and `AuthStatus`)
 - `auth/session.ts` — `getCurrentUserEmail()`, backing `/api/auth/me`
 
@@ -268,6 +270,8 @@ These never run automatically — they're one-off or occasional maintenance step
 - `scripts/reconcile-ans-data.sql` — rebuilds `public.ans_data` from `public.ans_data_upload` in Supabase (run by hand in the SQL editor)
 - `scripts/append-new-coin-issues.sql` — promotes unresolved `ans_data` rows into new `coin_issues` records
 - `scripts/add-admin-write-rls.sql` — one-time setup for the admin editing layer (§3): creates `admin_users` and `is_admin()`, adds the `admin_write_insert`/`_update`/`_delete` RLS policies to every editable table. Run once by hand; adding a new collaborator afterward is a single manual `insert into admin_users`.
+
+`v_coin_issues_flat` and `v_source_link_targets` (§4a) are a partial exception to the "one-off script checked into the repo" convention above — they were applied directly via the Supabase MCP server's `apply_migration` tool rather than a hand-run `scripts/*.sql` file, so their `CREATE VIEW` definitions live only in Supabase's own migration history (`list_migrations`), not in this repo. Worth keeping in mind if either view ever needs to change: there's no local `.sql` source to edit and re-run.
 
 ---
 

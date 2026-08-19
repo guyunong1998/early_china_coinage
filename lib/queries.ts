@@ -549,11 +549,14 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
   return filterSitesByQuery(sites, coinIssues, trimmed)
 }
 
+/** Reads the flattened, pre-joined `v_coin_issues_flat` view (mints/states/
+ * inscriptions/coin_type_hierarchy already joined and major/minor derived in
+ * SQL) instead of embedding + flattenCoinIssue-ing coin_issues by hand — same
+ * CoinIssueDisplay shape, no client-side join. */
 export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
-  const rows = await fetchAllPages<CoinIssueEmbed>((from, to) =>
-    supabase.from('coin_issues').select(COIN_ISSUE_FIELDS).order('coin_type_code').range(from, to)
+  return fetchAllPages<CoinIssueDisplay>((from, to) =>
+    supabase.from('v_coin_issues_flat').select('*').order('coin_type_code').range(from, to)
   )
-  return rows.map(flattenCoinIssue)
 }
 
 export async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {
@@ -890,11 +893,11 @@ function buildTypeLabel(coin: {
 export async function getMintFindspotsData(mintId: string): Promise<MintFindspotsData> {
   if (!mintId) return EMPTY_MINT_FINDSPOTS_DATA
 
+  // v_coin_issues_flat already has major/minor derived and inscription
+  // flattened, so no deriveMajorMinor/one() unwrapping needed here.
   const { data: mintedIssueRows, error: coinError } = await supabase
-    .from('coin_issues')
-    .select(
-      'id, coin_type_code, mint_id, inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
-    )
+    .from('v_coin_issues_flat')
+    .select('id, coin_type_code, major_type_zh, major_type_en, minor_type_zh, minor_type_en, inscription, inscription_en')
     .eq('mint_id', mintId)
 
   if (coinError) throw coinError
@@ -902,30 +905,16 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
     return EMPTY_MINT_FINDSPOTS_DATA
   }
 
-  const mintedCoinTypes = (
-    mintedIssueRows as Array<{
-      id: string
-      coin_type_code: string
-      mint_id: string | null
-      inscriptions:
-        | { inscription_zh: string; inscription_en: string | null }
-        | { inscription_zh: string; inscription_en: string | null }[]
-        | null
-      coin_type_hierarchy: CoinTypeHierarchyEmbed
-    }>
-  ).map((row) => {
-    const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
-    return {
-      id: row.id,
-      coin_type_code: row.coin_type_code,
-      major_type_zh: major_zh,
-      major_type_en: major_en,
-      minor_type_zh: minor_zh,
-      minor_type_en: minor_en,
-      inscription: one(row.inscriptions)?.inscription_zh ?? null,
-      inscription_en: one(row.inscriptions)?.inscription_en ?? null,
-    }
-  })
+  const mintedCoinTypes = mintedIssueRows as Array<{
+    id: string
+    coin_type_code: string
+    major_type_zh: string | null
+    major_type_en: string | null
+    minor_type_zh: string | null
+    minor_type_en: string | null
+    inscription: string | null
+    inscription_en: string | null
+  }>
 
   // Full catalogue of inscriptions attributed to this mint — independent of
   // whether any find has been recorded yet, so this stays complete even for
