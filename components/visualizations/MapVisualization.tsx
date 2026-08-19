@@ -37,10 +37,10 @@ import {
   NO_DATA_ALPHA,
   NO_DATA_COLOR,
   PRESENT_UNQUANTIFIED_COLOR,
-  RAMP_LEGEND_STOPS,
   SELECTION_COLORS,
   SINGLE_FIND_COLOR,
   hexToRgba,
+  ratioToColor,
   useSelectionColors,
 } from '@/lib/color-scale'
 import { computeSiteHeatStates } from '@/lib/context-heatmap'
@@ -212,6 +212,41 @@ function CompareLegend({
           {entry.label}
         </span>
       ))}
+    </>
+  )
+}
+
+/** Points view's match-ratio legend — a continuous 0%→100% gradient bar (the
+ * same interpolation stateColor()/ratioToColor() already use per-point, see
+ * lib/color-scale.ts) rather than the five discrete swatches this used to
+ * render, which read as bucketed color steps even though the underlying
+ * ratio→color mapping was already continuous. `presentNoCount` and `noData`
+ * are categorical states outside the ratio scale, so they keep their own
+ * swatches; `noData` is a slot for the caller's own markup since one caller
+ * pairs it with a showNoData checkbox and another doesn't. */
+function RatioLegend({ presentNoCount = false, noData }: { presentNoCount?: boolean; noData: ReactNode }) {
+  return (
+    <>
+      <span className="font-semibold uppercase tracking-wide text-gray-500">
+        <T k="map.legend.title" />
+      </span>
+      <span className="tabular-nums text-gray-500">0%</span>
+      <span
+        className="inline-block h-2 w-20 rounded-sm"
+        style={{ background: `linear-gradient(90deg, ${ratioToColor(0)}, ${ratioToColor(1)})` }}
+      />
+      <span className="tabular-nums text-gray-500">100%</span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: SINGLE_FIND_COLOR }} />
+        <T k="map.legend.singleFind" />
+      </span>
+      {presentNoCount && (
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: PRESENT_UNQUANTIFIED_COLOR }} />
+          <T k="heatmap.legend.presentNoCount" />
+        </span>
+      )}
+      {noData}
     </>
   )
 }
@@ -912,47 +947,24 @@ export function FindSpotsVisualization({
               <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
             ))}
           {filterActive && viewMode === 'points' && (
-            <>
-              <span className="font-semibold uppercase tracking-wide text-gray-500">
-                <T k="map.legend.title" />
-              </span>
-              {RAMP_LEGEND_STOPS.map((stop) => (
-                <span key={stop.ratio} className="flex items-center gap-1">
+            <RatioLegend
+              presentNoCount
+              noData={
+                <label className="flex cursor-pointer items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={showNoData}
+                    onChange={(e) => setShowNoData(e.target.checked)}
+                    className="accent-brand"
+                  />
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: stop.color }}
+                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
                   />
-                  {Math.round(stop.ratio * 100)}%
-                </span>
-              ))}
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: SINGLE_FIND_COLOR }}
-                />
-                <T k="map.legend.singleFind" />
-              </span>
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: PRESENT_UNQUANTIFIED_COLOR }}
-                />
-                <T k="heatmap.legend.presentNoCount" />
-              </span>
-              <label className="flex cursor-pointer items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={showNoData}
-                  onChange={(e) => setShowNoData(e.target.checked)}
-                  className="accent-brand"
-                />
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                />
-                <T k="heatmap.legend.noData" />
-              </label>
-            </>
+                  <T k="heatmap.legend.noData" />
+                </label>
+              }
+            />
           )}
           {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>
@@ -1243,40 +1255,23 @@ export function MintTownVisualization({
             <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
           )}
           {filterActive && viewMode === 'points' && (
-            <>
-              <span className="font-semibold uppercase tracking-wide text-gray-500">
-                <T k="map.legend.title" />
-              </span>
-              {RAMP_LEGEND_STOPS.map((stop) => (
-                <span key={stop.ratio} className="flex items-center gap-1">
+            <RatioLegend
+              noData={
+                <label className="flex cursor-pointer items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={showNoData}
+                    onChange={(e) => setShowNoData(e.target.checked)}
+                    className="accent-brand"
+                  />
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: stop.color }}
+                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
                   />
-                  {Math.round(stop.ratio * 100)}%
-                </span>
-              ))}
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: SINGLE_FIND_COLOR }}
-                />
-                <T k="map.legend.singleFind" />
-              </span>
-              <label className="flex cursor-pointer items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={showNoData}
-                  onChange={(e) => setShowNoData(e.target.checked)}
-                  className="accent-brand"
-                />
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                />
-                <T k="heatmap.legend.noData" />
-              </label>
-            </>
+                  <T k="heatmap.legend.noData" />
+                </label>
+              }
+            />
           )}
           {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>
@@ -1655,34 +1650,17 @@ export function AnsMintTownVisualization({
             <CompareLegend titleKey="map.legend.byType" entries={typeEntries} colorByValue={typeColorByValue} />
           )}
           {filterActive && viewMode === 'points' && (
-            <>
-              <span className="font-semibold uppercase tracking-wide text-gray-500">
-                <T k="map.legend.title" />
-              </span>
-              {RAMP_LEGEND_STOPS.map((stop) => (
-                <span key={stop.ratio} className="flex items-center gap-1">
+            <RatioLegend
+              noData={
+                <span className="flex items-center gap-1">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: stop.color }}
+                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
                   />
-                  {Math.round(stop.ratio * 100)}%
+                  <T k="heatmap.legend.noData" />
                 </span>
-              ))}
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: SINGLE_FIND_COLOR }}
-                />
-                <T k="map.legend.singleFind" />
-              </span>
-              <span className="flex items-center gap-1">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                />
-                <T k="heatmap.legend.noData" />
-              </span>
-            </>
+              }
+            />
           )}
           {viewMode === 'density' && <DensityLegend range={density.range} />}
         </div>

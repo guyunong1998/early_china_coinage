@@ -33,7 +33,7 @@
      rather than a very low step of the ratio color scale. Keep in sync with
      lib/color-scale.ts's NO_DATA_COLOR/NO_DATA_ALPHA (used for the matching
      legend swatch and popup bar, which can't read a CSS custom property). */
-  --map-dot-nodata-fill: rgba(90, 90, 90, 0.3);
+  --map-dot-nodata-fill: rgba(90, 90, 90, 0.2);
   --map-dot-nodata-border: rgba(60, 60, 60, 0.25);
 
   /* MapVisCanvas.tsx's quantity-driven dot sizing (Find Site):

@@ -16,7 +16,7 @@ const RAMP_DARK: [number, number, number] = [0xa0, 0x15, 0x15] // high ratio: re
 // actual marker uses (this constant backs the legend swatch and popup bar,
 // which can't read a CSS custom property).
 export const NO_DATA_COLOR = '#5a5a5a'
-export const NO_DATA_ALPHA = 0.4
+export const NO_DATA_ALPHA = 0.2
 
 // Type is present in a context but quantities cannot be computed — full
 // opacity so it doesn't read as "less certain" than quantified sites.
@@ -129,12 +129,6 @@ export function ratioToColor(ratio: number): string {
     lerp(RAMP_LIGHT[2], RAMP_DARK[2], t),
   ])
 }
-
-/** Legend stops matching ratioToColor (low % = yellow, high % = red). */
-export const RAMP_LEGEND_STOPS = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
-  ratio,
-  color: ratioToColor(ratio),
-}))
 
 // Shared leaflet.heat gradient (light yellow -> red) used by every density
 // heat layer in the app (MapVisCanvas.tsx's density view mode, and the

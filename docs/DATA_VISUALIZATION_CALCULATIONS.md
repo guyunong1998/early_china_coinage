@@ -2,13 +2,14 @@
 
 Exact algorithms behind every map's visual encoding: how a point's **size** is calculated, how its **color** is calculated in each of the three display modes (Points, Density, Compare), and how the density heat layer's color is calculated. This is the "what number produces what pixel" reference — for the broader component architecture, see `docs/ARCHITECTURE.md`.
 
-Every map on the site (Find Site, the database Mint Town tab, Museum Collections' Mint Town view, the homepage `CoinFilterMap`) shares this exact same math. The only thing that differs per map is *what* is being measured (a find site's coins vs. a mint town's coins vs. an ANS specimen count) — never *how* size or color is derived from that measurement.
+Every map on the site (Find Site, the database Mint Town tab, Museum Collections' Mint Town view, the homepage `CoinFilterMap`) shares this exact same math for point size and Points-view color. Density view is the one exception: Find Site, the Mint Town tab, and Museum Collections all min-max normalize their heat weight to *that view's own filtered result set* (§3.1), while the homepage teaser map (`CoinFilterMap`, no filter UI at all) uses a fixed, unscaled intensity curve instead (§3.4) — there's no filtered set to normalize against there.
 
 Source of truth for everything below:
 - `components/map/MapVisCanvas.tsx` — size (`siteSizeByQuantity`), color dispatch (`stateColor`), Compare rendering, stacking offsets
 - `lib/color-scale.ts` — the ratio→color gradient, the density gradient, the categorical identity palette
 - `lib/context-heatmap.ts` — how a raw match ratio is derived from finds/contexts in the first place
-- `components/visualizations/MapVisualization.tsx` — `heatIntensity()`, the density heat-weight function
+- `components/visualizations/MapVisualization.tsx` — `heatWeight()` and `buildDensityLayer()`, the density heat-weight function and its per-view min-max normalization; `RatioLegend`/`DensityLegend`, the legend components
+- `components/map/CoinFilterMap.tsx` — `densityIntensity()`, the homepage teaser map's own fixed (non-min-maxed) density curve
 - `app/maps.css` — the numeric constants (`--map-dot-qty-size-min/max`, `--heatmap-opacity`)
 
 ---
@@ -117,64 +118,88 @@ ratioToColor(ratio):
     return toHex(round(r), round(g), round(b))
 ```
 
-So e.g. `ratio = 0.5` → `r = 217 + (160-217)×0.5 = 188.5 → round 189`, `g = 164 + (21-164)×0.5 = 92.5 → round 93`, `b = 6 + (21-6)×0.5 = 13.5 → round 14` → `#bd5d0e`, a burnt orange roughly halfway between the yellow and red endpoints. The legend's 5 fixed swatches (`RAMP_LEGEND_STOPS`) are just this same function sampled at `ratio ∈ {0, 0.25, 0.5, 0.75, 1}`.
+So e.g. `ratio = 0.5` → `r = 217 + (160-217)×0.5 = 188.5 → round 189`, `g = 164 + (21-164)×0.5 = 92.5 → round 93`, `b = 6 + (21-6)×0.5 = 13.5 → round 14` → `#bd5d0e`, a burnt orange roughly halfway between the yellow and red endpoints.
+
+The Points-view legend (`RatioLegend` in `MapVisualization.tsx`) renders this same function as a continuous CSS `linear-gradient(90deg, ratioToColor(0), ratioToColor(1))` bar flanked by "0%"/"100%" labels — a direct visual sample of the actual per-point interpolation, not a discrete set of swatches at fixed ratio steps (an earlier version of this legend sampled `RAMP_LEGEND_STOPS` at `ratio ∈ {0, 0.25, 0.5, 0.75, 1}` as five separate dots; that constant no longer exists).
 
 ### 2.3 Full color dispatch, including the non-ratio special cases
 
 ```
-stateColor(state, opacity):
+stateColor(state, opacity = 1):
     match state.kind:
-        'no-filter'    → ratioToColor(1)              @ opacity   # unfiltered = "shown as if fully matched"
+        'no-filter'    → ratioToColor(1)              @ min(1, opacity × 0.75)   # unfiltered overview reads slightly softer than an actual 100% match
         'pure'         → ratioToColor(1)               @ opacity   # #a01515, full red
         'ratio' where ratio <= 0
                        → NO_DATA_COLOR                  @ NO_DATA_ALPHA   # true 0% reads as "disabled", not pale yellow
         'ratio'        → ratioToColor(ratio)             @ opacity
-        'no-data'      → NO_DATA_COLOR (#5a5a5a)         @ NO_DATA_ALPHA (0.55)
-        'unquantified' → PRESENT_UNQUANTIFIED_COLOR (#9caa4a) @ opacity
+        'no-data'      → NO_DATA_COLOR (#5a5a5a)         @ NO_DATA_ALPHA (0.2)
+        'unquantified' → PRESENT_UNQUANTIFIED_COLOR (#c05fae) @ opacity
         'single-find'  → SINGLE_FIND_COLOR (#7b3fa0)     @ opacity
 ```
 
 `'single-find'` is a presentation-only override applied just before coloring (`toDisplayState`): a `'pure'` state whose site total quantity is exactly 1 is recolored purple instead of red, because "this site's one and only recorded coin matches" is a much more notable pattern than "this multi-coin site happens to be 100% one type" — the two would otherwise be visually identical solid-red dots.
 
-`opacity` here is `pointOpacity = readHeatmapOpacity()`, which reads the CSS custom property `--heatmap-opacity` (default **0.7**) — the one opacity knob shared by Points-view dots, Compare-view dots, and the Density gradient (§3.3). `no-data` deliberately ignores it and always renders at its own fixed `NO_DATA_ALPHA = 0.55`, so "nothing recorded" reads consistently regardless of the opacity setting.
+`opacity` here is `pointOpacity = readHeatmapOpacity()`, which reads the CSS custom property `--heatmap-opacity` (default **0.7**) — the one opacity knob shared by Points-view dots, Compare-view dots, and the Density gradient (§3.3). `no-data` deliberately ignores it and always renders at its own fixed `NO_DATA_ALPHA = 0.2`, so "nothing recorded" reads consistently (and stays visually recessive against every other state) regardless of the opacity setting. `NO_DATA_ALPHA` must be kept in sync with `app/maps.css`'s `--map-dot-nodata-fill`, which the actual map dot reads from (the JS constant only backs the legend swatch and popup bar, which can't read a CSS custom property) — both currently `0.2`.
 
 ---
 
 ## 3. Point color — Density view
 
-Density view replaces per-point coloring with a single blended **heat mass** (a `leaflet.heat` canvas layer). Each point contributes a scalar **intensity weight** to that layer; there is no per-point color computed in this view — color only exists as the final blended gradient.
+Density view replaces per-point coloring with a single blended **heat mass** (a `leaflet.heat` canvas layer). Each point contributes a scalar **intensity weight** to that layer; there is no per-point color computed in this view — color only exists as the final blended gradient. Unlike Points view, this weight is **min-max normalized against the current filtered result set** before it ever reaches `leaflet.heat` — the darkest red always represents *this view's own maximum*, not some fixed/absolute count, and the legend labels exactly what that maximum is in real coin counts.
 
-### 3.1 Per-point intensity weight
+### 3.1 Per-point raw weight
 
 ```
-heatIntensity(state, totalQty):
+heatWeight(state, totalQty):
     match state.kind:
-        'no-filter' →  totalQty <= 0  ?  0.35
-                        : min(1, 0.35 + log10(totalQty + 1) / 4)
-        'no-data'      →  null                    # excluded from the heat layer entirely
-        'unquantified' →  0.4                      # fixed moderate weight
-        'pure'         →  1                        # full weight
-        'ratio'        →  max(0.08, state.ratio)   # floor so a small-but-real match stays visible
+        'no-filter' →  totalQty            # unfiltered: each site's own coin total
+        'pure'      →  totalQty            # every find here matches → the site's own total is the matched count
+        'no-data'      →  null             # excluded — no record of the selected type/mint at all
+        'unquantified' →  null             # excluded — present, but no usable count to min-max against
+        'ratio'        →  state.matchedQty # only the matched portion counts toward the heat mass
 ```
 
-Points with `intensity == null` are dropped before being handed to `leaflet.heat` — they contribute nothing to the blended mass. Everything else becomes a `[lat, lng, intensity]` triple.
+`null`-weight and `≤ 0`-weight points are dropped before normalization — they contribute nothing to the heat layer (same "excluded" spirit as `no-data`'s fixed gray dot in Points view, just with no dot to render here at all).
 
-The `'no-filter'` branch is its own small log curve (independent of the point-size log curve in §1): a site with 0 coins sits at a baseline `0.35`, and more coins push it up toward `1.0` at a decelerating rate via `log10(totalQty + 1) / 4`. This means the *unfiltered* density view still shows real texture (bigger sites glow more) rather than a flat wash.
+### 3.2 Min-max normalization (`buildDensityLayer`)
 
-### 3.2 leaflet.heat rendering parameters
+```
+DENSITY_FLOOR = 0.15   # lowest visible intensity — keeps the min-weight point a pale
+                        # yellow dot instead of literally invisible (leaflet.heat treats
+                        # intensity 0 as no contribution at all)
+
+buildDensityLayer(points):
+    weighted = points where weight != null and weight > 0
+    if weighted.length == 0: return { latLngs: [], range: null }
+
+    min = min(weighted weights)
+    max = max(weighted weights)
+    latLngs = weighted.map(p => {
+        intensity = (max == min) ? 1
+                    : DENSITY_FLOOR + (1 - DENSITY_FLOOR) × (p.weight - min) / (max - min)
+        return [p.lat, p.lng, intensity]
+    })
+    return { latLngs, range: { min, max } }
+```
+
+This is the "min-maxed" heat scale: `min`/`max` are recomputed from whatever set of points is currently weighted — the full unfiltered site list when no filter is active, or just the matched subset once a type/mint filter is on — so the color ramp always stretches across *this view's own data range*, never a fixed/arbitrary curve. `range` (raw coin counts, not normalized intensities) is handed straight to the legend (`DensityLegend`), which prints it flanking the gradient bar so "what does red mean, numerically" is always answered on screen — e.g. `1 [gradient] 36000` reads as "the darkest red on this map is a 36,000-coin location, the palest yellow is a 1-coin location, both among sites currently matching the filter."
+
+Every density-driven map (Find Site's sites, the Mint Town tab's mints, Museum Collections' Mint Town mints) builds its `points` list from `heatWeight()` and feeds it through this exact function — only what `totalQty` means per point differs (a site's coin total, a mint's importance-score-derived quantity, or a mint's ANS specimen count).
+
+### 3.3 leaflet.heat rendering parameters
 
 ```
 L.heatLayer(points, {
     radius:     32,     // px, per-point blob radius before blur
     blur:       26,     // px, gaussian blur applied on top
     maxZoom:    9,       // intensity normalization stops changing past this zoom
-    max:        1,       // the ceiling a point's weight is normalized against (matches heatIntensity's own 0–1 range)
+    max:        1,       // the ceiling a point's weight is normalized against (matches buildDensityLayer's own [DENSITY_FLOOR, 1] intensity range)
     minOpacity: 0.25,    // even the faintest area of the layer stays at least this visible
     gradient:   buildDensityGradient(readHeatmapOpacity())
 })
 ```
 
-### 3.3 The density color gradient
+### 3.4 The density color gradient
 
 ```
 DENSITY_GRADIENT_STOPS = [
@@ -189,9 +214,21 @@ buildDensityGradient(opacity):
     return { stop: hexToRgba(hex, opacity)  for each (stop, hex) in DENSITY_GRADIENT_STOPS }
 ```
 
-`leaflet.heat` internally interpolates between these 5 stops based on each pixel's *blended, post-blur* intensity (not any single point's raw value) — so the final on-screen color at any pixel is a function of how many nearby high-intensity points overlap, not a 1:1 read of one point's `heatIntensity()`. `opacity` is the same shared `--heatmap-opacity` (0.7 default) as Points/Compare view, baked directly into each stop's alpha channel since `leaflet.heat` has no single "layer opacity" knob that would apply evenly across a multi-stop gradient.
+`leaflet.heat` internally interpolates between these 5 stops based on each pixel's *blended, post-blur* intensity (not any single point's raw value) — so the final on-screen color at any pixel is a function of how many nearby high-intensity points overlap, not a 1:1 read of one point's normalized `intensity` from §3.2. `opacity` is the same shared `--heatmap-opacity` (0.7 default) as Points/Compare view, baked directly into each stop's alpha channel since `leaflet.heat` has no single "layer opacity" knob that would apply evenly across a multi-stop gradient.
 
 Underneath the heat layer, the ordinary per-site markers are still present but rendered nearly invisible (`inDensity` branch of `applyHeatMarkerStyle`): `size = 7px`, `color = rgba(40,40,40,0.45)` (or fully `transparent` at `size = 0` for `no-data`) — just enough of a hit target to keep popups clickable, not a visible second color layer.
+
+### 3.5 The one exception: the homepage teaser map
+
+`CoinFilterMap.tsx` (the always-on density overlay behind the homepage's site markers) does **not** use `heatWeight`/`buildDensityLayer` — it has no filter UI, so there's no "current filtered result set" to min-max against in the first place. Instead every site's intensity comes from its own fixed log curve, independent of every other site on the map:
+
+```
+densityIntensity(qty):
+    if !qty or qty <= 0: return 0.35
+    return min(1, 0.35 + log10(qty + 1) / 4)
+```
+
+A 0-coin site sits at a baseline `0.35` (never fully transparent), and more coins push it up toward `1.0` at a decelerating rate. This keeps the unfiltered overview showing real texture (bigger sites glow more) without needing a legend, since there's no filtered max to label — it shares the same `radius`/`blur`/`max`/`minOpacity`/gradient parameters as §3.3, just a different intensity source feeding in.
 
 ---
 
@@ -289,13 +326,15 @@ Separate from all three view modes above: a user's explicit picks (a selected mi
 | No-data point size | 12px, fixed | `NO_DATA_DOT_SIZE` |
 | Ratio gradient, low end | `#d9a406` (yellow) | `RAMP_LIGHT` |
 | Ratio gradient, high end | `#a01515` (red) | `RAMP_DARK` |
-| No-data color | `#5a5a5a` @ 0.55 alpha | `NO_DATA_COLOR` / `NO_DATA_ALPHA` |
-| Unquantified color | `#9caa4a` | `PRESENT_UNQUANTIFIED_COLOR` |
+| No-data color | `#5a5a5a` @ 0.2 alpha | `NO_DATA_COLOR` / `NO_DATA_ALPHA` (kept in sync with `app/maps.css`'s `--map-dot-nodata-fill`) |
+| Unquantified color | `#c05fae` | `PRESENT_UNQUANTIFIED_COLOR` |
 | Single-find color | `#7b3fa0` | `SINGLE_FIND_COLOR` |
 | Identity palette | 8 fixed hues | `SELECTION_COLORS` |
 | Shared opacity (Points/Compare/Density) | 0.7 default | `--heatmap-opacity` |
 | Density blob radius / blur | 32px / 26px | `L.heatLayer(...)` |
 | Density gradient stops | 5, `#f0d56a → #6e0c0c` | `DENSITY_GRADIENT_STOPS` |
+| Density min-max floor | 0.15 (lowest visible intensity after normalization) | `DENSITY_FLOOR` |
+| Homepage teaser density curve | fixed, `0.35 + log10(qty+1)/4`, not min-maxed | `densityIntensity()`, `CoinFilterMap.tsx` |
 | Compare stacking radius | 9px | `stackOffset()` call site |
 | Pin stacking radius | 12px | `stackOffset()` call site |
 | Pin size | 22px × 30px | `PIN_WIDTH` / `PIN_HEIGHT` |

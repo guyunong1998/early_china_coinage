@@ -124,6 +124,8 @@ export const DICTIONARY = {
   'about.resources.title': { en: 'Additional Resources', zh: '更多资源' },
   'about.resources.sources': { en: 'Bibliographic Sources', zh: '文献来源' },
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
+  'about.resources.architecture': { en: 'Architecture Docs', zh: '架构文档' },
+  'about.resources.sitemap': { en: 'Sitemap Docs', zh: '站点地图文档' },
 
   // ── search page ───────────────────────────────────────────────────────
   'search.title': { en: 'Search', zh: '搜索' },

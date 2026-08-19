@@ -6,6 +6,8 @@ import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const GITHUB_URL = 'https://github.com/guyunong1998/early_china_coinage'
+const ARCHITECTURE_DOC_URL = `${GITHUB_URL}/blob/main/docs/ARCHITECTURE.md`
+const SITEMAP_DOC_URL = `${GITHUB_URL}/blob/main/docs/SITEMAP.md`
 
 type TeamMember = {
   name: string
@@ -164,6 +166,22 @@ export default function AboutPage() {
               className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
             >
               <T k="about.resources.github" /> →
+            </a>
+            <a
+              href={ARCHITECTURE_DOC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+            >
+              <T k="about.resources.architecture" /> →
+            </a>
+            <a
+              href={SITEMAP_DOC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+            >
+              <T k="about.resources.sitemap" /> →
             </a>
           </div>
         </DataCard>
