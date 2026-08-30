@@ -147,7 +147,7 @@ function SourceDisplay({ source, index }: { source: Source; index: number }) {
         [{index + 1}] {source.source_code}
         {typeLabel ? <span className="ml-2 font-normal text-gray-500">{typeLabel}</span> : null}
       </p>
-      <p className="mt-1 leading-6 text-gray-800">{formatSourceCitation(source)}</p>
+      <p className="mt-1 leading-6 text-gray-800">{formatSourceCitation(source, null, { includePage: false })}</p>
     </>
   )
 }
@@ -234,7 +234,6 @@ export function SourceCard({
                     ) : (
                       <span className="italic text-gray-400">{target?.label ?? link.target_code} (missing)</span>
                     )}
-                    {link.page && <span className="text-gray-400"> · p. {link.page}</span>}
                   </span>
                   {isDevMode && (
                     <ConfirmDeleteButton

@@ -336,9 +336,13 @@ function assembleFromFields(source: Source, page: string): string {
  * Always assembled from split columns (gaps filled from citation_zh pieces);
  * the raw citation string is never shown as-is.
  */
-export function formatSourceCitation(source: Source, pageOverride?: string | null): string {
+export function formatSourceCitation(
+  source: Source,
+  pageOverride?: string | null,
+  options?: { includePage?: boolean }
+): string {
   const filled = enrichSourceFields(source)
-  const page = firstNonEmpty(pageOverride, filled.page)
+  const page = options?.includePage === false ? '' : firstNonEmpty(pageOverride, filled.page)
   return formatByType(filled, page) ?? assembleFromFields(filled, page)
 }
 
