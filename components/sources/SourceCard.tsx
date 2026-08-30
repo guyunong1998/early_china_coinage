@@ -6,13 +6,14 @@ import { deleteSource, updateSource } from '@/lib/admin/sources-actions'
 import { deleteSourceLink } from '@/lib/admin/source-links-actions'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
 import type { Source, SourceLink } from '@/lib/types'
-import { displayValue } from '@/lib/format'
+import { SOURCE_TYPES } from '@/lib/types'
+import { formatSourceCitation, sourceDisplayType } from '@/lib/format-citation'
 import { ConfirmDeleteButton } from '@/components/edit/ConfirmDeleteButton'
 import { EditableSection } from '@/components/edit/EditableSection'
 import { FieldLabel, fieldInputClass } from '@/components/edit/FieldRow'
 import { AddSourceLinkForm } from './AddSourceLinkForm'
 
-function SourceFields({ source }: { source: Partial<Source> }) {
+export function SourceFields({ source }: { source: Partial<Source> }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2">
@@ -20,12 +21,43 @@ function SourceFields({ source }: { source: Partial<Source> }) {
         <input name="source_code" defaultValue={source.source_code ?? ''} required className={fieldInputClass} />
       </div>
       <div>
-        <FieldLabel>Author (zh)</FieldLabel>
-        <input name="author_zh" defaultValue={source.author_zh ?? ''} className={fieldInputClass} />
+        <FieldLabel>Type</FieldLabel>
+        <select name="type" defaultValue={source.type ?? ''} className={fieldInputClass}>
+          <option value="">—</option>
+          {SOURCE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
       </div>
       <div>
-        <FieldLabel>Author (en)</FieldLabel>
-        <input name="author_en" defaultValue={source.author_en ?? ''} className={fieldInputClass} />
+        <FieldLabel>Year</FieldLabel>
+        <input name="year" type="number" defaultValue={source.year ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 1 (zh)</FieldLabel>
+        <input name="author1_zh" defaultValue={source.author1_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 1 (en)</FieldLabel>
+        <input name="author1_en" defaultValue={source.author1_en ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 2 (zh)</FieldLabel>
+        <input name="author2_zh" defaultValue={source.author2_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 2 (en)</FieldLabel>
+        <input name="author2_en" defaultValue={source.author2_en ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 3 (zh)</FieldLabel>
+        <input name="author3_zh" defaultValue={source.author3_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Author 3 (en)</FieldLabel>
+        <input name="author3_en" defaultValue={source.author3_en ?? ''} className={fieldInputClass} />
       </div>
       <div>
         <FieldLabel>Title (zh)</FieldLabel>
@@ -36,6 +68,22 @@ function SourceFields({ source }: { source: Partial<Source> }) {
         <input name="title_en" defaultValue={source.title_en ?? ''} className={fieldInputClass} />
       </div>
       <div>
+        <FieldLabel>Book title (zh)</FieldLabel>
+        <input name="book_zh" defaultValue={source.book_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Book title (en)</FieldLabel>
+        <input name="book_en" defaultValue={source.book_en ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Editor (zh)</FieldLabel>
+        <input name="editor_zh" defaultValue={source.editor_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Editor (en)</FieldLabel>
+        <input name="editor_en" defaultValue={source.editor_en ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
         <FieldLabel>Publication (zh)</FieldLabel>
         <input name="publication_zh" defaultValue={source.publication_zh ?? ''} className={fieldInputClass} />
       </div>
@@ -44,8 +92,20 @@ function SourceFields({ source }: { source: Partial<Source> }) {
         <input name="publication_en" defaultValue={source.publication_en ?? ''} className={fieldInputClass} />
       </div>
       <div>
-        <FieldLabel>Year</FieldLabel>
-        <input name="year" type="number" defaultValue={source.year ?? ''} className={fieldInputClass} />
+        <FieldLabel>Place (zh)</FieldLabel>
+        <input name="place_zh" defaultValue={source.place_zh ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Place (en)</FieldLabel>
+        <input name="place_en" defaultValue={source.place_en ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Volume / issue</FieldLabel>
+        <input name="volume" defaultValue={source.volume ?? ''} className={fieldInputClass} />
+      </div>
+      <div>
+        <FieldLabel>Date (MM-DD)</FieldLabel>
+        <input name="date" defaultValue={source.date ?? ''} className={fieldInputClass} />
       </div>
       <div>
         <FieldLabel>Page</FieldLabel>
@@ -55,7 +115,7 @@ function SourceFields({ source }: { source: Partial<Source> }) {
         <FieldLabel>Language</FieldLabel>
         <input name="language" defaultValue={source.language ?? ''} className={fieldInputClass} />
       </div>
-      <div>
+      <div className="sm:col-span-2">
         <FieldLabel>URL</FieldLabel>
         <input name="url" defaultValue={source.url ?? ''} className={fieldInputClass} />
       </div>
@@ -68,34 +128,26 @@ function SourceFields({ source }: { source: Partial<Source> }) {
         <textarea name="citation_en" defaultValue={source.citation_en ?? ''} rows={2} className={fieldInputClass} />
       </div>
       <div className="sm:col-span-2">
-        <FieldLabel>Note</FieldLabel>
+        <FieldLabel>Note (zh)</FieldLabel>
         <textarea name="note_zh" defaultValue={source.note_zh ?? ''} rows={2} className={fieldInputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <FieldLabel>Note (en)</FieldLabel>
+        <textarea name="note_en" defaultValue={source.note_en ?? ''} rows={2} className={fieldInputClass} />
       </div>
     </div>
   )
 }
 
 function SourceDisplay({ source, index }: { source: Source; index: number }) {
+  const typeLabel = sourceDisplayType(source)
   return (
     <>
       <p className="text-xs font-semibold text-brand">
         [{index + 1}] {source.source_code}
+        {typeLabel ? <span className="ml-2 font-normal text-gray-500">{typeLabel}</span> : null}
       </p>
-      <p className="mt-1 leading-6 text-gray-800">
-        {source.citation_zh ??
-          `${displayValue(source.author_zh, '')}${source.author_zh ? '：' : ''}${displayValue(source.title_zh, '—')}`}
-      </p>
-      {source.title_en && <p className="mt-1 leading-6 italic text-gray-500">{source.title_en}</p>}
-      <p className="mt-1 text-xs text-gray-500">
-        {displayValue(source.publication_zh)}
-        {source.year ? ` (${source.year})` : ''}
-        {source.page ? `, p. ${source.page}` : ''}
-      </p>
-      {source.url && (
-        <a href={source.url} className="mt-2 inline-block text-brand hover:underline" target="_blank" rel="noopener noreferrer">
-          {source.url}
-        </a>
-      )}
+      <p className="mt-1 leading-6 text-gray-800">{formatSourceCitation(source)}</p>
     </>
   )
 }

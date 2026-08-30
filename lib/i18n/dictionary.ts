@@ -329,6 +329,15 @@ export const DICTIONARY = {
   'siteTabs.table.qty': { en: 'Qty', zh: '数量' },
   'siteTabs.noFinds': { en: 'No find records for this site.', zh: '该遗址暂无出土记录。' },
   'siteTabs.noSources': { en: 'No bibliographic sources linked yet.', zh: '暂无关联文献。' },
+  'siteTabs.citation.context': { en: 'Context', zh: '出土单位' },
+  'siteTabs.citation.contextCode': { en: 'Context code', zh: '出土单位编号' },
+  'siteTabs.citation.site': { en: 'Site', zh: '遗址' },
+  'siteTabs.citation.type': { en: 'Type', zh: '文献类型' },
+  'siteTabs.citation.noType': { en: 'Unspecified', zh: '未标注' },
+  'siteTabs.citation.noStructured': {
+    en: 'No structured citations linked yet.',
+    zh: '暂无结构化引用。',
+  },
 
   // ── map visualizations page ──────────────────────────────────────────────
   'visualizations.viewByLabel': { en: 'View by', zh: '浏览方式' },

@@ -6,20 +6,32 @@ import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
 import type { ActionState } from '@/lib/admin/types'
 import type { Source, SourceLink } from '@/lib/types'
 import { EditableSection } from '@/components/edit/EditableSection'
-import { FieldLabel, fieldInputClass } from '@/components/edit/FieldRow'
-import { SourceCard } from './SourceCard'
+import { SourceCard, SourceFields } from './SourceCard'
 
 const BLANK_SOURCE: Source = {
   id: '',
   source_code: '',
-  author_zh: null,
-  author_en: null,
+  type: null,
+  author1_zh: null,
+  author1_en: null,
+  author2_zh: null,
+  author2_en: null,
+  author3_zh: null,
+  author3_en: null,
+  editor_zh: null,
+  editor_en: null,
   title_zh: null,
   title_en: null,
+  book_zh: null,
+  book_en: null,
   language: null,
   year: null,
   publication_zh: null,
   publication_en: null,
+  place_zh: null,
+  place_en: null,
+  volume: null,
+  date: null,
   page: null,
   citation_zh: null,
   citation_en: null,
@@ -64,10 +76,17 @@ export function SourcesListClient({
     return sources.filter((s) =>
       [
         s.source_code,
-        s.author_zh,
-        s.author_en,
+        s.type,
+        s.author1_zh,
+        s.author1_en,
+        s.author2_zh,
+        s.author2_en,
+        s.author3_zh,
+        s.author3_en,
+        s.editor_zh,
         s.title_zh,
         s.title_en,
+        s.book_zh,
         s.citation_zh,
         s.citation_en,
         s.publication_zh,
@@ -153,7 +172,7 @@ export function SourcesListClient({
                 action={handleCreateSource}
                 onCancelCreate={() => setAddingSource(false)}
                 renderDisplay={() => null}
-                renderForm={(s) => <SourceFormFieldsForCreate source={s} />}
+                renderForm={(s) => <SourceFields source={s} />}
               />
             </div>
           )}
@@ -204,48 +223,6 @@ export function SourcesListClient({
           </button>
         </nav>
       )}
-    </div>
-  )
-}
-
-/** A trimmed-down subset of SourceCard's edit fields (SourceFields isn't
- * exported) — enough to create a usable source; the rest can be filled in
- * via Edit afterward. */
-function SourceFormFieldsForCreate({ source }: { source: Partial<Source> }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
-        <FieldLabel>Source code</FieldLabel>
-        <input name="source_code" defaultValue={source.source_code ?? ''} required autoFocus className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Author (zh)</FieldLabel>
-        <input name="author_zh" defaultValue={source.author_zh ?? ''} className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Author (en)</FieldLabel>
-        <input name="author_en" defaultValue={source.author_en ?? ''} className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Title (zh)</FieldLabel>
-        <input name="title_zh" defaultValue={source.title_zh ?? ''} className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Title (en)</FieldLabel>
-        <input name="title_en" defaultValue={source.title_en ?? ''} className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Publication (zh)</FieldLabel>
-        <input name="publication_zh" defaultValue={source.publication_zh ?? ''} className={fieldInputClass} />
-      </div>
-      <div>
-        <FieldLabel>Year</FieldLabel>
-        <input name="year" type="number" defaultValue={source.year ?? ''} className={fieldInputClass} />
-      </div>
-      <div className="sm:col-span-2">
-        <FieldLabel>Citation (zh)</FieldLabel>
-        <textarea name="citation_zh" defaultValue={source.citation_zh ?? ''} rows={2} className={fieldInputClass} />
-      </div>
     </div>
   )
 }

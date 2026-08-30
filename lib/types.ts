@@ -90,7 +90,10 @@ export type CoinTypeHierarchyRow = {
  * off this (via finds.coin_issues_id), never off `coin_type_code`. That's a
  * business/catalog code kept for display only (e.g. the "Code" column on
  * the coin-types detail page); `finds.coin_type_code` itself was renamed to
- * `deprecated_coin_type_code` and no longer exists under that name.
+ * `deprecated_coin_type_code` and no longer exists under that name. Map
+ * filters, search pies, and site classification all join through
+ * coin_issues_id; when coin_type_hierarchy_id is still null they fall back
+ * to coin_issues.legacy_type (see matchHierarchyForLegacyType).
  */
 export type CoinIssueDisplay = {
   id: string
@@ -139,17 +142,48 @@ export type Find = {
   coin_issues: CoinIssueDisplay | null
 }
 
+/** Zotero-style bibliographic category stored on public.sources.type. */
+export type SourceType =
+  | 'Book'
+  | 'Book Section'
+  | 'Journal Article'
+  | 'Newspaper'
+  | 'Blog Post'
+  | 'Edited Volume'
+
+export const SOURCE_TYPES: SourceType[] = [
+  'Book',
+  'Book Section',
+  'Journal Article',
+  'Newspaper',
+  'Blog Post',
+  'Edited Volume',
+]
+
 export type Source = {
   id: string
   source_code: string
-  author_zh: string | null
-  author_en: string | null
+  type: string | null
+  author1_zh: string | null
+  author1_en: string | null
+  author2_zh: string | null
+  author2_en: string | null
+  author3_zh: string | null
+  author3_en: string | null
+  editor_zh: string | null
+  editor_en: string | null
   title_zh: string | null
   title_en: string | null
-  language: string | null
-  year: number | null
+  book_zh: string | null
+  book_en: string | null
   publication_zh: string | null
   publication_en: string | null
+  place_zh: string | null
+  place_en: string | null
+  language: string | null
+  year: number | null
+  volume: string | null
+  date: string | null
   page: string | null
   citation_zh: string | null
   citation_en: string | null

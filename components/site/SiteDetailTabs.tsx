@@ -483,6 +483,10 @@ export function SiteDetailTabs({
                 sourcesByCode={sourcesByCode}
                 resolvedTargets={resolvedTargets}
                 isDevMode={isDevMode}
+                filterContextCode={selectedContext === 'all' ? null : selectedContext}
+                contextOrder={contexts.map((c) => c.context_code)}
+                contextNamesByCode={new Map(contexts.map((c) => [c.context_code, c.context_name_zh]))}
+                findContextByCode={new Map(finds.map((f) => [f.find_code, f.context_code]))}
               />
             ),
           },

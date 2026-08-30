@@ -1,5 +1,6 @@
 import { splitCsv } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
+import { matchHierarchyForLegacyType, parseLegacyTypeTokens } from '@/lib/typology-filter'
 import type {
   CoinIssueDisplay,
   CoinTypeHierarchyRow,
@@ -92,6 +93,10 @@ export type CoinIssueEmbed = {
   state_id: string | null
   inscription_id: string | null
   coin_type_hierarchy_id: string | null
+  legacy_type?: string | null
+  legacy_inscription?: string | null
+  legacy_mint?: string | null
+  legacy_state?: string | null
   mints: { name_zh: string; name_en: string | null } | { name_zh: string; name_en: string | null }[] | null
   states: { state_zh: string; state_en: string | null } | { state_zh: string; state_en: string | null }[] | null
   inscriptions:
@@ -102,39 +107,89 @@ export type CoinIssueEmbed = {
 }
 
 export const COIN_ISSUE_FIELDS =
-  'id, coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+  'id, coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, legacy_type, legacy_inscription, legacy_mint, legacy_state, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
+
+type LegacyTypeFields = {
+  legacy_type?: string | null
+  legacy_inscription?: string | null
+  legacy_mint?: string | null
+  legacy_state?: string | null
+}
+
+/** When coin_type_hierarchy_id is null, resolve type text from legacy_type
+ * against the live hierarchy (and fall back to the raw tokens if no row
+ * matches) so finds that only have coin_issues_id still display and filter. */
+function applyLegacyHierarchy(
+  issue: CoinIssueDisplay,
+  legacy: LegacyTypeFields | null | undefined,
+  hierarchyRows?: CoinTypeHierarchyRow[]
+): CoinIssueDisplay {
+  if (issue.coin_type_hierarchy_id && issue.major_type_zh) {
+    return {
+      ...issue,
+      inscription: issue.inscription ?? legacy?.legacy_inscription ?? null,
+      mint_zh: issue.mint_zh ?? legacy?.legacy_mint ?? null,
+      state_zh: issue.state_zh ?? legacy?.legacy_state ?? null,
+    }
+  }
+
+  const matched =
+    !issue.coin_type_hierarchy_id && hierarchyRows?.length
+      ? matchHierarchyForLegacyType(legacy?.legacy_type, hierarchyRows)
+      : null
+  const derived = matched ? deriveMajorMinor(matched) : { major_zh: null, major_en: null, minor_zh: null, minor_en: null }
+  const tokens = parseLegacyTypeTokens(legacy?.legacy_type)
+  return {
+    ...issue,
+    coin_type_hierarchy_id: issue.coin_type_hierarchy_id ?? matched?.id ?? null,
+    major_type_zh: issue.major_type_zh ?? derived.major_zh ?? tokens[0] ?? null,
+    major_type_en: issue.major_type_en ?? derived.major_en ?? null,
+    minor_type_zh: issue.minor_type_zh ?? derived.minor_zh ?? tokens[1] ?? null,
+    minor_type_en: issue.minor_type_en ?? derived.minor_en ?? null,
+    level2_zh: issue.level2_zh ?? matched?.level2_zh ?? tokens[0] ?? null,
+    level2_en: issue.level2_en ?? matched?.level2_en ?? null,
+    inscription: issue.inscription ?? legacy?.legacy_inscription ?? null,
+    mint_zh: issue.mint_zh ?? legacy?.legacy_mint ?? null,
+    state_zh: issue.state_zh ?? legacy?.legacy_state ?? null,
+  }
+}
 
 /** Flattens a joined coin_issues row into the same flat zh/en text shape the
  * old coin_types table provided, plus the FK ids for match-logic callers
- * (see lib/typology-filter.ts, lib/mint-filter.ts). */
-export function flattenCoinIssue(row: CoinIssueEmbed): CoinIssueDisplay {
-  const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(row.coin_type_hierarchy)
+ * (see lib/typology-filter.ts, lib/mint-filter.ts). Pass `hierarchyRows` so
+ * issues with a null coin_type_hierarchy_id still resolve via legacy_type. */
+export function flattenCoinIssue(row: CoinIssueEmbed, hierarchyRows?: CoinTypeHierarchyRow[]): CoinIssueDisplay {
   const cth = one(row.coin_type_hierarchy)
+  const { major_zh, major_en, minor_zh, minor_en } = deriveMajorMinor(cth)
   const mint = one(row.mints)
   const state = one(row.states)
   const inscription = one(row.inscriptions)
-  return {
-    id: row.id,
-    coin_type_code: row.coin_type_code,
-    major_type_zh: major_zh,
-    major_type_en: major_en,
-    minor_type_zh: minor_zh,
-    minor_type_en: minor_en,
-    level2_zh: cth?.level2_zh ?? null,
-    level2_en: cth?.level2_en ?? null,
-    inscription: inscription?.inscription_zh ?? null,
-    inscription_en: inscription?.inscription_en ?? null,
-    mint_zh: mint?.name_zh ?? null,
-    mint_en: mint?.name_en ?? null,
-    state_zh: state?.state_zh ?? null,
-    state_en: state?.state_en ?? null,
-    description_zh: row.description_zh,
-    description_en: row.description_en,
-    mint_id: row.mint_id,
-    state_id: row.state_id,
-    inscription_id: row.inscription_id,
-    coin_type_hierarchy_id: row.coin_type_hierarchy_id,
-  }
+  return applyLegacyHierarchy(
+    {
+      id: row.id,
+      coin_type_code: row.coin_type_code,
+      major_type_zh: major_zh,
+      major_type_en: major_en,
+      minor_type_zh: minor_zh,
+      minor_type_en: minor_en,
+      level2_zh: cth?.level2_zh ?? null,
+      level2_en: cth?.level2_en ?? null,
+      inscription: inscription?.inscription_zh ?? null,
+      inscription_en: inscription?.inscription_en ?? null,
+      mint_zh: mint?.name_zh ?? null,
+      mint_en: mint?.name_en ?? null,
+      state_zh: state?.state_zh ?? null,
+      state_en: state?.state_en ?? null,
+      description_zh: row.description_zh,
+      description_en: row.description_en,
+      mint_id: row.mint_id,
+      state_id: row.state_id,
+      inscription_id: row.inscription_id,
+      coin_type_hierarchy_id: row.coin_type_hierarchy_id,
+    },
+    row,
+    hierarchyRows
+  )
 }
 
 function splitSourceCodes(raw: string | null | undefined): string[] {
@@ -143,6 +198,206 @@ function splitSourceCodes(raw: string | null | undefined): string[] {
     .split(/[、,，;；|]/)
     .map((s) => s.trim())
     .filter(Boolean)
+}
+
+function addCsvValue(set: Set<string>, value: string | null | undefined) {
+  const v = value?.trim()
+  if (v) set.add(v)
+}
+
+function csvFromSet(set: Set<string>): string | null {
+  if (set.size === 0) return null
+  return [...set].join('、')
+}
+
+function unionCsv(a: string | null | undefined, b: string | null | undefined): string | null {
+  const set = new Set([...splitCsv(a), ...splitCsv(b)])
+  return set.size ? [...set].join('、') : null
+}
+
+type MapSiteTypeFields = Pick<
+  MapSite,
+  | 'level1_types_zh'
+  | 'level2_types_zh'
+  | 'level3_types_zh'
+  | 'level4_types_zh'
+  | 'level5_types_zh'
+  | 'level1_types_en'
+  | 'level2_types_en'
+  | 'level3_types_en'
+  | 'level4_types_en'
+  | 'level5_types_en'
+  | 'inscriptions'
+  | 'inscriptions_en'
+  | 'states_zh'
+  | 'states_en'
+  | 'mints_zh'
+  | 'mints_en'
+>
+
+function emptyTypeBuckets() {
+  return {
+    level1_zh: new Set<string>(),
+    level1_en: new Set<string>(),
+    level2_zh: new Set<string>(),
+    level2_en: new Set<string>(),
+    level3_zh: new Set<string>(),
+    level3_en: new Set<string>(),
+    level4_zh: new Set<string>(),
+    level4_en: new Set<string>(),
+    level5_zh: new Set<string>(),
+    level5_en: new Set<string>(),
+    inscriptions: new Set<string>(),
+    inscriptions_en: new Set<string>(),
+    states_zh: new Set<string>(),
+    states_en: new Set<string>(),
+    mints_zh: new Set<string>(),
+    mints_en: new Set<string>(),
+  }
+}
+
+function addIssueToTypeBuckets(
+  buckets: ReturnType<typeof emptyTypeBuckets>,
+  issue: CoinIssueDisplay,
+  hierarchyById: Map<string, CoinTypeHierarchyRow>
+) {
+  const row = issue.coin_type_hierarchy_id ? hierarchyById.get(issue.coin_type_hierarchy_id) : undefined
+  if (row) {
+    addCsvValue(buckets.level1_zh, row.level1_zh)
+    addCsvValue(buckets.level1_en, row.level1_en)
+    addCsvValue(buckets.level2_zh, row.level2_zh)
+    addCsvValue(buckets.level2_en, row.level2_en)
+    addCsvValue(buckets.level3_zh, row.level3_zh)
+    addCsvValue(buckets.level3_en, row.level3_en)
+    addCsvValue(buckets.level4_zh, row.level4_zh)
+    addCsvValue(buckets.level4_en, row.level4_en)
+    addCsvValue(buckets.level5_zh, row.level5_zh)
+    addCsvValue(buckets.level5_en, row.level5_en)
+  } else {
+    addCsvValue(buckets.level2_zh, issue.level2_zh ?? issue.major_type_zh)
+    addCsvValue(buckets.level2_en, issue.level2_en ?? issue.major_type_en)
+    addCsvValue(buckets.level3_zh, issue.minor_type_zh)
+    addCsvValue(buckets.level3_en, issue.minor_type_en)
+  }
+  addCsvValue(buckets.inscriptions, issue.inscription)
+  addCsvValue(buckets.inscriptions_en, issue.inscription_en)
+  addCsvValue(buckets.states_zh, issue.state_zh)
+  addCsvValue(buckets.states_en, issue.state_en)
+  addCsvValue(buckets.mints_zh, issue.mint_zh)
+  addCsvValue(buckets.mints_en, issue.mint_en)
+}
+
+function bucketsToTypeFields(buckets: ReturnType<typeof emptyTypeBuckets>): MapSiteTypeFields {
+  return {
+    level1_types_zh: csvFromSet(buckets.level1_zh),
+    level2_types_zh: csvFromSet(buckets.level2_zh),
+    level3_types_zh: csvFromSet(buckets.level3_zh),
+    level4_types_zh: csvFromSet(buckets.level4_zh),
+    level5_types_zh: csvFromSet(buckets.level5_zh),
+    level1_types_en: csvFromSet(buckets.level1_en),
+    level2_types_en: csvFromSet(buckets.level2_en),
+    level3_types_en: csvFromSet(buckets.level3_en),
+    level4_types_en: csvFromSet(buckets.level4_en),
+    level5_types_en: csvFromSet(buckets.level5_en),
+    inscriptions: csvFromSet(buckets.inscriptions),
+    inscriptions_en: csvFromSet(buckets.inscriptions_en),
+    states_zh: csvFromSet(buckets.states_zh),
+    states_en: csvFromSet(buckets.states_en),
+    mints_zh: csvFromSet(buckets.mints_zh),
+    mints_en: csvFromSet(buckets.mints_en),
+  }
+}
+
+function unionMapSiteTypeFields(site: MapSite, extra: MapSiteTypeFields): MapSite {
+  return {
+    ...site,
+    level1_types_zh: unionCsv(site.level1_types_zh, extra.level1_types_zh),
+    level2_types_zh: unionCsv(site.level2_types_zh, extra.level2_types_zh),
+    level3_types_zh: unionCsv(site.level3_types_zh, extra.level3_types_zh),
+    level4_types_zh: unionCsv(site.level4_types_zh, extra.level4_types_zh),
+    level5_types_zh: unionCsv(site.level5_types_zh, extra.level5_types_zh),
+    level1_types_en: unionCsv(site.level1_types_en, extra.level1_types_en),
+    level2_types_en: unionCsv(site.level2_types_en, extra.level2_types_en),
+    level3_types_en: unionCsv(site.level3_types_en, extra.level3_types_en),
+    level4_types_en: unionCsv(site.level4_types_en, extra.level4_types_en),
+    level5_types_en: unionCsv(site.level5_types_en, extra.level5_types_en),
+    inscriptions: unionCsv(site.inscriptions, extra.inscriptions),
+    inscriptions_en: unionCsv(site.inscriptions_en, extra.inscriptions_en),
+    states_zh: unionCsv(site.states_zh, extra.states_zh),
+    states_en: unionCsv(site.states_en, extra.states_en),
+    mints_zh: unionCsv(site.mints_zh, extra.mints_zh),
+    mints_en: unionCsv(site.mints_en, extra.mints_en),
+  }
+}
+
+function typeFieldsFromIssues(
+  issues: CoinIssueDisplay[],
+  hierarchyRows: CoinTypeHierarchyRow[]
+): MapSiteTypeFields {
+  const hierarchyById = new Map(hierarchyRows.map((row) => [row.id, row]))
+  const buckets = emptyTypeBuckets()
+  issues.forEach((issue) => addIssueToTypeBuckets(buckets, issue, hierarchyById))
+  return bucketsToTypeFields(buckets)
+}
+
+/** Overlay type/mint/inscription/state CSVs from each find's coin_issues
+ * (including legacy_type → hierarchy fallback) onto a v_coin_map_sites row
+ * so sites whose view columns are empty still show types in map popups and
+ * the site classification panel. */
+export function overlayMapSiteTypesFromFinds(
+  site: MapSite | null,
+  finds: Find[],
+  hierarchyRows: CoinTypeHierarchyRow[]
+): MapSite | null {
+  if (!site) return null
+  const issues = finds.map((find) => find.coin_issues).filter((issue): issue is CoinIssueDisplay => issue != null)
+  if (issues.length === 0) return site
+  return unionMapSiteTypeFields(site, typeFieldsFromIssues(issues, hierarchyRows))
+}
+
+function siteHasTypeCsv(site: MapSite): boolean {
+  return !!(
+    site.level1_types_zh ||
+    site.level2_types_zh ||
+    site.level3_types_zh ||
+    site.level4_types_zh ||
+    site.level5_types_zh
+  )
+}
+
+/** Sites whose map-view type CSVs are empty (typically finds that only have
+ * coin_issues_id, whose issue has no coin_type_hierarchy_id) get those
+ * columns rebuilt from finds → coin_issues → hierarchy/legacy_type. */
+async function fillMissingMapSiteTypes(sites: MapSite[]): Promise<MapSite[]> {
+  const missing = sites.filter((site) => (site.find_record_count ?? 0) > 0 && !siteHasTypeCsv(site))
+  if (missing.length === 0) return sites
+
+  const finds = await getFindsForSiteCodes(missing.map((site) => site.site_code))
+  const issueIds = [...new Set(finds.map((find) => find.coin_issues_id).filter((id): id is string => !!id))]
+  if (issueIds.length === 0) return sites
+
+  const [issueRows, hierarchyRows] = await Promise.all([
+    fetchAllPages<CoinIssueEmbed>((from, to) =>
+      supabase.from('coin_issues').select(COIN_ISSUE_FIELDS).in('id', issueIds).order('coin_type_code').range(from, to)
+    ),
+    getCoinTypeHierarchy(),
+  ])
+  const issueById = new Map(issueRows.map((row) => [row.id, flattenCoinIssue(row, hierarchyRows)]))
+  const extraBySite = new Map<string, CoinIssueDisplay[]>()
+  finds.forEach((find) => {
+    if (!find.site_code || !find.coin_issues_id) return
+    const issue = issueById.get(find.coin_issues_id)
+    if (!issue) return
+    const list = extraBySite.get(find.site_code) ?? []
+    list.push(issue)
+    extraBySite.set(find.site_code, list)
+  })
+
+  return sites.map((site) => {
+    const issues = extraBySite.get(site.site_code)
+    if (!issues?.length) return site
+    return unionMapSiteTypeFields(site, typeFieldsFromIssues(issues, hierarchyRows))
+  })
 }
 
 /**
@@ -361,7 +616,7 @@ function mergeMapSites(base: MapSite[], extras: MapSite[]): MapSite[] {
  */
 export async function getFindSpotsMapSites(): Promise<MapSite[]> {
   const [mapped, supplements] = await Promise.all([getMapSites(), getPrecisionSupplementSites()])
-  return mergeMapSites(mapped, supplements)
+  return fillMissingMapSiteTypes(mergeMapSites(mapped, supplements))
 }
 
 /** Sums `total_quantity_for_map` across every row, paginating past PostgREST's 1000-row cap. */
@@ -383,7 +638,8 @@ export async function getAllSites(): Promise<SearchSite[]> {
     ),
     getPrecisionSupplementSites(),
   ])
-  return attachSiteDetails(mergeMapSites(sites, supplements))
+  const filled = await fillMissingMapSiteTypes(mergeMapSites(sites, supplements))
+  return attachSiteDetails(filled)
 }
 
 export async function getDatabaseStats(): Promise<DatabaseStats> {
@@ -433,7 +689,10 @@ export async function getSiteContexts(siteCode: string): Promise<Context[]> {
   return (data ?? []).map(flattenPeriod)
 }
 
-export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
+export async function getSiteFinds(
+  contextCodes: string[],
+  hierarchyRows?: CoinTypeHierarchyRow[]
+): Promise<Find[]> {
   if (contextCodes.length === 0) return []
 
   const { data, error } = await supabase
@@ -443,13 +702,22 @@ export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
     .order('find_code')
 
   if (error) throw error
-  return (
-    (data ?? []) as Array<Omit<Find, 'coin_issues'> & { coin_issues: CoinIssueEmbed | CoinIssueEmbed[] | null }>
-  ).map((row) => {
+  const rows = (data ?? []) as Array<
+    Omit<Find, 'coin_issues'> & { coin_issues: CoinIssueEmbed | CoinIssueEmbed[] | null }
+  >
+  const needsLegacy =
+    !hierarchyRows &&
+    rows.some((row) => {
+      const coinIssue = one(row.coin_issues)
+      return !!coinIssue && !coinIssue.coin_type_hierarchy_id
+    })
+  const hierarchy = needsLegacy ? await getCoinTypeHierarchy() : hierarchyRows
+
+  return rows.map((row) => {
     const coinIssue = one(row.coin_issues)
     return {
       ...row,
-      coin_issues: coinIssue ? flattenCoinIssue(coinIssue) : null,
+      coin_issues: coinIssue ? flattenCoinIssue(coinIssue, hierarchy) : null,
     }
   })
 }
@@ -552,11 +820,37 @@ export async function searchSites(query: string): Promise<SearchSite[]> {
 /** Reads the flattened, pre-joined `v_coin_issues_flat` view (mints/states/
  * inscriptions/coin_type_hierarchy already joined and major/minor derived in
  * SQL) instead of embedding + flattenCoinIssue-ing coin_issues by hand — same
- * CoinIssueDisplay shape, no client-side join. */
+ * CoinIssueDisplay shape, no client-side join. Issues whose hierarchy FK is
+ * still null are then filled from legacy_type so map filters and search pies
+ * see the same types as finds that still have deprecated_coin_type_code. */
 export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
-  return fetchAllPages<CoinIssueDisplay>((from, to) =>
+  const rows = await fetchAllPages<CoinIssueDisplay>((from, to) =>
     supabase.from('v_coin_issues_flat').select('*').order('coin_type_code').range(from, to)
   )
+  const incomplete = rows.filter((row) => !row.coin_type_hierarchy_id)
+  if (incomplete.length === 0) return rows
+
+  const ids = incomplete.map((row) => row.id)
+  const [legacyRows, hierarchyRows] = await Promise.all([
+    fetchAllPages<
+      { id: string } & Required<
+        Pick<LegacyTypeFields, 'legacy_type' | 'legacy_inscription' | 'legacy_mint' | 'legacy_state'>
+      >
+    >((from, to) =>
+      supabase
+        .from('coin_issues')
+        .select('id, legacy_type, legacy_inscription, legacy_mint, legacy_state')
+        .in('id', ids)
+        .order('id')
+        .range(from, to)
+    ),
+    getCoinTypeHierarchy(),
+  ])
+  const legacyById = new Map(legacyRows.map((row) => [row.id, row]))
+  return rows.map((row) => {
+    if (row.coin_type_hierarchy_id) return row
+    return applyLegacyHierarchy(row, legacyById.get(row.id) ?? null, hierarchyRows)
+  })
 }
 
 export async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {

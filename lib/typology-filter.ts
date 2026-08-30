@@ -115,6 +115,57 @@ function rowPath(row: CoinTypeHierarchyRow): string[] {
   return path
 }
 
+/** `coin_issues.legacy_type` is either one hierarchy label (蚁鼻钱) or the
+ * old major,minor pair (刀币,齐大刀) joined with a comma. */
+export function parseLegacyTypeTokens(legacyType: string | null | undefined): string[] {
+  if (!legacyType) return []
+  return legacyType
+    .split(/[,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Best coin_type_hierarchy row for a legacy_type string — used when
+ * coin_issues.coin_type_hierarchy_id is still null but the type text is
+ * already on legacy_type (the ~10 Shandong issues whose finds only have
+ * coin_issues_id, never deprecated_coin_type_code).
+ *
+ * Prefers a row whose path ends on the last token (the leaf), then the
+ * generic bucket (shortest path) so '圜钱' maps to the category row rather
+ * than a random inscription-level child.
+ */
+export function matchHierarchyForLegacyType(
+  legacyType: string | null | undefined,
+  hierarchyRows: CoinTypeHierarchyRow[]
+): CoinTypeHierarchyRow | null {
+  const tokens = parseLegacyTypeTokens(legacyType)
+  if (tokens.length === 0) return null
+  const leaf = tokens[tokens.length - 1]
+
+  const candidates = hierarchyRows.filter((row) => {
+    const path = rowPath(row)
+    if (!path.includes(leaf)) return false
+    let i = 0
+    for (const step of path) {
+      if (step === tokens[i]) {
+        i += 1
+        if (i === tokens.length) return true
+      }
+    }
+    return false
+  })
+  if (candidates.length === 0) return null
+
+  const endingAtLeaf = candidates.filter((row) => {
+    const path = rowPath(row)
+    return path[path.length - 1] === leaf
+  })
+  const pool = endingAtLeaf.length > 0 ? endingAtLeaf : candidates
+  pool.sort((a, b) => rowPath(a).length - rowPath(b).length)
+  return pool[0] ?? null
+}
+
 /** The selected path, stopping at the first unset level (selection is only
  * meaningful contiguously from level1). */
 function selectionPath(sel: TypologyFilterSelection): string[] {
