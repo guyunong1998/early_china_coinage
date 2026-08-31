@@ -42,8 +42,11 @@ import {
   hexToRgba,
   ratioToColor,
   useSelectionColors,
+  buildDensityLayer,
+  densityLegendCss,
+  type DensityRange,
 } from '@/lib/color-scale'
-import { computeSiteHeatStates } from '@/lib/context-heatmap'
+import { computeSiteHeatStates, filterToFullyQuantifiedContexts } from '@/lib/context-heatmap'
 import type { FilterMode, SiteHeatState, ViewMode } from '@/lib/context-heatmap'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { findMintByNameZh } from '@/lib/mint-directory'
@@ -143,6 +146,34 @@ function ViewModeRow({
   )
 }
 
+function QuantityFilterRow({
+  includeUnquantified,
+  onChange,
+}: {
+  includeUnquantified: boolean
+  onChange: (v: boolean) => void
+}) {
+  const { t } = useLanguage()
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <ClickHint
+        hint={t('map.filter.quantityLabelHint')}
+        className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
+      >
+        <T k="map.filter.quantityLabel" />
+      </ClickHint>
+      <ToggleButtons
+        value={includeUnquantified ? 'include' : 'exclude'}
+        onChange={(v) => onChange(v === 'include')}
+        options={[
+          { value: 'include' as const, label: <T k="map.filter.quantityInclude" /> },
+          { value: 'exclude' as const, label: <T k="map.filter.quantityExclude" /> },
+        ]}
+      />
+    </div>
+  )
+}
+
 /**
  * Paragraph 2 of every map's explanation: how to read the current view mode
  * (color + size mechanics), identical wording wherever that view mode
@@ -170,10 +201,7 @@ function DensityLegend({ range }: { range: DensityRange }) {
       <span className="tabular-nums text-gray-500">{range?.min ?? '—'}</span>
       <span
         className="inline-block h-2 w-28 rounded-sm"
-        style={{
-          background:
-            'linear-gradient(90deg, #f0d56a 0%, #e39a2b 40%, #d04a1c 65%, #a01515 85%, #6e0c0c 100%)',
-        }}
+        style={{ background: `linear-gradient(90deg, ${densityLegendCss()})` }}
       />
       <span className="tabular-nums text-gray-500">{range?.max ?? '—'}</span>
       <span className="text-gray-500">
@@ -222,9 +250,9 @@ function CompareLegend({
  * render, which read as bucketed color steps even though the underlying
  * ratio→color mapping was already continuous. `presentNoCount` and `noData`
  * are categorical states outside the ratio scale, so they keep their own
- * swatches; `noData` is a slot for the caller's own markup since one caller
- * pairs it with a showNoData checkbox and another doesn't. */
-function RatioLegend({ presentNoCount = false, noData }: { presentNoCount?: boolean; noData: ReactNode }) {
+ * swatches as caller-supplied markup (Find Site pairs each with a checkbox;
+ * Mint Town / Museum leave `presentNoCount` off). */
+function RatioLegend({ presentNoCount, noData }: { presentNoCount?: ReactNode; noData: ReactNode }) {
   return (
     <>
       <span className="font-semibold uppercase tracking-wide text-gray-500">
@@ -240,12 +268,7 @@ function RatioLegend({ presentNoCount = false, noData }: { presentNoCount?: bool
         <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: SINGLE_FIND_COLOR }} />
         <T k="map.legend.singleFind" />
       </span>
-      {presentNoCount && (
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: PRESENT_UNQUANTIFIED_COLOR }} />
-          <T k="heatmap.legend.presentNoCount" />
-        </span>
-      )}
+      {presentNoCount}
       {noData}
     </>
   )
@@ -533,36 +556,6 @@ function heatWeight(state: SiteHeatState, totalQty: number): number | null {
   }
 }
 
-/** Lowest visible intensity on the gradient — keeps the min-weight point a
- * pale yellow dot instead of literally invisible (leaflet.heat treats 0 as
- * no contribution at all). */
-const DENSITY_FLOOR = 0.15
-
-export type DensityRange = { min: number; max: number } | null
-
-/** Min-max normalizes raw per-point weights (see heatWeight) to the [0, 1]
- * intensities leaflet.heat expects, and returns the actual min/max weight
- * so the legend can label what its yellow and red ends mean in coin counts
- * — this is the "min maxed" heat scale: color reflects this view's own
- * data range, not a fixed/arbitrary curve. Points with a null or zero
- * weight are dropped (nothing to show on the heat layer for them). */
-function buildDensityLayer(
-  points: { lat: number; lng: number; weight: number | null }[]
-): { latLngs: [number, number, number][]; range: DensityRange } {
-  const weighted = points.filter(
-    (p): p is { lat: number; lng: number; weight: number } => p.weight != null && p.weight > 0
-  )
-  if (weighted.length === 0) return { latLngs: [], range: null }
-
-  const min = Math.min(...weighted.map((p) => p.weight))
-  const max = Math.max(...weighted.map((p) => p.weight))
-  const latLngs: [number, number, number][] = weighted.map((p) => {
-    const intensity = max === min ? 1 : DENSITY_FLOOR + (1 - DENSITY_FLOOR) * ((p.weight - min) / (max - min))
-    return [p.lat, p.lng, intensity]
-  })
-  return { latLngs, range: { min, max } }
-}
-
 export function FindSpotsVisualization({
   sites,
   coinIssues,
@@ -598,6 +591,11 @@ export function FindSpotsVisualization({
   const [mode, setMode] = useState<FilterMode>(initialMode ?? 'type')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
   const [showNoData, setShowNoData] = useState(true)
+  const [includeUnquantified, setIncludeUnquantified] = useState(true)
+  const findsForFilter = useMemo(
+    () => (includeUnquantified ? finds : filterToFullyQuantifiedContexts(finds)),
+    [finds, includeUnquantified]
+  )
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -610,8 +608,8 @@ export function FindSpotsVisualization({
   } = useTypologyMultiSelect(coinIssues, hierarchyRows, initialTypeSelections)
 
   const typeOptionCounts = useMemo(
-    () => buildTypologySiteCounts(finds, coinIssues, hierarchyRows, stagedType),
-    [finds, coinIssues, hierarchyRows, stagedType]
+    () => buildTypologySiteCounts(findsForFilter, coinIssues, hierarchyRows, stagedType),
+    [findsForFilter, coinIssues, hierarchyRows, stagedType]
   )
 
   const mintOptions = useMemo(() => buildMintFilterOptions(coinIssues, finds, mints), [coinIssues, finds, mints])
@@ -652,10 +650,10 @@ export function FindSpotsVisualization({
     () =>
       computeSiteHeatStates(
         sites.map((s) => s.site_code),
-        finds,
+        findsForFilter,
         matchedIds
       ),
-    [sites, finds, matchedIds]
+    [sites, findsForFilter, matchedIds]
   )
 
   const foundInSummary = useMemo(() => {
@@ -702,13 +700,13 @@ export function FindSpotsVisualization({
   // site), a site matching two selected groups shows up twice here.
   const siteMintQuantities = useMemo(() => {
     if (mode !== 'mint' || viewMode !== 'compare') return new Map<string, Map<string, number>>()
-    return computeSiteMintQuantities(finds, coinIssues, mintFilters)
-  }, [mode, viewMode, finds, coinIssues, mintFilters])
+    return computeSiteMintQuantities(findsForFilter, coinIssues, mintFilters)
+  }, [mode, viewMode, findsForFilter, coinIssues, mintFilters])
 
   const siteTypeQuantities = useMemo(() => {
     if (mode !== 'type' || viewMode !== 'compare') return new Map<string, Map<string, number>>()
-    return computeSiteTypeQuantities(finds, coinIssues, hierarchyRows, typeEntries)
-  }, [mode, viewMode, finds, coinIssues, hierarchyRows, typeEntries])
+    return computeSiteTypeQuantities(findsForFilter, coinIssues, hierarchyRows, typeEntries)
+  }, [mode, viewMode, findsForFilter, coinIssues, hierarchyRows, typeEntries])
 
   const comparePoints = useMemo<ComparePoint[]>(() => {
     if (viewMode !== 'compare') return []
@@ -853,6 +851,8 @@ export function FindSpotsVisualization({
 
           <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
+          <QuantityFilterRow includeUnquantified={includeUnquantified} onChange={setIncludeUnquantified} />
+
           <p className="text-sm leading-snug text-gray-700">
             {mode === 'type' ? (
               typeEntries.length === 0 ? (
@@ -948,7 +948,21 @@ export function FindSpotsVisualization({
             ))}
           {filterActive && viewMode === 'points' && (
             <RatioLegend
-              presentNoCount
+              presentNoCount={
+                <label className="flex cursor-pointer items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={includeUnquantified}
+                    onChange={(e) => setIncludeUnquantified(e.target.checked)}
+                    className="accent-brand"
+                  />
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ background: PRESENT_UNQUANTIFIED_COLOR }}
+                  />
+                  <T k="heatmap.legend.presentNoCount" />
+                </label>
+              }
               noData={
                 <label className="flex cursor-pointer items-center gap-1">
                   <input

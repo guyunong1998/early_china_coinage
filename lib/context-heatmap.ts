@@ -41,6 +41,24 @@ function coalesceQuantity(find: HeatmapFind): number | null {
   return null
 }
 
+export function findHasUsableQuantity(find: HeatmapFind): boolean {
+  return coalesceQuantity(find) != null
+}
+
+/** Keeps only finds whose archaeological context is fully quantified — every
+ * find in that context has a usable quantity. Incomplete-count units (and
+ * therefore sites that only appear through them) drop out. */
+export function filterToFullyQuantifiedContexts(finds: HeatmapFind[]): HeatmapFind[] {
+  const bySite = groupFindsBySiteContext(finds)
+  const kept: HeatmapFind[] = []
+  for (const ctxs of bySite.values()) {
+    for (const ctxFinds of ctxs.values()) {
+      if (ctxFinds.every(findHasUsableQuantity)) kept.push(...ctxFinds)
+    }
+  }
+  return kept
+}
+
 /** Sum of every find's quantity, or null if any find in the list lacks a
  * usable quantity (in which case the sum can't be trusted as a total). */
 function sumQuantityIfComplete(finds: HeatmapFind[]): number | null {
@@ -121,8 +139,14 @@ export function computeContextHeatState(
 export function aggregateSiteHeatState(contextStates: ContextHeatState[]): SiteHeatState {
   if (contextStates.length === 0) return { kind: 'no-data' }
 
+  // Presence includes unquantified contexts: the type is there, only the
+  // quantity share is unknown. Those must not collapse to no-data.
+  const hasSelectedType = contextStates.some(
+    (s) => s.kind === 'pure' || s.kind === 'ratio' || s.kind === 'unquantified'
+  )
+  if (!hasSelectedType) return { kind: 'no-data' }
+
   const matchedContextCount = contextStates.filter((s) => s.kind === 'pure' || s.kind === 'ratio').length
-  if (matchedContextCount === 0) return { kind: 'no-data' }
 
   let matchedQty = 0
   let totalQty = 0

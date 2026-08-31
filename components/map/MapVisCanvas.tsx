@@ -25,7 +25,7 @@ import {
   NO_DATA_COLOR,
   PRESENT_UNQUANTIFIED_COLOR,
   SINGLE_FIND_COLOR,
-  buildDensityGradient,
+  densityHeatLayerOptions,
   hexToRgba,
   ratioToColor,
   readHeatmapOpacity,
@@ -913,15 +913,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       try {
         if (inDensity && densityLatLngs.length > 0) {
           if (!heatLayerRef.current) {
-            heatLayerRef.current = L.heatLayer(densityLatLngs, {
-              radius: 32,
-              blur: 26,
-              maxZoom: 9,
-              max: 1,
-              minOpacity: 0.25,
-              gradient: buildDensityGradient(readHeatmapOpacity()),
-            }).addTo(map)
+            heatLayerRef.current = L.heatLayer(densityLatLngs, densityHeatLayerOptions()).addTo(map)
           } else {
+            heatLayerRef.current.setOptions(densityHeatLayerOptions())
             heatLayerRef.current.setLatLngs(densityLatLngs)
             if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
           }

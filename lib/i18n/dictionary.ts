@@ -410,6 +410,13 @@ export const DICTIONARY = {
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
   'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
   'map.filter.addSelection': { en: 'Add', zh: '添加' },
+  'map.filter.quantityLabel': { en: 'Incomplete counts', zh: '数量不全' },
+  'map.filter.quantityLabelHint': {
+    en: 'Some excavation units only record that a type is present, not how many coins. Include those units and sites, or limit the map and counts to units with a recorded quantity.',
+    zh: '部分出土单位只记录某币种存在、没有件数。可选择把这些单位和遗址算入，或只保留有明确数量的出土单位与遗址。',
+  },
+  'map.filter.quantityInclude': { en: 'Include', zh: '包含' },
+  'map.filter.quantityExclude': { en: 'Exclude', zh: '不包含' },
 
   // ── map explanation paragraph 2: one per view mode, shared by every map ──
   'map.explain.points': {
@@ -417,8 +424,8 @@ export const DICTIONARY = {
     zh: '点的颜色反映该处符合当前筛选条件的比例——灰色表示无、红色表示全部，中间按比例过渡。',
   },
   'map.explain.density': {
-    en: 'In Density view, each point’s heat weight is: no filter — scales with total quantity; fully matches (including a single item that matches) — full weight; partial match — weight equals the matched percentage (with a small floor so it stays visible); present but quantity uncounted — a fixed moderate weight; no record at all — excluded from the heatmap entirely.',
-    zh: '在密度视图中，各点的热力权重计算方式为：未筛选 — 按总数量缩放（对数）；完全匹配（含仅一枚即匹配）— 权重为满值；部分匹配 — 权重等于匹配比例（设有下限以保持可见）；存在但数量未计 — 固定的中等权重；完全无记录 — 不计入密度图。',
+    en: 'Color follows each location’s coin count on a log scale across whatever is currently shown, so 10, 100, 1,000, and 10,000 coins stay equally distinct. Yellow is fewest, red is most. With a filter on, only the matched count is used; sites with no usable quantity are omitted. The layer stays the same strength at every zoom.',
+    zh: '颜色按当前视图中各点的钱币数量以对数分级，使 10、100、1,000、10,000 枚每一数量级都同样可辨。黄色最少，红色最多。筛选后按匹配数量计重；无数可计的地点不显示。缩放时色块浓度保持一致。',
   },
   'map.explain.compare': {
     en: 'Compare colors each selection separately — a location matching more than one selection shows as multiple points, one per selection. Point size reflects that selection’s own coin quantity there, independent of color; a match with unrecorded quantity counts as 1.',
@@ -499,8 +506,8 @@ export const DICTIONARY = {
   'map.compare.mintKindLabel': { en: 'Mint: ', zh: '铸地：' },
   'map.compare.typeKindLabel': { en: 'Type: ', zh: '类型：' },
   'map.legend.densityHint': {
-    en: 'Coin count, scaled from the lowest to highest currently shown — yellow is fewest, red is most.',
-    zh: '按当前显示范围内的钱币数量最低到最高缩放——黄色最少，红色最多。',
+    en: 'Log-scaled coin count in this view — yellow is fewest, red is most; each order of magnitude is spaced evenly.',
+    zh: '按当前视图钱币数量对数分级——黄色最少，红色最多；每一数量级间隔相同。',
   },
   'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
