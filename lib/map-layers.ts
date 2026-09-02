@@ -107,8 +107,8 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
 }
 
 /**
- * Historical route network + its named nodes, converted from the route0180 /
- * Node shapefiles by scripts/convert-routes-shapefile.mjs.
+ * Historical route network, converted from newRoute.shp by
+ * scripts/convert-routes-shapefile.mjs.
  *
  * Each `routelevel` gets its own cartographic line style:
  *   1 (trunk)     — double line: a thick casing with a thinner light line
@@ -116,28 +116,25 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
  *   2 (secondary) — single solid line.
  *   3 (tertiary)  — dashed line.
  *
- * The routes arrive as many short, separately-digitised segments that meet
- * end to end, so drawing each segment's full stack (halo → casing → inner)
- * one after another would let a neighbour's halo/inner paint over the segment
- * before it and leave a visible seam or stub at every junction. Instead each
- * part of the stack lives in its own pane, so *all* halos are painted, then
- * *all* casings, and so on — junctions fuse into continuous lines.
+ * The converter welds junctions and splits crossings so shared vertices
+ * actually coincide. Strokes paint low-grade first, high-grade last, so a
+ * thinner road T-joins the side of a thicker one instead of cutting across
+ * its casing. Same-level stubs are drawn before through-lines for the same
+ * reason. Halos sit under every stroke so they cannot open a seam at a join.
  */
 type RouteProps = { routelevel?: number | null }
-type RouteNodeProps = { id?: number | null; name?: string | null }
 
-const ROUTE_COLOR = '#b45309'
+const ROUTE_COLOR = '#a15a1a'
 const ROUTE_HALO_COLOR = '#fff7ed'
-const ROUTE_NODE_COLOR = '#7c2d12'
 
 /** Pane name → z-index, in paint order. Above Leaflet's overlayPane (400),
  *  below its markerPane (600) so find-site coin markers stay on top. */
 const ROUTE_PANES = {
   halo: 402,
-  trunkCasing: 403,
-  trunkInner: 404,
-  line: 405,
-  nodes: 406,
+  tertiary: 403,
+  secondary: 404,
+  trunkCasing: 405,
+  trunkInner: 406,
 } as const
 
 const ROUTE_DASH = '7 5'
@@ -148,33 +145,120 @@ function ensurePane(map: import('leaflet').Map, name: string, zIndex: number) {
   return name
 }
 
+function zoomBlend(z: number, z0: number, z1: number) {
+  return Math.max(0, Math.min(1, (z - z0) / (z1 - z0)))
+}
+
+function mix(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+
+/** Line weights and which decorations are on, scaled so a China-wide view
+ *  stays a thin amber net instead of a smear of casings, then opens up into
+ *  the double-line / dashed vocabulary once the user has zoomed in. */
+function routeLook(z: number) {
+  const t = zoomBlend(z, 4, 9)
+  return {
+    showHalo: z >= 6,
+    showInner: z >= 7,
+    showTertiary: z >= 5,
+    trunkHalo: mix(3.2, 8, t),
+    trunkCasing: mix(2, 6, t),
+    trunkInner: mix(0.8, 2.6, t),
+    secondaryHalo: mix(2.2, 4.6, t),
+    secondary: mix(1.25, 2.4, t),
+    tertiaryHalo: mix(1.8, 4, t),
+    tertiary: mix(1.1, 1.9, t),
+    lineOpacity: mix(0.7, 0.92, t),
+    haloOpacity: mix(0.35, 0.75, t),
+  }
+}
+
 function buildRoutesLayer(
   L: LeafletNS,
   map: import('leaflet').Map,
-  linesUrl = '/data/routes.geojson',
-  nodesUrl = '/data/route-nodes.geojson'
+  linesUrl = '/data/routes.geojson'
 ) {
   const group = L.layerGroup()
+  const renderer = L.canvas({ padding: 0.6 })
 
   const panes = {
     halo: ensurePane(map, 'routes-halo', ROUTE_PANES.halo),
+    tertiary: ensurePane(map, 'routes-tertiary', ROUTE_PANES.tertiary),
+    secondary: ensurePane(map, 'routes-secondary', ROUTE_PANES.secondary),
     trunkCasing: ensurePane(map, 'routes-trunk-casing', ROUTE_PANES.trunkCasing),
     trunkInner: ensurePane(map, 'routes-trunk-inner', ROUTE_PANES.trunkInner),
-    line: ensurePane(map, 'routes-line', ROUTE_PANES.line),
-    nodes: ensurePane(map, 'routes-nodes', ROUTE_PANES.nodes),
   }
+
+  type PathLayer = import('leaflet').GeoJSON
+  const painted: {
+    trunkHalo?: PathLayer
+    trunkCasing?: PathLayer
+    trunkInner?: PathLayer
+    secondaryHalo?: PathLayer
+    secondary?: PathLayer
+    tertiaryHalo?: PathLayer
+    tertiary?: PathLayer
+  } = {}
+
+  const stroke = { lineCap: 'round' as const, lineJoin: 'round' as const }
+  const innerStroke = { lineCap: 'butt' as const, lineJoin: 'round' as const }
+  const layerOpts = { renderer, smoothFactor: 1.4 }
+
+  const pathLength = (coords: number[][]) => {
+    let n = 0
+    for (let i = 1; i < coords.length; i++) {
+      const a = coords[i - 1]
+      const b = coords[i]
+      n += Math.hypot(b[0] - a[0], b[1] - a[1])
+    }
+    return n
+  }
+
+  const applyLook = () => {
+    const look = routeLook(map.getZoom())
+    painted.trunkHalo?.setStyle({
+      weight: look.trunkHalo,
+      opacity: look.showHalo ? look.haloOpacity : 0,
+    })
+    painted.trunkCasing?.setStyle({ weight: look.trunkCasing, opacity: look.lineOpacity })
+    painted.trunkInner?.setStyle({
+      weight: look.trunkInner,
+      opacity: look.showInner ? 0.95 : 0,
+    })
+    painted.secondaryHalo?.setStyle({
+      weight: look.secondaryHalo,
+      opacity: look.showHalo ? look.haloOpacity : 0,
+    })
+    painted.secondary?.setStyle({ weight: look.secondary, opacity: look.lineOpacity })
+    painted.tertiaryHalo?.setStyle({
+      weight: look.tertiaryHalo,
+      opacity: look.showHalo && look.showTertiary ? look.haloOpacity : 0,
+    })
+    painted.tertiary?.setStyle({
+      weight: look.tertiary,
+      opacity: look.showTertiary ? look.lineOpacity : 0,
+    })
+  }
+
+  map.on('zoomend', applyLook)
 
   fetch(linesUrl)
     .then((res) => res.json())
     .then((geojson: import('geojson').FeatureCollection) => {
       type RouteFeature = import('geojson').Feature<import('geojson').Geometry, RouteProps>
 
-      const atLevel = (level: number) => ({
-        ...geojson,
-        features: geojson.features.filter(
-          (f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level
-        ),
-      })
+      const atLevel = (level: number) => {
+        const features = geojson.features
+          .filter((f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level)
+          .slice()
+          .sort((a, b) => {
+            const ac = a.geometry?.type === 'LineString' ? a.geometry.coordinates : []
+            const bc = b.geometry?.type === 'LineString' ? b.geometry.coordinates : []
+            return pathLength(ac as number[][]) - pathLength(bc as number[][])
+          })
+        return { ...geojson, features }
+      }
 
       const tooltip = (feature: RouteFeature, layer: import('leaflet').Layer) => {
         const level = feature.properties?.routelevel
@@ -182,91 +266,58 @@ function buildRoutesLayer(
         layer.bindTooltip(`Route · level ${level}`, { sticky: true, className: 'river-tooltip' })
       }
 
-      // Level 1 — halo, then casing, then the light inner line. Round caps on
-      // the casing let abutting segments blend; the inner line uses butt caps
-      // so it can never spill past the casing it sits inside.
-      const trunk = atLevel(1)
-      L.geoJSON(trunk, {
+      const tertiary = atLevel(3)
+      painted.tertiaryHalo = L.geoJSON(tertiary, {
+        ...layerOpts,
         pane: panes.halo,
         interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
+        style: { color: ROUTE_HALO_COLOR, dashArray: ROUTE_DASH, ...stroke },
       }).addTo(group)
-      L.geoJSON(trunk, {
-        pane: panes.trunkCasing,
-        style: { color: ROUTE_COLOR, weight: 7, opacity: 1, lineCap: 'round', lineJoin: 'round' },
+      painted.tertiary = L.geoJSON(tertiary, {
+        ...layerOpts,
+        pane: panes.tertiary,
+        style: { color: ROUTE_COLOR, dashArray: ROUTE_DASH, ...stroke },
         onEachFeature: tooltip,
       }).addTo(group)
-      L.geoJSON(trunk, {
+
+      const secondary = atLevel(2)
+      painted.secondaryHalo = L.geoJSON(secondary, {
+        ...layerOpts,
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, ...stroke },
+      }).addTo(group)
+      painted.secondary = L.geoJSON(secondary, {
+        ...layerOpts,
+        pane: panes.secondary,
+        style: { color: ROUTE_COLOR, ...stroke },
+        onEachFeature: tooltip,
+      }).addTo(group)
+
+      const trunk = atLevel(1)
+      painted.trunkHalo = L.geoJSON(trunk, {
+        ...layerOpts,
+        pane: panes.halo,
+        interactive: false,
+        style: { color: ROUTE_HALO_COLOR, ...stroke },
+      }).addTo(group)
+      painted.trunkCasing = L.geoJSON(trunk, {
+        ...layerOpts,
+        pane: panes.trunkCasing,
+        style: { color: ROUTE_COLOR, ...stroke },
+        onEachFeature: tooltip,
+      }).addTo(group)
+      painted.trunkInner = L.geoJSON(trunk, {
+        ...layerOpts,
         pane: panes.trunkInner,
         interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 3, opacity: 1, lineCap: 'butt', lineJoin: 'round' },
+        style: { color: ROUTE_HALO_COLOR, ...innerStroke },
       }).addTo(group)
 
-      // Level 2 — plain solid line.
-      const secondary = atLevel(2)
-      L.geoJSON(secondary, {
-        pane: panes.halo,
-        interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
-      }).addTo(group)
-      L.geoJSON(secondary, {
-        pane: panes.line,
-        style: { color: ROUTE_COLOR, weight: 2.6, opacity: 1, lineCap: 'round', lineJoin: 'round' },
-        onEachFeature: tooltip,
-      }).addTo(group)
-
-      // Level 3 — dashed. Its halo carries the same dash pattern, otherwise a
-      // solid white line would show through the gaps.
-      const tertiary = atLevel(3)
-      L.geoJSON(tertiary, {
-        pane: panes.halo,
-        interactive: false,
-        style: {
-          color: ROUTE_HALO_COLOR,
-          weight: 4.4,
-          opacity: 0.9,
-          dashArray: ROUTE_DASH,
-          lineCap: 'butt',
-        },
-      }).addTo(group)
-      L.geoJSON(tertiary, {
-        pane: panes.line,
-        style: {
-          color: ROUTE_COLOR,
-          weight: 2,
-          opacity: 1,
-          dashArray: ROUTE_DASH,
-          lineCap: 'butt',
-        },
-        onEachFeature: tooltip,
-      }).addTo(group)
+      applyLook()
     })
     .catch(() => {
       // Route overlay is non-essential — fail silently.
-    })
-
-  fetch(nodesUrl)
-    .then((res) => res.json())
-    .then((geojson) => {
-      L.geoJSON<RouteNodeProps>(geojson, {
-        pane: panes.nodes,
-        pointToLayer: (_feature, latlng) =>
-          L.circleMarker(latlng, {
-            pane: panes.nodes,
-            radius: 3,
-            color: ROUTE_HALO_COLOR,
-            weight: 1.2,
-            fillColor: ROUTE_NODE_COLOR,
-            fillOpacity: 1,
-          }),
-        onEachFeature: (feature, layer) => {
-          const name = feature.properties?.name
-          if (name) layer.bindTooltip(name, { direction: 'top', className: 'river-tooltip' })
-        },
-      }).addTo(group)
-    })
-    .catch(() => {
-      // Node overlay is non-essential — fail silently.
     })
 
   return group
@@ -428,15 +479,17 @@ export function addLayerControl(
 
   const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  const routes = buildRoutesLayer(L, map).addTo(map)
+  // Built but not added — the overlay checkbox starts unchecked so the
+  // network only appears after the user turns it on.
+  const routes = buildRoutesLayer(L, map)
 
   // Leaflet's layer control inserts each key as raw innerHTML, so "Routes &
   // nodes" can carry its own hover-title explanation (a native tooltip, not
   // the app's usual ClickHint popover — this control is plain Leaflet DOM,
   // not React) the same dotted-underline look every other in-app hint uses.
   const routesLabel =
-    '<span class="routes-hint-label" title="Ancient trade-route network and its named nodes, from the Tang dynasty (description may change)." ' +
-    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes &amp; nodes</span>'
+    '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change)." ' +
+    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes</span>'
 
   const control = L.control
     .layers(
@@ -460,7 +513,7 @@ export function addLayerControl(
 
   // Clicking anywhere in a Leaflet overlay row toggles its checkbox, because
   // the row is a <label> wrapping the input. That swallows clicks meant to
-  // read the "Routes & nodes" hint text as a toggle instead. Calling
+  // read the "Routes" hint text as a toggle instead. Calling
   // preventDefault() on the span cancels the browser's implicit forwarding
   // of the click to the checkbox, so only the checkbox itself now toggles
   // the layer — the label text becomes hover-only, like the hint it is.
@@ -480,9 +533,9 @@ export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
 }
 
-/** The route network as a fixed layer, for the same no-controls maps that get
- *  `addStaticMajorRivers` — otherwise routes would vanish entirely below the
- *  768px breakpoint, where the layer control isn't built. */
+/** Opt-in helper if a map without layer chrome still wants the network on.
+ *  Visualization pages do not call this — routes stay off until the user
+ *  ticks "Routes" in the layer control. */
 export function addStaticRoutes(L: LeafletNS, map: import('leaflet').Map) {
   buildRoutesLayer(L, map).addTo(map)
 }
