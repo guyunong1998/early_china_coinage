@@ -149,10 +149,16 @@ export function CoinTypePieChart({
   const total = data.reduce((sum, d) => sum + d.value, 0)
   if (total <= 0 && unquantified.length === 0) return null
 
-  const rOuter = size / 2
+  const hasUnquantified = unquantified.length > 0
+  // Reserve a thin band just outside the donut for the gray "unquantified
+  // types exist" ring, so it reads as a wrapper around the chart rather than
+  // overlapping its outermost inscription slices.
+  const RING_WIDTH = 3
+  const RING_GAP = 1.5
+  const cx = size / 2
+  const cy = size / 2
+  const rOuter = hasUnquantified ? size / 2 - RING_WIDTH - RING_GAP : size / 2
   const rMid = rOuter * 0.62
-  const cx = rOuter
-  const cy = rOuter
 
   // No quantified data at all (only unquantified types) — nothing to draw
   // a pie from, so skip straight to a legend that's just the warning row.
@@ -197,7 +203,7 @@ export function CoinTypePieChart({
 
   return (
     <div className="flex flex-wrap items-start gap-4">
-      {total > 0 && (
+      {(total > 0 || hasUnquantified) && (
         <svg
           width={size}
           height={size}
@@ -227,6 +233,19 @@ export function CoinTypePieChart({
                 <title>{`${g.label} · ${c.label}: ${c.value} (${Math.round((c.value / total) * 100)}%)`}</title>
               </path>
             ))
+          )}
+          {hasUnquantified && (
+            <circle
+              cx={cx}
+              cy={cy}
+              r={rOuter + RING_GAP + RING_WIDTH / 2}
+              fill="none"
+              stroke="#9ca3af"
+              strokeWidth={RING_WIDTH}
+              opacity={0.6}
+            >
+              <title>{`${unquantified.length} unquantified type(s) not shown as slices`}</title>
+            </circle>
           )}
         </svg>
       )}

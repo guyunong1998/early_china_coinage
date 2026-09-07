@@ -2,6 +2,7 @@
  * Shared tile layer definitions for all Leaflet maps.
  */
 import { PLACE_LABELS } from '@/lib/place-labels'
+import { toEnglishName } from '@/lib/name-translation'
 
 type LeafletNS = typeof import('leaflet')
 
@@ -110,42 +111,68 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
  * Historical route network + its named nodes, converted from the route0180 /
  * Node shapefiles by scripts/convert-routes-shapefile.mjs.
  *
- * Each `routelevel` gets its own cartographic line style:
- *   1 (trunk)     — double line: a thick casing with a thinner light line
- *                   drawn down its middle, reading as two parallel lines.
+ * Each `routelevel` gets its own cartographic line style, all sharing the
+ * same orange and no halo (a plain stroke straight on the basemap, not a
+ * glow):
+ *   1 (trunk)     — single solid line, twice the weight of level 2.
  *   2 (secondary) — single solid line.
  *   3 (tertiary)  — dashed line.
  *
- * The routes arrive as many short, separately-digitised segments that meet
- * end to end, so drawing each segment's full stack (halo → casing → inner)
- * one after another would let a neighbour's halo/inner paint over the segment
- * before it and leave a visible seam or stub at every junction. Instead each
- * part of the stack lives in its own pane, so *all* halos are painted, then
- * *all* casings, and so on — junctions fuse into continuous lines.
+ * Edges only reveal their level via a bound popup (click to open), unlike
+ * the nodes below (hover tooltip) — deliberately asymmetric so a route
+ * segment's tooltip can't flash open just from a pointer passing over the
+ * network while panning. Both are bilingual (Chinese + English together, not
+ * gated by the site's language toggle) — nodes carry only a Chinese name in
+ * the source data, so the English side falls back to pinyin the same way
+ * lib/name-translation.ts does for mint names.
  */
 type RouteProps = { routelevel?: number | null }
 type RouteNodeProps = { id?: number | null; name?: string | null }
 
 const ROUTE_COLOR = '#b45309'
-const ROUTE_HALO_COLOR = '#fff7ed'
 const ROUTE_NODE_COLOR = '#7c2d12'
 
 /** Pane name → z-index, in paint order. Above Leaflet's overlayPane (400),
  *  below its markerPane (600) so find-site coin markers stay on top. */
 const ROUTE_PANES = {
-  halo: 402,
-  trunkCasing: 403,
-  trunkInner: 404,
-  line: 405,
-  nodes: 406,
+  line: 402,
+  nodes: 403,
 } as const
 
 const ROUTE_DASH = '7 5'
+
+// Base weights, tuned to look right at REFERENCE_ZOOM — scaled by the same
+// zoomScale() the river layers use so routes thin out at low zooms instead
+// of staying a constant (and increasingly heavy-looking) screen width as the
+// view pulls back to cover more ground. Trunk has no weight of its own —
+// it's always drawn at exactly twice the secondary weight.
+const ROUTE_BASE_WEIGHTS = {
+  secondary: 2.6,
+  tertiary: 2,
+} as const
+
+const ROUTE_NODE_BASE_RADIUS = 3
+
+function routeWeight(base: number, zoom: number) {
+  return base * zoomScale(zoom)
+}
 
 function ensurePane(map: import('leaflet').Map, name: string, zIndex: number) {
   const pane = map.getPane(name) ?? map.createPane(name)
   pane.style.zIndex = String(zIndex)
   return name
+}
+
+/** Chinese + English shown together for a route's click popup — not gated by
+ *  the language toggle, since both should always be visible per-line. */
+const ROUTE_LEVEL_LABELS: Record<number, { zh: string; en: string }> = {
+  1: { zh: '干道', en: 'Trunk route' },
+  2: { zh: '支线', en: 'Secondary route' },
+  3: { zh: '小路', en: 'Tertiary route' },
+}
+
+function bilingualHtml(zh: string, en: string) {
+  return `<span>${zh}<span style="margin-left:6px;font-style:italic;color:#9ca3af;font-size:0.85em;">${en}</span></span>`
 }
 
 function buildRoutesLayer(
@@ -157,9 +184,6 @@ function buildRoutesLayer(
   const group = L.layerGroup()
 
   const panes = {
-    halo: ensurePane(map, 'routes-halo', ROUTE_PANES.halo),
-    trunkCasing: ensurePane(map, 'routes-trunk-casing', ROUTE_PANES.trunkCasing),
-    trunkInner: ensurePane(map, 'routes-trunk-inner', ROUTE_PANES.trunkInner),
     line: ensurePane(map, 'routes-line', ROUTE_PANES.line),
     nodes: ensurePane(map, 'routes-nodes', ROUTE_PANES.nodes),
   }
@@ -176,70 +200,74 @@ function buildRoutesLayer(
         ),
       })
 
-      const tooltip = (feature: RouteFeature, layer: import('leaflet').Layer) => {
+      // Click-only: a bound Popup (unlike Tooltip) only ever opens on click
+      // in Leaflet, never on hover, which is exactly the "must be clicked"
+      // behavior wanted for edges — the nodes below keep the hover tooltip.
+      const clickPopup = (feature: RouteFeature, layer: import('leaflet').Layer) => {
         const level = feature.properties?.routelevel
-        if (level == null) return
-        layer.bindTooltip(`Route · level ${level}`, { sticky: true, className: 'river-tooltip' })
+        const label = level != null ? ROUTE_LEVEL_LABELS[level] : null
+        if (!label) return
+        layer.bindPopup(bilingualHtml(label.zh, label.en), { closeButton: false, className: 'river-tooltip' })
       }
 
-      // Level 1 — halo, then casing, then the light inner line. Round caps on
-      // the casing let abutting segments blend; the inner line uses butt caps
-      // so it can never spill past the casing it sits inside.
+      // Level 1 — single solid line, twice the weight of level 2.
+      const trunkStyle = () => ({
+        color: ROUTE_COLOR,
+        weight: 2 * routeWeight(ROUTE_BASE_WEIGHTS.secondary, map.getZoom()),
+        opacity: 0.85,
+        lineCap: 'round' as const,
+        lineJoin: 'round' as const,
+      })
+
       const trunk = atLevel(1)
-      L.geoJSON(trunk, {
-        pane: panes.halo,
-        interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
-      }).addTo(group)
-      L.geoJSON(trunk, {
-        pane: panes.trunkCasing,
-        style: { color: ROUTE_COLOR, weight: 7, opacity: 1, lineCap: 'round', lineJoin: 'round' },
-        onEachFeature: tooltip,
-      }).addTo(group)
-      L.geoJSON(trunk, {
-        pane: panes.trunkInner,
-        interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 3, opacity: 1, lineCap: 'butt', lineJoin: 'round' },
+      const trunkLayer = L.geoJSON(trunk, {
+        pane: panes.line,
+        style: trunkStyle,
+        onEachFeature: clickPopup,
       }).addTo(group)
 
       // Level 2 — plain solid line.
+      const secondaryLineStyle = () => ({
+        color: ROUTE_COLOR,
+        weight: routeWeight(ROUTE_BASE_WEIGHTS.secondary, map.getZoom()),
+        opacity: 0.8,
+        lineCap: 'round' as const,
+        lineJoin: 'round' as const,
+      })
+
       const secondary = atLevel(2)
-      L.geoJSON(secondary, {
-        pane: panes.halo,
-        interactive: false,
-        style: { color: ROUTE_HALO_COLOR, weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
-      }).addTo(group)
-      L.geoJSON(secondary, {
+      const secondaryLineLayer = L.geoJSON(secondary, {
         pane: panes.line,
-        style: { color: ROUTE_COLOR, weight: 2.6, opacity: 1, lineCap: 'round', lineJoin: 'round' },
-        onEachFeature: tooltip,
+        style: secondaryLineStyle,
+        onEachFeature: clickPopup,
       }).addTo(group)
 
-      // Level 3 — dashed. Its halo carries the same dash pattern, otherwise a
-      // solid white line would show through the gaps.
+      // Level 3 — dashed, tighter rhythm than the trunk's.
+      const tertiaryLineStyle = () => ({
+        color: ROUTE_COLOR,
+        weight: routeWeight(ROUTE_BASE_WEIGHTS.tertiary, map.getZoom()),
+        opacity: 0.8,
+        dashArray: ROUTE_DASH,
+        lineCap: 'butt' as const,
+      })
+
       const tertiary = atLevel(3)
-      L.geoJSON(tertiary, {
-        pane: panes.halo,
-        interactive: false,
-        style: {
-          color: ROUTE_HALO_COLOR,
-          weight: 4.4,
-          opacity: 0.9,
-          dashArray: ROUTE_DASH,
-          lineCap: 'butt',
-        },
-      }).addTo(group)
-      L.geoJSON(tertiary, {
+      const tertiaryLineLayer = L.geoJSON(tertiary, {
         pane: panes.line,
-        style: {
-          color: ROUTE_COLOR,
-          weight: 2,
-          opacity: 1,
-          dashArray: ROUTE_DASH,
-          lineCap: 'butt',
-        },
-        onEachFeature: tooltip,
+        style: tertiaryLineStyle,
+        onEachFeature: clickPopup,
       }).addTo(group)
+
+      // Re-derive every tier's weight whenever the zoom settles, the same
+      // "recompute once on zoomend, not mid-gesture" approach the river
+      // layers use — otherwise these lines never fall below their
+      // REFERENCE_ZOOM weight, making a low zoom's routes look far too heavy
+      // relative to how much ground they now cover.
+      map.on('zoomend', () => {
+        trunkLayer.setStyle(trunkStyle)
+        secondaryLineLayer.setStyle(secondaryLineStyle)
+        tertiaryLineLayer.setStyle(tertiaryLineStyle)
+      })
     })
     .catch(() => {
       // Route overlay is non-essential — fail silently.
@@ -248,22 +276,40 @@ function buildRoutesLayer(
   fetch(nodesUrl)
     .then((res) => res.json())
     .then((geojson) => {
-      L.geoJSON<RouteNodeProps>(geojson, {
+      const nodeRadius = () => routeWeight(ROUTE_NODE_BASE_RADIUS, map.getZoom())
+
+      const nodesLayer = L.geoJSON<RouteNodeProps>(geojson, {
         pane: panes.nodes,
         pointToLayer: (_feature, latlng) =>
           L.circleMarker(latlng, {
             pane: panes.nodes,
-            radius: 3,
-            color: ROUTE_HALO_COLOR,
-            weight: 1.2,
+            radius: nodeRadius(),
+            color: ROUTE_NODE_COLOR,
+            weight: 1,
+            opacity: 0.9,
             fillColor: ROUTE_NODE_COLOR,
-            fillOpacity: 1,
+            fillOpacity: 0.85,
           }),
         onEachFeature: (feature, layer) => {
           const name = feature.properties?.name
-          if (name) layer.bindTooltip(name, { direction: 'top', className: 'river-tooltip' })
+          if (!name) return
+          // Nodes only carry a Chinese name in the source shapefile — the
+          // English side falls back to tone-less pinyin, same convention
+          // lib/name-translation.ts uses for mint names with no translation.
+          const en = toEnglishName(name, null)
+          layer.bindTooltip(bilingualHtml(name, en), { direction: 'top', className: 'river-tooltip' })
         },
       }).addTo(group)
+
+      // Shrink the node dots at low zoom too, to match the thinned-out
+      // routes — CircleMarker.setRadius isn't part of GeoJSON's generic
+      // setStyle, so each marker is updated directly.
+      map.on('zoomend', () => {
+        const radius = nodeRadius()
+        nodesLayer.eachLayer((layer) => {
+          if (layer instanceof L.CircleMarker) layer.setRadius(radius)
+        })
+      })
     })
     .catch(() => {
       // Node overlay is non-essential — fail silently.
@@ -461,13 +507,24 @@ export function addLayerControl(
   // Clicking anywhere in a Leaflet overlay row toggles its checkbox, because
   // the row is a <label> wrapping the input. That swallows clicks meant to
   // read the "Routes & nodes" hint text as a toggle instead. Calling
-  // preventDefault() on the span cancels the browser's implicit forwarding
+  // preventDefault() on the click cancels the browser's implicit forwarding
   // of the click to the checkbox, so only the checkbox itself now toggles
   // the layer — the label text becomes hover-only, like the hint it is.
-  control
-    .getContainer()
-    ?.querySelector('.routes-hint-label')
-    ?.addEventListener('click', (e) => e.preventDefault())
+  //
+  // This has to be delegated on the control's outer container rather than
+  // bound directly to the `.routes-hint-label` span: Leaflet's layer control
+  // rebuilds its row DOM (`_update()`, recreating every label/span) whenever
+  // *any* layer is added to or removed from the map — which happens
+  // constantly here (heat layer, marker clusters, pins toggling as filters
+  // and view modes change) — so a listener attached straight to the span
+  // gets silently dropped the next time that happens. The outer container
+  // itself is stable across those rebuilds, so checking the click target at
+  // dispatch time survives them.
+  control.getContainer()?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement | null)?.closest('.routes-hint-label')) {
+      e.preventDefault()
+    }
+  })
 }
 
 /**

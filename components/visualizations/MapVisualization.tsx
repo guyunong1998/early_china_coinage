@@ -19,7 +19,6 @@ import type { ReactNode } from 'react'
 import { useDeferredValue, useMemo, useState } from 'react'
 import {
   MapVisCanvas,
-  mintImportanceScore,
   mintSizeMetrics,
   type ComparePoint,
   type MintSizeBy,
@@ -1083,14 +1082,14 @@ export function MintTownVisualization({
   const density = useMemo(() => {
     const points = mintPoints.map((mint) => {
       const state: SiteHeatState = mintStates?.get(mint.mint_zh) ?? { kind: 'no-filter' }
-      // Same filter-aware metrics as circle diameter (expm1 maps the log
-      // score back to a qty-like weight heatWeight's log10 curve understands).
-      const score = mintImportanceScore(mint, sizeBy, mintSizeMetrics(mint, state))
-      const weightQty = Math.expm1(score)
-      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, weightQty) }
+      // Heat weight is the real coin count, not the log/sqrt-compressed score
+      // circle diameter uses — min-max needs a linear quantity to stretch
+      // across, and the legend labels this range in coin counts.
+      const { coins } = mintSizeMetrics(mint, state)
+      return { lat: mint.lat, lng: mint.lng, weight: heatWeight(state, coins) }
     })
     return buildDensityLayer(points)
-  }, [mintPoints, mintStates, sizeBy])
+  }, [mintPoints, mintStates])
 
   const foundInSummary = useMemo(() => {
     if (!mintStates) return null
@@ -1161,7 +1160,7 @@ export function MintTownVisualization({
 
       <MapVisualizationOverlay>
         <div className="space-y-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* <div className="flex flex-wrap items-center gap-1.5">
             <span className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
               <T k="visualizations.data.label" />
             </span>
@@ -1170,7 +1169,7 @@ export function MintTownVisualization({
               onChange={setSource}
               options={[{ value: 'database' as const, label: <T k="visualizations.data.database" /> }]}
             />
-          </div>
+          </div> */}
 
           <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 

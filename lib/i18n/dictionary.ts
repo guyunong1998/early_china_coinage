@@ -476,8 +476,8 @@ export const DICTIONARY = {
   },
   'map.sizeBy.label': { en: 'Size by', zh: '大小依据' },
   'map.sizeBy.labelHint': {
-    en: 'With a coin-type filter active, size follows that type’s own matched coins/sites at the mint, not the mint’s overall total.',
-    zh: '启用币种筛选时，大小按该铸地匹配所选币种的数量/遗址数计算，而非铸地全部出土总量。',
+    en: 'With a coin-type filter active, size follows that type’s own matched coins/sites at the mint, not the mint’s overall total. Combined balances coin quantity and site count together, so a mint with a lot of coins from few sites and one with fewer coins from many sites can end up similarly sized. Coins count sizes purely by total coin quantity. Sites count sizes purely by how many find sites reported this mint’s coins.',
+    zh: '启用币种筛选时，大小按该铸地匹配所选币种的数量/遗址数计算，而非铸地全部出土总量。综合同时权衡钱币数量与遗址数量，因此遗址少但钱币量大的铸地，可能与遗址多但钱币量小的铸地大小相近。钱币数量仅按出土钱币总数决定大小。遗址数量仅按记录过该铸地钱币的遗址数量决定大小。',
   },
   'map.sizeBy.combined': { en: 'Combined', zh: '综合' },
   'map.sizeBy.coins': { en: 'Coins count', zh: '钱币数量' },
