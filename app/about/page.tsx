@@ -44,7 +44,7 @@ const TEAM_MEMBERS: TeamMember[] = [
   {
     name: 'Sophia Ling',
     title: '',
-    affiliation: 'M.S, Columbia University',
+    affiliation: 'M.S Candidate, Columbia University',
     email: 'sl4909@columbia.edu',
     photo: '/images/sophia.jpg',
   },

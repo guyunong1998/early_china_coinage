@@ -25,7 +25,7 @@ import {
   NO_DATA_COLOR,
   PRESENT_UNQUANTIFIED_COLOR,
   SINGLE_FIND_COLOR,
-  buildDensityGradient,
+  densityHeatLayerOptions,
   hexToRgba,
   ratioToColor,
   readHeatmapOpacity,
@@ -913,15 +913,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       try {
         if (inDensity && densityLatLngs.length > 0) {
           if (!heatLayerRef.current) {
-            heatLayerRef.current = L.heatLayer(densityLatLngs, {
-              radius: 32,
-              blur: 26,
-              maxZoom: 9,
-              max: 1,
-              minOpacity: 0.25,
-              gradient: buildDensityGradient(readHeatmapOpacity()),
-            }).addTo(map)
+            heatLayerRef.current = L.heatLayer(densityLatLngs, densityHeatLayerOptions()).addTo(map)
           } else {
+            heatLayerRef.current.setOptions(densityHeatLayerOptions())
             heatLayerRef.current.setLatLngs(densityLatLngs)
             if (!map.hasLayer(heatLayerRef.current)) heatLayerRef.current.addTo(map)
           }
@@ -955,7 +949,6 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
         buildBaseLayers,
         addLayerControl,
         addStaticMajorRivers,
-        addStaticRoutes,
         setLabelLayerForLang,
       } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current || mapRef.current) return
@@ -973,15 +966,12 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       // The layer control is reserved for the dedicated Map Visualizations
-      // pages (fullControls, default true), desktop only — on mobile, or
-      // wherever this canvas is embedded elsewhere with fullControls={false}
-      // (e.g. the /mints overview map), it drops back to the same "just the
-      // bilingual labels + static major rivers and routes" baseline every
-      // other map on the site uses.
-      const isMobile = window.matchMedia('(max-width: 768px)').matches
-      if (isMobile || props.fullControls === false) {
+      // pages (fullControls, default true). Embedded maps (e.g. /mints)
+      // drop back to bilingual labels + static major rivers. Routes are an
+      // overlay in that control and start unchecked — they only appear after
+      // the user ticks "Routes".
+      if (props.fullControls === false) {
         addStaticMajorRivers(L, map)
-        addStaticRoutes(L, map)
       } else {
         addLayerControl(L, map, baseLayers, {
           collapsed: true,

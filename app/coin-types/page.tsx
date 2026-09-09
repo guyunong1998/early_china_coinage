@@ -1,11 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
-import { FullTypologyTree } from '@/components/coin-types/TypologyTree'
-import { TypologyViewer } from '@/components/coin-types/TypologyViewer'
+import { TypologyHierarchyCard } from '@/components/coin-types/TypologyHierarchyCard'
 import { T } from '@/components/i18n/T'
-import { LabelHint } from '@/components/ui/LabelHint'
-import { Panel } from '@/components/ui/Panel'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
 import { getCoinTypeImagePaths, type CoinTypeImagePaths } from '@/lib/coin-images'
 import { DEMO_VISUALIZATIONS, demoHref } from '@/lib/demo-visualizations'
@@ -52,29 +49,27 @@ export default async function CoinTypesPage() {
         </p>
       </div>
 
-      {/* Overview row — left half is the map (title/links + the same
-          static Compare-view screenshot the home page uses, since its
-          subject already matches this page's), right half is the full
-          typology hierarchy tree, so the two most-used ways into the data
-          (by map, by type) sit side by side above the fold. */}
-      <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-2">
-        <div className="flex flex-col gap-3 p-4">
-          <div className="panel-nav-card-inner flex flex-col gap-2 p-4">
-            <h2 className="font-serif text-xl font-semibold text-brand">
-              <T k="navcards.map.label" />
-            </h2>
-            <p className="text-sm leading-6 text-gray-600">
-              <T k="navcards.map.desc" />
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/visualizations"
-                className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
-              >
-                <T k="home.mapSection.title" /> →
-              </Link>
-            </div>
-          </div>
+      {/* Overview map — same left-third title/link + right-two-thirds
+          preview card the home page uses for its own map section, reusing
+          that same demo's static (pre-cropped, 16:9) screenshot rather than
+          a second live map, since its subject (a coin-type Compare view)
+          already matches this page's. Links to the same pre-built URL. */}
+      <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
+        <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
+          <h2 className="font-serif text-xl font-semibold text-brand">
+            <T k="navcards.map.label" />
+          </h2>
+          <p className="text-sm leading-6 text-gray-600">
+            <T k="navcards.map.desc" />
+          </p>
+          <Link
+            href="/visualizations"
+            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          >
+            <T k="home.mapSection.title" /> →
+          </Link>
+        </div>
+        <div className="lg:col-span-2 p-4">
           <Link
             href={demoHref(OVERVIEW_DEMO)}
             className="group relative block aspect-video w-full overflow-hidden rounded border border-brand/15 bg-gray-100"
@@ -83,36 +78,20 @@ export default async function CoinTypesPage() {
               src={OVERVIEW_DEMO.image}
               alt={`${OVERVIEW_DEMO.title.zh} (${OVERVIEW_DEMO.title.en})`}
               fill
-              sizes="(min-width: 1024px) 33vw, 100vw"
+              sizes="(min-width: 1024px) 66vw, 100vw"
               className="object-cover transition duration-300 group-hover:scale-[1.02]"
             />
           </Link>
         </div>
-
-        {/* Full typology hierarchy — both level1 roots (钱币 Coin, 钱范
-            Mould) down through every descendant, so the whole classification
-            system (every one of the {cardNodes.length} types below) is
-            browsable as one tree, not just the single-branch view the
-            detail page shows. Fixed at 460px (internally scrollable past
-            that) rather than growing to fit a fully-expanded tree, since
-            this sits beside the map card. */}
-        <div className="p-4 flex flex-col border-t border-brand/15 lg:border-l lg:border-t-0">
-          <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
-            <LabelHint labelKey="coinTypeDetail.hierarchy" hintKey="coinTypeDetail.hierarchyHint" />
-          </div>
-          <div className="panel-body scrollbar min-h-[460px] overflow-y-auto p-5 pl-8 lg:max-h-[460px] lg:flex-1">
-            <FullTypologyTree nodes={nodes} />
-          </div>
-        </div>
       </div>
 
-      {/* Typology Viewer — the same hierarchy as a single pannable/zoomable
-          poster image (photos + silhouettes + connecting lines baked in by
-          scripts/gen-coin-hierarchy-diagram.py), for browsing the whole
-          classification visually instead of as text. */}
-      <Panel header={<T k="coinTypeList.typologyViewer.title" />} className="mt-8">
-        <TypologyViewer src="/images/coin-type-hierarchy.png" manifest={typologyManifest} />
-      </Panel>
+      {/* Typology Hierarchy — both level1 roots (钱币 Coin, 钱范 Mould) down
+          through every descendant, browsable either as the pannable/zoomable
+          poster diagram (photos + silhouettes + connecting lines baked in by
+          scripts/gen-coin-hierarchy-diagram.py) or as a plain nested tree —
+          same {cardNodes.length}-type hierarchy, one card, a toggle between
+          the two views. */}
+      <TypologyHierarchyCard nodes={nodes} src="/images/coin-type-hierarchy.png" manifest={typologyManifest} />
 
       {/* Searchable list */}
       <div className="mt-8">

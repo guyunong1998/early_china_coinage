@@ -219,6 +219,54 @@ export function getCoinTypeNodeBySlug(nodes: CoinTypeNode[], slug: string): Coin
   return nodes.find((n) => n.slug === slug)
 }
 
+const CHILD_LEVEL: Partial<Record<CoinTypeLevel, CoinTypeLevel>> = {
+  level1: 'level2',
+  level2: 'level3',
+  level3: 'level4',
+  level4: 'level5',
+}
+
+/** This node's direct next-level children (not every descendant) — e.g. a
+ * level2 node's level3 children, but not their level4/5 descendants. */
+export function childrenOf(nodes: CoinTypeNode[], parent: CoinTypeNode): CoinTypeNode[] {
+  const childLevel = CHILD_LEVEL[parent.level]
+  if (!childLevel) return []
+  return nodes.filter((n) => n.level === childLevel && n.parents[n.parents.length - 1]?.slug === parent.slug)
+}
+
+/** Every img_acc_num photographed anywhere under this node's subtree (its
+ * own row plus every descendant) — for picking a real specimen photo to
+ * represent a broad category that has no photographed specimen of its own
+ * (CoinTypeNode.imgAccNum only ever looks at the node's own row). */
+export function photographedAccNumsUnder(node: CoinTypeNode, hierarchyRows: CoinTypeHierarchyRow[]): string[] {
+  const ids = new Set(node.matchedHierarchyIds)
+  const accNums: string[] = []
+  hierarchyRows.forEach((r) => {
+    if (ids.has(r.id) && r.img_acc_num) accNums.push(r.img_acc_num)
+  })
+  return accNums
+}
+
+/** For each top-level (钱币, not 钱范/mould) category: one real obverse photo,
+ * picked at random from anywhere in that category's subtree — never a
+ * silhouette. A category with no photographed specimen anywhere under it is
+ * left out. Used by the home page's category showcase. */
+export function pickLevel2ShowcasePhotos(
+  nodes: CoinTypeNode[],
+  hierarchyRows: CoinTypeHierarchyRow[],
+  getObverseSrc: (accNum: string) => string | null
+): { node: CoinTypeNode; obverseSrc: string }[] {
+  return nodes
+    .filter((n) => n.level === 'level2' && !isMouldNode(n))
+    .flatMap((node) => {
+      const accNums = photographedAccNumsUnder(node, hierarchyRows)
+      if (accNums.length === 0) return []
+      const accNum = accNums[Math.floor(Math.random() * accNums.length)]
+      const obverseSrc = getObverseSrc(accNum)
+      return obverseSrc ? [{ node, obverseSrc }] : []
+    })
+}
+
 /** True for a node under the '钱范' (Coin Mould) level1 branch, as opposed
  * to '钱币' (ordinary coins) — the real field MouldTag.tsx was waiting on. */
 export function isMouldNode(node: CoinTypeNode): boolean {

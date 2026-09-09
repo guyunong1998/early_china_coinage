@@ -134,11 +134,11 @@ export function ratioToColor(ratio: number): string {
 // heat layer in the app (MapVisCanvas.tsx's density view mode, and the
 // homepage CoinFilterMap's always-on density layer) — one definition so
 // retinting/opacity changes apply everywhere at once.
-const DENSITY_GRADIENT_STOPS: [number, string][] = [
-  [0.15, '#f0d56a'],
-  [0.4, '#e39a2b'],
-  [0.65, '#d04a1c'],
-  [0.85, '#a01515'],
+export const DENSITY_GRADIENT_STOPS: [number, string][] = [
+  [0, '#f0d56a'],
+  [0.25, '#e39a2b'],
+  [0.5, '#d04a1c'],
+  [0.75, '#a01515'],
   [1, '#6e0c0c'],
 ]
 
@@ -157,4 +157,67 @@ export function buildDensityGradient(opacity: number): Record<number, string> {
     gradient[stop] = hexToRgba(hex, opacity)
   })
   return gradient
+}
+
+/** Lowest visible intensity after log-normalization — leaflet.heat treats 0
+ * as no contribution, and we want the fewest-coin location to still read as
+ * a pale yellow rather than disappearing. */
+export const DENSITY_FLOOR = 0.2
+
+export type DensityRange = { min: number; max: number } | null
+
+/**
+ * Maps raw coin-count weights onto leaflet.heat's [DENSITY_FLOOR, 1]
+ * intensity range on a **log** scale — the same idea as point sizing
+ * (`siteSizeByQuantity`). Linear min–max crushed everything except a few
+ * mega-hoards into the palest yellow; log spacing gives each order of
+ * magnitude an equal slice of the ramp, so 10 / 100 / 1,000 / 10,000 stay
+ * equally distinct.
+ */
+export function buildDensityLayer(
+  points: { lat: number; lng: number; weight: number | null }[]
+): { latLngs: [number, number, number][]; range: DensityRange } {
+  const weighted = points.filter(
+    (p): p is { lat: number; lng: number; weight: number } => p.weight != null && p.weight > 0
+  )
+  if (weighted.length === 0) return { latLngs: [], range: null }
+
+  const min = Math.min(...weighted.map((p) => p.weight))
+  const max = Math.max(...weighted.map((p) => p.weight))
+  const logMin = Math.log(min)
+  const logSpan = Math.log(max) - logMin
+  const latLngs: [number, number, number][] = weighted.map((p) => {
+    const t = logSpan <= 0 ? 1 : (Math.log(p.weight) - logMin) / logSpan
+    const intensity = DENSITY_FLOOR + (1 - DENSITY_FLOOR) * t
+    return [p.lat, p.lng, intensity]
+  })
+  return { latLngs, range: { min, max } }
+}
+
+export function densityLegendCss(): string {
+  return DENSITY_GRADIENT_STOPS.map(([stop, hex]) => `${hex} ${Math.round(stop * 100)}%`).join(', ')
+}
+
+/**
+ * leaflet.heat options shared by every density overlay. `maxZoom: 0` keeps
+ * the per-point scale factor `v` at 1 at every map zoom — the plugin
+ * otherwise multiplies intensity by 1/2^(maxZoom − zoom), which faded the
+ * layer when zoomed out and made each zoom level look different.
+ */
+export function densityHeatLayerOptions(): {
+  radius: number
+  blur: number
+  maxZoom: number
+  max: number
+  minOpacity: number
+  gradient: Record<number, string>
+} {
+  return {
+    radius: 32,
+    blur: 26,
+    maxZoom: 0,
+    max: 1,
+    minOpacity: 0.35,
+    gradient: buildDensityGradient(readHeatmapOpacity()),
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { ContextCard } from '@/components/site/ContextCard'
-import { CoinTypePieChart, type PieChild, type PieGroup } from '@/components/site/CoinTypePieChart'
+import { CoinTypePieChart, type PieChild, type PieGroup, type UnquantifiedChild } from '@/components/site/CoinTypePieChart'
 import { FindRow } from '@/components/site/FindRow'
 import { CitationsSection } from '@/components/sources/CitationsSection'
 import { ClickHint } from '@/components/ui/ClickHint'
@@ -34,6 +34,14 @@ function inscriptionLabel(find: Find) {
     return { zh: raw, en: find.coin_issues?.inscription_en?.trim() || null }
   }
   return { zh: '无铭文', en: 'No inscription recorded' }
+}
+
+/** The overarching major type a find's type falls under, if any — used to
+ * tell whether an unquantified type is a subtype of an already-quantified
+ * one (same major type, more specific minor type) rather than an unrelated
+ * type that needs its own standalone legend row. */
+function majorTypeZh(find: Find) {
+  return find.coin_issues?.major_type_zh?.trim() || null
 }
 
 function capChildren(
@@ -73,19 +81,25 @@ function capGroups(
   ]
 }
 
+/** A quantified breakdown group, plus the major type it was built from —
+ * carried alongside (not part of PieGroup itself) purely so
+ * attachUnquantifiedToGroups can tell which unquantified types are subtypes
+ * of it. */
+type BreakdownGroup = PieGroup & { majorZh: string | null }
+
 /**
  * Builds a two-level coin-type → inscription breakdown for the sector chart,
  * but only when the context's finds actually carry specific quantities — a
  * chart built from presence-only flags (no recorded counts) would be
  * misleading.
  */
-function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
+function buildContextBreakdown(findsForContext: Find[]): BreakdownGroup[] | null {
   const withQuantity = findsForContext.filter((f) => findQuantity(f) != null && (findQuantity(f) ?? 0) > 0)
   if (withQuantity.length === 0) return null
 
   const typeGroups = new Map<
     string,
-    { labelEn: string | null; value: number; children: Map<string, PieChild> }
+    { labelEn: string | null; majorZh: string | null; value: number; children: Map<string, PieChild> }
   >()
 
   withQuantity.forEach((find) => {
@@ -94,7 +108,7 @@ function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
     const insc = inscriptionLabel(find)
 
     if (!typeGroups.has(type.zh)) {
-      typeGroups.set(type.zh, { labelEn: type.en, value: 0, children: new Map() })
+      typeGroups.set(type.zh, { labelEn: type.en, majorZh: majorTypeZh(find), value: 0, children: new Map() })
     }
     const group = typeGroups.get(type.zh)!
     group.value += qty
@@ -109,10 +123,13 @@ function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
 
   // Cap both levels so the legend stays readable — fold long tails into a
   // single "Other" bucket rather than repeating the color palette forever.
-  const groups: PieGroup[] = capGroups(
+  // (Groups folded into "Other" lose their majorZh, so unquantified types
+  // won't match against them — acceptable given they're already a tail.)
+  const groups = capGroups(
     [...typeGroups.entries()].map(([zh, g]) => ({
       label: zh,
       labelEn: g.labelEn,
+      majorZh: g.majorZh,
       value: g.value,
       children: capChildren(
         [...g.children.values()],
@@ -124,7 +141,7 @@ function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
     8,
     (n) => `其他类型 (${n})`,
     (n) => `Other types (${n})`
-  )
+  ) as BreakdownGroup[]
 
   return groups.length > 0 ? groups : null
 }
@@ -132,6 +149,7 @@ function buildContextBreakdown(findsForContext: Find[]): PieGroup[] | null {
 type UnquantifiedType = {
   typeZh: string
   typeEn: string | null
+  majorZh: string | null
   inscriptionZh: string
   inscriptionEn: string | null
   recordCount: number
@@ -156,13 +174,70 @@ function buildUnquantifiedTypes(findsForContext: Find[]): UnquantifiedType[] {
     if (existing) {
       existing.recordCount += 1
     } else {
-      byKey.set(key, { typeZh: type.zh, typeEn: type.en, inscriptionZh: insc.zh, inscriptionEn: insc.en, recordCount: 1 })
+      byKey.set(key, {
+        typeZh: type.zh,
+        typeEn: type.en,
+        majorZh: majorTypeZh(find),
+        inscriptionZh: insc.zh,
+        inscriptionEn: insc.en,
+        recordCount: 1,
+      })
     }
   })
 
   return [...byKey.values()].sort(
     (a, b) => a.typeZh.localeCompare(b.typeZh, 'zh-CN') || a.inscriptionZh.localeCompare(b.inscriptionZh, 'zh-CN')
   )
+}
+
+/**
+ * Splits unquantified types into those that belong under an already-
+ * quantified type's dropdown (same type, different inscription — or a
+ * subtype of it, sharing its major type) vs. those with no overarching
+ * quantified category, which stay as standalone legend rows.
+ */
+function attachUnquantifiedToGroups(
+  groups: BreakdownGroup[],
+  unquantifiedTypes: UnquantifiedType[]
+): { groups: PieGroup[]; standalone: UnquantifiedType[] } {
+  const withChildren = groups.map((g) => ({ ...g, unquantifiedChildren: [] as UnquantifiedChild[] }))
+  const byLabel = new Map(withChildren.map((g) => [g.label, g]))
+
+  // Prefer the group that IS the major type itself (no minor type of its
+  // own) as the home for a subtype, since it's the most direct parent.
+  const byMajor = new Map<string, (typeof withChildren)[number]>()
+  withChildren.forEach((g) => {
+    if (!g.majorZh) return
+    const existing = byMajor.get(g.majorZh)
+    if (!existing || g.label === g.majorZh) byMajor.set(g.majorZh, g)
+  })
+
+  const standalone: UnquantifiedType[] = []
+  unquantifiedTypes.forEach((u) => {
+    const exact = byLabel.get(u.typeZh)
+    if (exact) {
+      exact.unquantifiedChildren.push({
+        inscriptionLabel: u.inscriptionZh,
+        inscriptionLabelEn: u.inscriptionEn,
+        count: u.recordCount,
+      })
+      return
+    }
+    const parent = u.majorZh ? byMajor.get(u.majorZh) : undefined
+    if (parent) {
+      parent.unquantifiedChildren.push({
+        subtypeLabel: u.typeZh,
+        subtypeLabelEn: u.typeEn,
+        inscriptionLabel: u.inscriptionZh,
+        inscriptionLabelEn: u.inscriptionEn,
+        count: u.recordCount,
+      })
+      return
+    }
+    standalone.push(u)
+  })
+
+  return { groups: withChildren, standalone }
 }
 
 type SiteDetailTabsProps = {
@@ -315,6 +390,10 @@ export function SiteDetailTabs({
           const findsForContext = finds.filter((f) => f.context_code === ctx.context_code)
           const breakdown = buildContextBreakdown(findsForContext)
           const unquantifiedTypes = buildUnquantifiedTypes(findsForContext)
+          const { groups: breakdownGroups, standalone: standaloneUnquantified } = attachUnquantifiedToGroups(
+            breakdown ?? [],
+            unquantifiedTypes
+          )
           const totalCoins = findsForContext.reduce((sum, f) => sum + (findQuantity(f) ?? 0), 0)
 
           return (
@@ -333,8 +412,8 @@ export function SiteDetailTabs({
                       币种构成 / Coin types
                     </p>
                     <CoinTypePieChart
-                      data={breakdown ?? []}
-                      unquantified={unquantifiedTypes.map((t) => ({
+                      data={breakdownGroups}
+                      unquantified={standaloneUnquantified.map((t) => ({
                         label: t.typeZh,
                         labelEn: t.typeEn,
                         inscriptionLabel: t.inscriptionZh,
@@ -483,6 +562,10 @@ export function SiteDetailTabs({
                 sourcesByCode={sourcesByCode}
                 resolvedTargets={resolvedTargets}
                 isDevMode={isDevMode}
+                filterContextCode={selectedContext === 'all' ? null : selectedContext}
+                contextOrder={contexts.map((c) => c.context_code)}
+                contextNamesByCode={new Map(contexts.map((c) => [c.context_code, c.context_name_zh]))}
+                findContextByCode={new Map(finds.map((f) => [f.find_code, f.context_code]))}
               />
             ),
           },

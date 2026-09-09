@@ -1,18 +1,5 @@
 import Link from 'next/link'
-import type { CoinTypeLevel, CoinTypeNode } from '@/lib/coin-type-catalog'
-
-const CHILD_LEVEL: Partial<Record<CoinTypeLevel, CoinTypeLevel>> = {
-  level1: 'level2',
-  level2: 'level3',
-  level3: 'level4',
-  level4: 'level5',
-}
-
-function childrenOf(nodes: CoinTypeNode[], parent: CoinTypeNode): CoinTypeNode[] {
-  const childLevel = CHILD_LEVEL[parent.level]
-  if (!childLevel) return []
-  return nodes.filter((n) => n.level === childLevel && n.parents[n.parents.length - 1]?.slug === parent.slug)
-}
+import { childrenOf, type CoinTypeNode } from '@/lib/coin-type-catalog'
 
 /** The current node's own level2 ancestor (parents are root-first, so
  * parents[1] is level2 for a level3+ node) — or the node itself when it IS

@@ -14,7 +14,7 @@ import type { HeatLayer, Map as LeafletMap, Marker, Layer } from 'leaflet'
 import type { MapSite } from '@/lib/types'
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
-import { buildDensityGradient, readHeatmapOpacity } from '@/lib/color-scale'
+import { buildDensityLayer, densityHeatLayerOptions } from '@/lib/color-scale'
 import {
   fetchCityBoundaryGeoJson,
   fetchCountyBoundaryGeoJson,
@@ -28,13 +28,6 @@ import {
 // `.map-dot-size-12`, `.map-dot-home-site` — no inline styles.
 function dot(size = 12) {
   return `<div class="map-dot map-dot-size-${size} map-dot-home-site"></div>`
-}
-
-/** Same intensity curve as the "no filter" state on the find spots map, so
- * both density overlays read consistently. */
-function densityIntensity(qty: number | null | undefined): number {
-  if (!qty || qty <= 0) return 0.35
-  return Math.min(1, 0.35 + Math.log10(qty + 1) / 4)
 }
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
@@ -94,7 +87,7 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
       setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       const bounds: [number, number][] = []
-      const densityLatLngs: [number, number, number][] = []
+      const densityPoints: { lat: number; lng: number; weight: number | null }[] = []
 
       sites.forEach((site) => {
         if (site.lat == null || site.lng == null) return
@@ -132,18 +125,16 @@ export function CoinFilterMap({ sites }: { sites: MapSite[] }) {
           )
 
         markersRef.current.set(site.site_code, marker)
-        densityLatLngs.push([site.lat, site.lng, densityIntensity(site.total_quantity_for_map)])
+        densityPoints.push({
+          lat: site.lat,
+          lng: site.lng,
+          weight: site.total_quantity_for_map ?? null,
+        })
       })
 
+      const { latLngs: densityLatLngs } = buildDensityLayer(densityPoints)
       if (densityLatLngs.length > 0) {
-        heatLayerRef.current = L.heatLayer(densityLatLngs, {
-          radius: 32,
-          blur: 26,
-          maxZoom: 9,
-          max: 1,
-          minOpacity: 0.25,
-          gradient: buildDensityGradient(readHeatmapOpacity()),
-        }).addTo(map)
+        heatLayerRef.current = L.heatLayer(densityLatLngs, densityHeatLayerOptions()).addTo(map)
       }
 
       // Gray city boundaries for uncertain site locations

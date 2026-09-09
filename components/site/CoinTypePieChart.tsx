@@ -9,16 +9,34 @@ export type PieChild = {
   value: number
 }
 
+/** A type/inscription combo recorded as present but never quantified, that
+ * belongs under a quantified type's dropdown rather than standing on its
+ * own — either the same type under a different inscription (no
+ * `subtypeLabel`), or a subtype of it (`subtypeLabel` set). */
+export type UnquantifiedChild = {
+  subtypeLabel?: string
+  subtypeLabelEn?: string | null
+  inscriptionLabel: string
+  inscriptionLabelEn?: string | null
+  count: number
+}
+
 export type PieGroup = {
   label: string
   labelEn?: string | null
   value: number
   children: PieChild[]
+  /** Unquantified type/inscription combos that are this type, or a subtype
+   * of it — folded into this group's dropdown instead of the standalone
+   * "unquantified types" list below. */
+  unquantifiedChildren?: UnquantifiedChild[]
 }
 
 /** One type/inscription combo that was recorded as present but never got a
- * quantity, so it can't be a slice of the chart — shown as its own legend
- * row instead (see the "unquantified types" row in the legend below). */
+ * quantity, so it can't be a slice of the chart, and has no quantified type
+ * of its own (or subtype relationship to one) to fold under — shown as its
+ * own legend row instead (see the "unquantified types" row in the legend
+ * below). */
 export type UnquantifiedItem = {
   label: string
   labelEn?: string | null
@@ -83,9 +101,9 @@ function clampSpan(startAngle: number, endAngle: number) {
  * with an exclamation mark (no type color of its own) — marks the
  * "unquantified types" legend row as a different kind of thing
  * (present-but-uncounted) rather than another color-coded slice. */
-function UnquantifiedSwatch() {
+function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 16 16" className="mt-0.5 h-2.5 w-2.5 shrink-0" aria-hidden="true">
+    <svg viewBox="0 0 16 16" className={`${className} shrink-0`} aria-hidden="true">
       <circle cx="8" cy="8" r="8" fill="#9ca3af" />
       <rect x="7.25" y="3.5" width="1.5" height="5.5" rx="0.75" fill="white" />
       <rect x="7.25" y="10.5" width="1.5" height="1.5" rx="0.75" fill="white" />
@@ -103,6 +121,7 @@ type RenderGroup = {
   startAngle: number
   endAngle: number
   children: RenderChild[]
+  unquantifiedChildren: UnquantifiedChild[]
 }
 
 /**
@@ -129,11 +148,14 @@ export function CoinTypePieChart({
   // their own. Within budget, inscriptions default open; over budget, they
   // default closed (behind the toggle) so the legend doesn't sprawl — types
   // themselves are never hidden or capped either way.
-  const totalRows = data.length + data.reduce((sum, g) => sum + (g.children.length > 1 ? g.children.length : 0), 0)
+  const dropdownRowCount = (g: PieGroup) =>
+    (g.children.length > 1 ? g.children.length : 0) + (g.unquantifiedChildren?.length ?? 0)
+  const hasDropdown = (g: PieGroup) => g.children.length > 1 || (g.unquantifiedChildren?.length ?? 0) > 0
+  const totalRows = data.length + data.reduce((sum, g) => sum + dropdownRowCount(g), 0)
   const defaultExpanded = totalRows <= 10
 
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(() =>
-    defaultExpanded ? new Set(data.filter((g) => g.children.length > 1).map((g) => g.label)) : new Set()
+    defaultExpanded ? new Set(data.filter(hasDropdown).map((g) => g.label)) : new Set()
   )
   const [showUnquantified, setShowUnquantified] = useState(false)
 
@@ -149,15 +171,15 @@ export function CoinTypePieChart({
   const total = data.reduce((sum, d) => sum + d.value, 0)
   if (total <= 0 && unquantified.length === 0) return null
 
-  const hasUnquantified = unquantified.length > 0
-  // Reserve a thin band just outside the donut for the gray "unquantified
-  // types exist" ring, so it reads as a wrapper around the chart rather than
-  // overlapping its outermost inscription slices.
-  const RING_WIDTH = 3
-  const RING_GAP = 1.5
+  const hasUnquantified =
+    unquantified.length > 0 || data.some((g) => (g.unquantifiedChildren?.length ?? 0) > 0)
+  // Reserve a band just outside the donut for the gray "unquantified types
+  // exist" ring, so it reads as a third ring of the chart — flush against
+  // the inscription ring rather than a halo floating outside it.
+  const RING_WIDTH = 6
   const cx = size / 2
   const cy = size / 2
-  const rOuter = hasUnquantified ? size / 2 - RING_WIDTH - RING_GAP : size / 2
+  const rOuter = hasUnquantified ? size / 2 - RING_WIDTH : size / 2
   const rMid = rOuter * 0.62
 
   // No quantified data at all (only unquantified types) — nothing to draw
@@ -193,7 +215,16 @@ export function CoinTypePieChart({
               cursor: endAngle,
               groups: [
                 ...acc.groups,
-                { label: g.label, labelEn: g.labelEn, value: g.value, color: baseColor, startAngle, endAngle, children },
+                {
+                  label: g.label,
+                  labelEn: g.labelEn,
+                  value: g.value,
+                  color: baseColor,
+                  startAngle,
+                  endAngle,
+                  children,
+                  unquantifiedChildren: g.unquantifiedChildren ?? [],
+                },
               ],
             }
           },
@@ -238,11 +269,10 @@ export function CoinTypePieChart({
             <circle
               cx={cx}
               cy={cy}
-              r={rOuter + RING_GAP + RING_WIDTH / 2}
+              r={rOuter + RING_WIDTH / 2}
               fill="none"
               stroke="#9ca3af"
               strokeWidth={RING_WIDTH}
-              opacity={0.6}
             >
               <title>{`${unquantified.length} unquantified type(s) not shown as slices`}</title>
             </circle>
@@ -254,19 +284,20 @@ export function CoinTypePieChart({
       <ul className="min-w-[220px] flex-1 space-y-1.5 text-xs">
         {groups.map((g) => {
           const hasInscriptions = g.children.length > 1
+          const dropdown = hasDropdown(g)
           const isExpanded = expandedTypes.has(g.label)
           return (
           <li key={g.label}>
             <div
               className={`flex items-start justify-between gap-2 font-semibold ${
-                hasInscriptions ? 'cursor-pointer select-none hover:text-brand' : ''
+                dropdown ? 'cursor-pointer select-none hover:text-brand' : ''
               }`}
-              role={hasInscriptions ? 'button' : undefined}
-              tabIndex={hasInscriptions ? 0 : undefined}
-              aria-expanded={hasInscriptions ? isExpanded : undefined}
-              onClick={hasInscriptions ? () => toggleType(g.label) : undefined}
+              role={dropdown ? 'button' : undefined}
+              tabIndex={dropdown ? 0 : undefined}
+              aria-expanded={dropdown ? isExpanded : undefined}
+              onClick={dropdown ? () => toggleType(g.label) : undefined}
               onKeyDown={
-                hasInscriptions
+                dropdown
                   ? (e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
@@ -279,7 +310,7 @@ export function CoinTypePieChart({
               <span className="flex items-start gap-1.5">
                 <span
                   className={`mt-0.5 w-3 shrink-0 text-center text-[9px] text-gray-400 transition-transform ${
-                    hasInscriptions ? '' : 'invisible'
+                    dropdown ? '' : 'invisible'
                   } ${isExpanded ? 'rotate-90' : ''}`}
                   aria-hidden="true"
                 >
@@ -300,25 +331,52 @@ export function CoinTypePieChart({
                 {g.value} · {Math.round((g.value / total) * 100)}%
               </span>
             </div>
-            {hasInscriptions && isExpanded && (
+            {dropdown && isExpanded && (
               <ul className="ml-[34px] mt-0.5 space-y-0.5">
-                {g.children.map((c) => (
-                  <li key={c.label} className="flex items-start justify-between gap-2 text-gray-600">
+                {hasInscriptions &&
+                  g.children.map((c) => (
+                    <li key={c.label} className="flex items-start justify-between gap-2 text-gray-600">
+                      <span className="flex items-start gap-1.5">
+                        <span
+                          className="mt-0.5 inline-block h-2 w-2 shrink-0 rounded-sm"
+                          style={{ backgroundColor: c.color }}
+                        />
+                        <span>
+                          {c.label}
+                          {c.labelEn && c.labelEn !== c.label && (
+                            <span className="ml-1 italic text-gray-400">{c.labelEn}</span>
+                          )}
+                        </span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-gray-400">
+                        {c.value} · {Math.round((c.value / total) * 100)}%
+                      </span>
+                    </li>
+                  ))}
+                {g.unquantifiedChildren.map((u, i) => (
+                  <li
+                    key={`unq-${u.subtypeLabel ?? ''}-${u.inscriptionLabel}-${i}`}
+                    className="flex items-start justify-between gap-2 text-gray-500"
+                  >
                     <span className="flex items-start gap-1.5">
-                      <span
-                        className="mt-0.5 inline-block h-2 w-2 shrink-0 rounded-sm"
-                        style={{ backgroundColor: c.color }}
-                      />
+                      <UnquantifiedSwatch className="mt-0.5 h-2 w-2" />
                       <span>
-                        {c.label}
-                        {c.labelEn && c.labelEn !== c.label && (
-                          <span className="ml-1 italic text-gray-400">{c.labelEn}</span>
+                        {u.subtypeLabel && (
+                          <>
+                            {u.subtypeLabel}
+                            {u.subtypeLabelEn && u.subtypeLabelEn !== u.subtypeLabel && (
+                              <span className="ml-1 italic text-gray-400">{u.subtypeLabelEn}</span>
+                            )}
+                            <span className="text-gray-400"> · </span>
+                          </>
+                        )}
+                        {u.inscriptionLabel}
+                        {u.inscriptionLabelEn && u.inscriptionLabelEn !== u.inscriptionLabel && (
+                          <span className="ml-1 italic text-gray-400">{u.inscriptionLabelEn}</span>
                         )}
                       </span>
                     </span>
-                    <span className="shrink-0 tabular-nums text-gray-400">
-                      {c.value} · {Math.round((c.value / total) * 100)}%
-                    </span>
+                    {u.count > 1 && <span className="shrink-0 tabular-nums text-gray-400">×{u.count}</span>}
                   </li>
                 ))}
               </ul>

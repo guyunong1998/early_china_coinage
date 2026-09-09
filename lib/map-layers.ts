@@ -108,8 +108,8 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
 }
 
 /**
- * Historical route network + its named nodes, converted from the route0180 /
- * Node shapefiles by scripts/convert-routes-shapefile.mjs.
+ * Historical route network + its named nodes, converted from newRoute.shp /
+ * Node.shp by scripts/convert-routes-shapefile.mjs.
  *
  * Each `routelevel` gets its own cartographic line style, all sharing the
  * same orange and no halo (a plain stroke straight on the basemap, not a
@@ -117,6 +117,12 @@ function buildRiverLayer(L: LeafletNS, map: import('leaflet').Map, url: string) 
  *   1 (trunk)     — single solid line, twice the weight of level 2.
  *   2 (secondary) — single solid line.
  *   3 (tertiary)  — dashed line.
+ *
+ * The converter welds junctions and splits crossings so shared vertices
+ * actually coincide. Strokes paint low-grade first, high-grade last, so a
+ * thinner road T-joins the side of a thicker one instead of disappearing
+ * under it. Same-level stubs are drawn before through-lines for the same
+ * reason (see `atLevel`'s sort).
  *
  * Edges only reveal their level via a bound popup (click to open), unlike
  * the nodes below (hover tooltip) — deliberately asymmetric so a route
@@ -139,7 +145,16 @@ const ROUTE_PANES = {
   nodes: 403,
 } as const
 
-const ROUTE_DASH = '7 5'
+// Dash + gap length in pixels at REFERENCE_ZOOM, scaled by zoomScale() like
+// the line weights — otherwise a fixed-pixel pattern stays the same size on
+// screen while the line thins out at low zoom, so the dashes end up looking
+// sparse relative to the line instead of scaling down with it.
+const ROUTE_DASH_BASE = { dash: 7, gap: 5 }
+
+function routeDashArray(zoom: number) {
+  const scale = zoomScale(zoom)
+  return `${ROUTE_DASH_BASE.dash * scale} ${ROUTE_DASH_BASE.gap * scale}`
+}
 
 // Base weights, tuned to look right at REFERENCE_ZOOM — scaled by the same
 // zoomScale() the river layers use so routes thin out at low zooms instead
@@ -175,6 +190,16 @@ function bilingualHtml(zh: string, en: string) {
   return `<span>${zh}<span style="margin-left:6px;font-style:italic;color:#9ca3af;font-size:0.85em;">${en}</span></span>`
 }
 
+function pathLength(coords: number[][]) {
+  let n = 0
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1]
+    const b = coords[i]
+    n += Math.hypot(b[0] - a[0], b[1] - a[1])
+  }
+  return n
+}
+
 function buildRoutesLayer(
   L: LeafletNS,
   map: import('leaflet').Map,
@@ -188,17 +213,32 @@ function buildRoutesLayer(
     nodes: ensurePane(map, 'routes-nodes', ROUTE_PANES.nodes),
   }
 
+  // Pinned to its own pane explicitly — an explicit `renderer` takes total
+  // precedence over a path's `pane` option (see Leaflet's getRenderer()), so
+  // without this the canvas silently falls back to the shared default
+  // overlayPane instead of routes-line, leaving its stacking order (and
+  // whether clicks reach it) at the mercy of whatever else gets appended
+  // into that shared pane later.
+  const renderer = L.canvas({ padding: 0.6, pane: panes.line })
+
   fetch(linesUrl)
     .then((res) => res.json())
     .then((geojson: import('geojson').FeatureCollection) => {
       type RouteFeature = import('geojson').Feature<import('geojson').Geometry, RouteProps>
 
-      const atLevel = (level: number) => ({
-        ...geojson,
-        features: geojson.features.filter(
-          (f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level
-        ),
-      })
+      // Shortest segments first within a level, so a short stub never paints
+      // over (and gets hidden by) the long through-line it joins.
+      const atLevel = (level: number) => {
+        const features = geojson.features
+          .filter((f) => ((f.properties as RouteProps)?.routelevel ?? 2) === level)
+          .slice()
+          .sort((a, b) => {
+            const ac = a.geometry?.type === 'LineString' ? a.geometry.coordinates : []
+            const bc = b.geometry?.type === 'LineString' ? b.geometry.coordinates : []
+            return pathLength(ac as number[][]) - pathLength(bc as number[][])
+          })
+        return { ...geojson, features }
+      }
 
       // Click-only: a bound Popup (unlike Tooltip) only ever opens on click
       // in Leaflet, never on hover, which is exactly the "must be clicked"
@@ -210,19 +250,23 @@ function buildRoutesLayer(
         layer.bindPopup(bilingualHtml(label.zh, label.en), { closeButton: false, className: 'river-tooltip' })
       }
 
-      // Level 1 — single solid line, twice the weight of level 2.
-      const trunkStyle = () => ({
+      const layerOpts = { renderer, smoothFactor: 1.4 }
+
+      // Level 3 — dashed, painted first so trunk/secondary lines drawn after
+      // it sit on top at any crossing.
+      const tertiaryLineStyle = () => ({
         color: ROUTE_COLOR,
-        weight: 2 * routeWeight(ROUTE_BASE_WEIGHTS.secondary, map.getZoom()),
-        opacity: 0.85,
-        lineCap: 'round' as const,
-        lineJoin: 'round' as const,
+        weight: routeWeight(ROUTE_BASE_WEIGHTS.tertiary, map.getZoom()),
+        opacity: 0.8,
+        dashArray: routeDashArray(map.getZoom()),
+        lineCap: 'butt' as const,
       })
 
-      const trunk = atLevel(1)
-      const trunkLayer = L.geoJSON(trunk, {
+      const tertiary = atLevel(3)
+      const tertiaryLineLayer = L.geoJSON(tertiary, {
+        ...layerOpts,
         pane: panes.line,
-        style: trunkStyle,
+        style: tertiaryLineStyle,
         onEachFeature: clickPopup,
       }).addTo(group)
 
@@ -237,24 +281,27 @@ function buildRoutesLayer(
 
       const secondary = atLevel(2)
       const secondaryLineLayer = L.geoJSON(secondary, {
+        ...layerOpts,
         pane: panes.line,
         style: secondaryLineStyle,
         onEachFeature: clickPopup,
       }).addTo(group)
 
-      // Level 3 — dashed, tighter rhythm than the trunk's.
-      const tertiaryLineStyle = () => ({
+      // Level 1 — single solid line, twice the weight of level 2, painted
+      // last so it stays unbroken across any lower-grade crossing.
+      const trunkStyle = () => ({
         color: ROUTE_COLOR,
-        weight: routeWeight(ROUTE_BASE_WEIGHTS.tertiary, map.getZoom()),
-        opacity: 0.8,
-        dashArray: ROUTE_DASH,
-        lineCap: 'butt' as const,
+        weight: 2 * routeWeight(ROUTE_BASE_WEIGHTS.secondary, map.getZoom()),
+        opacity: 0.85,
+        lineCap: 'round' as const,
+        lineJoin: 'round' as const,
       })
 
-      const tertiary = atLevel(3)
-      const tertiaryLineLayer = L.geoJSON(tertiary, {
+      const trunk = atLevel(1)
+      const trunkLayer = L.geoJSON(trunk, {
+        ...layerOpts,
         pane: panes.line,
-        style: tertiaryLineStyle,
+        style: trunkStyle,
         onEachFeature: clickPopup,
       }).addTo(group)
 
@@ -264,9 +311,9 @@ function buildRoutesLayer(
       // REFERENCE_ZOOM weight, making a low zoom's routes look far too heavy
       // relative to how much ground they now cover.
       map.on('zoomend', () => {
-        trunkLayer.setStyle(trunkStyle)
-        secondaryLineLayer.setStyle(secondaryLineStyle)
         tertiaryLineLayer.setStyle(tertiaryLineStyle)
+        secondaryLineLayer.setStyle(secondaryLineStyle)
+        trunkLayer.setStyle(trunkStyle)
       })
     })
     .catch(() => {
@@ -474,15 +521,17 @@ export function addLayerControl(
 
   const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  const routes = buildRoutesLayer(L, map).addTo(map)
+  // Built but not added — the overlay checkbox starts unchecked so the
+  // network only appears after the user turns it on.
+  const routes = buildRoutesLayer(L, map)
 
   // Leaflet's layer control inserts each key as raw innerHTML, so "Routes &
   // nodes" can carry its own hover-title explanation (a native tooltip, not
   // the app's usual ClickHint popover — this control is plain Leaflet DOM,
   // not React) the same dotted-underline look every other in-app hint uses.
   const routesLabel =
-    '<span class="routes-hint-label" title="Ancient trade-route network and its named nodes, from the Tang dynasty (description may change)." ' +
-    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes &amp; nodes</span>'
+    '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change)." ' +
+    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes</span>'
 
   const control = L.control
     .layers(
@@ -507,7 +556,7 @@ export function addLayerControl(
   // Clicking anywhere in a Leaflet overlay row toggles its checkbox, because
   // the row is a <label> wrapping the input. That swallows clicks meant to
   // read the "Routes & nodes" hint text as a toggle instead. Calling
-  // preventDefault() on the click cancels the browser's implicit forwarding
+  // preventDefault() on the span cancels the browser's implicit forwarding
   // of the click to the checkbox, so only the checkbox itself now toggles
   // the layer — the label text becomes hover-only, like the hint it is.
   //
@@ -537,9 +586,9 @@ export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
 }
 
-/** The route network as a fixed layer, for the same no-controls maps that get
- *  `addStaticMajorRivers` — otherwise routes would vanish entirely below the
- *  768px breakpoint, where the layer control isn't built. */
+/** Opt-in helper if a map without layer chrome still wants the network on.
+ *  Visualization pages do not call this — routes stay off until the user
+ *  ticks "Routes" in the layer control. */
 export function addStaticRoutes(L: LeafletNS, map: import('leaflet').Map) {
   buildRoutesLayer(L, map).addTo(map)
 }

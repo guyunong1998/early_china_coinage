@@ -106,13 +106,12 @@ Data that either never changes, is small enough to just ship, or is derived once
 
 | What | Where | Source |
 |---|---|---|
-| Mint town static dossiers (coordinates, descriptions, images, citations) | `lib/mint-towns.ts` + `lib/mint-dossiers.ts` (`MINT_TOWNS` / `MINT_DOSSIERS`) | Hand-transcribed from `铸币城邑考证61.docx` |
 | River overlays for the map base layers | `public/data/rivers-major.geojson`, `rivers-minor.geojson` | `scripts/clip-rivers-to-china.js`, clipped from Natural Earth 1:10m data |
-| Mint-town photos, coin specimen photography | `public/images/mints/`, `public/images/type_imgs/` | Static files, matched by filename prefix at request time (`lib/coin-images.ts`) |
+| Coin specimen photography | `public/images/type_imgs/` | Static files, matched by filename prefix at request time (`lib/coin-images.ts`) |
 
 Map **tiles** and **city/county boundary polygons** are the one runtime "external" dependency that isn't Supabase: base tiles come from OpenStreetMap / CyclOSM, Esri ArcGIS (satellite + English labels), the Consortium of Ancient World Mappers terrain, and 高德 / AutoNavi (`lib/map-layers.ts`), and precise city/county boundary outlines are fetched live from Nominatim (`lib/city-boundaries.ts`), cached in-memory per session.
 
-**Rule of thumb:** if it's about a specific archaeological find, coin issue, or museum specimen, it's in Supabase. If it's reference/gazetteer data (which mint is where, what the typology tree looks like) or media, it's local.
+**Rule of thumb:** if it's about a specific archaeological find, coin issue, museum specimen, or mint (including mint-town photos, now catalogued via the `images` table), it's in Supabase. If it's reference/gazetteer data that isn't tied to a DB row (river overlays) or coin-type specimen media, it's local.
 
 ---
 
@@ -141,8 +140,7 @@ Grouped by job rather than alphabetically:
 - `types.ts` — the DB-shaped types (`MapSite`, `Site`, `Context`, `CoinIssueDisplay`, `Find`, `Source`, `HeatmapFind`, …), i.e. what `queries.ts` returns
 
 **Static reference data**
-- `mint-towns.ts` / `mint-dossiers.ts` — `MINT_TOWNS` and lookups (`getMintByNameZh`, `resolveMintNameZh` for name-alias handling)
-- `mint-directory.ts` — merges a live `mints` DB row with its matching static dossier (DB wins per-field where it has data)
+- `mint-directory.ts` — flattens a live `mints` DB row into the shapes consumers want (`toMintInfo`, `buildMintDirectory`); no static fallback layer, everything comes from the database
 - `coin-images.ts` — filename-prefix matching for specimen photos
 
 **Domain logic / aggregation** (the "how do these rows turn into map points" layer)
@@ -282,11 +280,10 @@ Vercel, deploying this Next.js App Router project with no custom configuration (
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (local admin writes only — Add citation / edit forms; never ship to the browser)
-- `GOOGLE_SHEET_MINTS_CSV_URL` (optional — `/mints` falls back to the static `MINT_TOWNS` list without it)
 
 No new env var is needed for admin editing in production — Google OAuth is configured on the Supabase project itself (Auth → Providers), and who's allowed to write is data (`admin_users` rows, §3), not config.
 
-Most pages render per-request (dynamic Server Components hitting Supabase live); `/mints` opts into ISR (`export const revalidate = 3600`) since its Google Sheets source changes rarely. There are no serverless/edge functions beyond what Next.js's own RSC rendering provides — the whole "backend" is those server components plus Supabase.
+Most pages render per-request (dynamic Server Components hitting Supabase live); `/mints` opts into ISR (`export const revalidate = 3600`) since mint data changes rarely. There are no serverless/edge functions beyond what Next.js's own RSC rendering provides — the whole "backend" is those server components plus Supabase.
 
 **Local dev note:** this Next.js version requires Node ≥ 20 (the repo's default `nvm` Node may be older — check before running `npm run dev`).
 

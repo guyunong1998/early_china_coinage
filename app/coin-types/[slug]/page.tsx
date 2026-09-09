@@ -6,6 +6,7 @@ import { CoinIssuesTable } from '@/components/coin-types/CoinIssuesTable'
 import { CoinTypeDescriptionSection } from '@/components/coin-types/CoinTypeDescriptionSection'
 import { CoinTypeImages } from '@/components/coin-types/CoinTypeImages'
 import { MouldTag } from '@/components/coin-types/MouldTag'
+import { SubtypeImageGrid } from '@/components/coin-types/SubtypeImageGrid'
 import { TypologyTree } from '@/components/coin-types/TypologyTree'
 import { T } from '@/components/i18n/T'
 import { LabelHint } from '@/components/ui/LabelHint'
@@ -16,6 +17,7 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import {
   buildCoinTypeNodes,
+  childrenOf,
   computeCoinTypeCounts,
   getCoinTypeNodeBySlug,
   isMouldNode,
@@ -76,6 +78,13 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
   if (!node) notFound()
 
   const { obverseSrc, reverseSrc } = getCoinTypeImagePaths(node.imgAccNum, node.slug)
+  // A broad level2/level3 category with no specimen photographed for itself
+  // has nothing but a generic silhouette to show — so if it has subtypes,
+  // show their obverse photos instead, linked through to each one. Narrower
+  // level4/level5 nodes keep the silhouette/placeholder fallback as before.
+  const directSubtypes = childrenOf(nodes, node)
+  const isGeneralCategory =
+    !node.imgAccNum && directSubtypes.length > 0 && (node.level === 'level2' || node.level === 'level3')
 
   const authorized = await isAuthorized()
   // mints is also needed to resolve the Mints row's links below (for every
@@ -135,7 +144,9 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
         <MouldTag isMould={isMouldNode(node)} />
       </div>
 
-      {obverseSrc || reverseSrc ? (
+      {isGeneralCategory ? (
+        <SubtypeImageGrid subtypes={directSubtypes} />
+      ) : obverseSrc || reverseSrc ? (
         <CoinTypeImages obverseSrc={obverseSrc} reverseSrc={reverseSrc} accNum={node.imgAccNum} />
       ) : (
         <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="mt-4 h-56 w-full rounded" />
