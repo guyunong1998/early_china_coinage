@@ -1,4 +1,5 @@
 import { findMintByNameZh } from '@/lib/mint-directory'
+import { findQuantity } from '@/lib/quantity'
 import {
   coinMatchesTypologyFilter,
   getMatchingHierarchyIds,
@@ -42,8 +43,51 @@ export type MintStat = {
   inMintDirectory: boolean
 }
 
-function findQuantity(find: HeatmapFind): number {
-  return find.quantity_total ?? find.quantity_estimated ?? find.quantity_min ?? 0
+/** The fields every MintStat row needs beyond mint_zh — findQuantity/
+ * inscription/site-count semantics differ slightly between the database-find
+ * and ans_data aggregations below, so each builds its own group shape and
+ * normalizes into this one before handing off to statsFromGroups. */
+type MintStatGroup = {
+  findCount: number
+  coinCount: number
+  siteCount: number
+  inscriptions: string[]
+}
+
+/** Shared mint_zh -> MintStat resolution (mints-table lookup, mapped/unmapped
+ * split by coordinate availability, sort by coin count) for both
+ * computeMintStatsFromFinds and computeAnsMintStats below — they differ only
+ * in how they aggregate their source rows into a MintStatGroup per mint. */
+function statsFromGroups(
+  groups: Map<string, MintStatGroup>,
+  mints: MintInfo[]
+): { mapped: MintStat[]; unmapped: MintStat[] } {
+  const stats: MintStat[] = [...groups.entries()]
+    .map(([mint_zh, g]) => {
+      const mint = findMintByNameZh(mints, mint_zh)
+      return {
+        mint_zh,
+        mint_en: mint?.name_en ?? null,
+        mint_code: mint?.mint_code ?? null,
+        lat: mint?.lat ?? NaN,
+        lng: mint?.lng ?? NaN,
+        findCount: g.findCount,
+        coinCount: g.coinCount,
+        siteCount: g.siteCount,
+        inscriptions: g.inscriptions,
+        state_zh: mint?.state_zh ?? null,
+        state_en: mint?.state_en ?? null,
+        modern_location_en: mint?.modern_location_en ?? null,
+        inTypology: false,
+        inMintDirectory: !!mint,
+      }
+    })
+    .sort((a, b) => b.coinCount - a.coinCount || a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
+
+  return {
+    mapped: stats.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)),
+    unmapped: stats.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng)),
+  }
 }
 
 /**
@@ -113,34 +157,18 @@ export function computeMintStatsFromFinds(
     }
   })
 
-  const stats: MintStat[] = [...groups.entries()]
-    .map(([mint_zh, g]) => {
-      const mint = findMintByNameZh(mints, mint_zh)
-      return {
-        mint_zh,
-        mint_en: mint?.name_en ?? null,
-        mint_code: mint?.mint_code ?? null,
-        lat: mint?.lat ?? NaN,
-        lng: mint?.lng ?? NaN,
+  const normalized = new Map<string, MintStatGroup>(
+    [...groups.entries()].map(([mint_zh, g]) => [
+      mint_zh,
+      {
         findCount: g.findCount,
         coinCount: g.coinCount,
         siteCount: g.siteCodes.size,
-        inscriptions: includeInscriptions
-          ? [...g.inscriptions!].sort((a, b) => a.localeCompare(b, 'zh-CN'))
-          : [],
-        state_zh: mint?.state_zh ?? null,
-        state_en: mint?.state_en ?? null,
-        modern_location_en: mint?.modern_location_en ?? null,
-        inTypology: false,
-        inMintDirectory: !!mint,
-      }
-    })
-    .sort((a, b) => b.coinCount - a.coinCount || a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
-
-  const mapped = stats.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-  const unmapped = stats.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng))
-
-  return { mapped, unmapped }
+        inscriptions: includeInscriptions ? [...g.inscriptions!].sort((a, b) => a.localeCompare(b, 'zh-CN')) : [],
+      },
+    ])
+  )
+  return statsFromGroups(normalized, mints)
 }
 
 /** Reshapes mapped mint stats into the plain `MintPoint[]` MapVisCanvas
@@ -223,32 +251,18 @@ export function computeAnsMintStats(
     if (insc) group.inscriptions.add(insc)
   })
 
-  const stats: MintStat[] = [...groups.entries()]
-    .map(([mint_zh, g]) => {
-      const mint = findMintByNameZh(mints, mint_zh)
-      return {
-        mint_zh,
-        mint_en: mint?.name_en ?? null,
-        mint_code: mint?.mint_code ?? null,
-        lat: mint?.lat ?? NaN,
-        lng: mint?.lng ?? NaN,
+  const normalized = new Map<string, MintStatGroup>(
+    [...groups.entries()].map(([mint_zh, g]) => [
+      mint_zh,
+      {
         findCount: g.coinCount,
         coinCount: g.coinCount,
         siteCount: 0,
         inscriptions: [...g.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
-        state_zh: mint?.state_zh ?? null,
-        state_en: mint?.state_en ?? null,
-        modern_location_en: mint?.modern_location_en ?? null,
-        inTypology: false,
-        inMintDirectory: !!mint,
-      }
-    })
-    .sort((a, b) => b.coinCount - a.coinCount || a.mint_zh.localeCompare(b.mint_zh, 'zh-CN'))
-
-  const mapped = stats.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-  const unmapped = stats.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng))
-
-  return { mapped, unmapped }
+      },
+    ])
+  )
+  return statsFromGroups(normalized, mints)
 }
 
 /** Narrows ans_data specimens to the active (multiselect, OR/ANY) typology

@@ -31,6 +31,8 @@ import {
   readHeatmapOpacity,
 } from '@/lib/color-scale'
 import {
+  cityBoundaryStyle,
+  countyBoundaryStyle,
   fetchCityBoundaryGeoJson,
   fetchCountyBoundaryGeoJson,
   shouldShowCityBoundary,
@@ -41,25 +43,34 @@ import { toEnglishName } from '@/lib/name-translation'
 import type { MapSite } from '@/lib/types'
 
 /** Shared Leaflet (+ leaflet.heat) load — restyle used to re-import on every
- * filter change, which showed up as multi-frame jank. */
+ * filter change, which showed up as multi-frame jank. Cleared on failure
+ * (a transient chunk-load error, e.g. mid-HMR) so the next mount retries
+ * instead of every map staying broken for the rest of the tab's session. */
 type LeafletLib = typeof import('leaflet')
 let leafletReady: Promise<LeafletLib> | null = null
 function loadLeaflet(): Promise<LeafletLib> {
   if (!leafletReady) {
-    leafletReady = import('leaflet').then(async (mod) => {
-      // @types/leaflet is `export =`; runtime ESM interop may expose the API
-      // on `.default` — prefer that when present (matches prior restyle path).
-      const L = ((mod as { default?: LeafletLib }).default ?? mod) as LeafletLib
-      const g = globalThis as typeof globalThis & { L?: LeafletLib }
-      g.L = L
-      await import('leaflet.heat')
-      // Clustering for the big Find Site / Mint Town canvases — same plugin
-      // CoinMap already uses for search-result maps.
-      await import('leaflet.markercluster')
-      await import('leaflet.markercluster/dist/MarkerCluster.css')
-      await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
-      return L
-    })
+    leafletReady = import('leaflet')
+      .then(async (mod) => {
+        // @types/leaflet is `export =`; runtime ESM interop may expose the API
+        // on `.default` — prefer that when present (matches prior restyle path).
+        const L = ((mod as { default?: LeafletLib }).default ?? mod) as LeafletLib
+        const g = globalThis as typeof globalThis & { L?: LeafletLib }
+        g.L = L
+        // https://github.com/Leaflet/Leaflet.heat
+        await import('leaflet.heat')
+        // Clustering for the big Find Site / Mint Town canvases — same plugin
+        // CoinMap already uses for search-result maps.
+        // https://github.com/Leaflet/Leaflet.markercluster
+        await import('leaflet.markercluster')
+        await import('leaflet.markercluster/dist/MarkerCluster.css')
+        await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
+        return L
+      })
+      .catch((err) => {
+        leafletReady = null
+        throw err
+      })
   }
   return leafletReady
 }
@@ -120,7 +131,13 @@ function dot(color: string, size = 14) {
 
 // "No record at all" marker — fixed size + color, both set in app/maps.css
 // (`.map-dot-no-data`) rather than computed inline, since neither varies.
-const NO_DATA_DOT_SIZE = 12
+// The size is read from --map-dot-no-data-size (not just hardcoded again
+// here) so the iconSize/iconAnchor passed to Leaflet can never drift from
+// what the CSS class actually renders.
+function noDataDotSize(): number {
+  const raw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--map-dot-no-data-size'))
+  return Number.isFinite(raw) ? raw : 12
+}
 function noDataDot() {
   return `<div class="map-dot map-dot-no-data"></div>`
 }
@@ -134,8 +151,11 @@ export const PIN_HEIGHT = 30
 // user-selected PinPoints below; exported for SinglePointMap.tsx, whose
 // one-marker-only maps (a mint town's own location) get this same shape
 // instead of the plain dot every other map's markers use.
+// `style="fill:..."` rather than a bare `fill="..."` attribute so a CSS
+// custom property (e.g. `rgb(var(--accent-rgb))`) resolves same as a literal
+// hex color — bare SVG presentation attributes never resolve var().
 export function dropPinHtml(color: string): string {
-  return `<svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.45))"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.9 17.1 0 11 0z" fill="${color}" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4" fill="white"/></svg>`
+  return `<svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.45))"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.9 17.1 0 11 0z" style="fill:${color}" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4" fill="white"/></svg>`
 }
 
 /** Min/max pixel size for quantity-driven sizing, read from app/maps.css's
@@ -249,7 +269,7 @@ function statusLine(state: DisplayState, totalQty: number, t: TFunction): string
 
 function ratioBarHtml(pct: number, color: string): string {
   const clamped = Math.max(0, Math.min(100, Math.round(pct)))
-  return `<div style="height:6px;width:100%;border-radius:3px;background:#e2e2e2;overflow:hidden;margin-top:3px"><div style="height:100%;width:${clamped}%;background:${color}"></div></div>`
+  return `<div style="height:6px;width:100%;border-radius:3px;background:var(--map-popup-bar-track);overflow:hidden;margin-top:3px"><div style="height:100%;width:${clamped}%;background:${color}"></div></div>`
 }
 
 /** Shared "x of y coins (~z%)" line + bar, used by both the site and mint
@@ -259,7 +279,7 @@ function ratioStatusHtml(state: DisplayState, totalQty: number, t: TFunction): s
   if (!text) return ''
   const nums = ratioNumbers(state, totalQty)
   const bar = nums && nums.total > 0 ? ratioBarHtml((nums.matched / nums.total) * 100, stateColor(state)) : ''
-  return `<div>${text}</div>${bar}<hr style="margin:8px 0;border:none;border-top:1px solid #ddd" />`
+  return `<div>${text}</div>${bar}<hr style="margin:8px 0;border:none;border-top:1px solid var(--map-popup-divider)" />`
 }
 
 function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): string {
@@ -275,15 +295,15 @@ function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): strin
   const status = ratioStatusHtml(state, site.total_quantity_for_map ?? 0, t)
 
   return `
-    <div style="min-width:250px;font-size:12.5px;font-family:sans-serif;line-height:1.6">
+    <div class="map-popup" style="min-width:250px">
       ${status}
-      <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span style="color:#888;font-style:italic">${nameEn}</span>` : ''}</div>
-      <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span style="color:#888">(${provinceEn})</span>` : ''}</div>
-      <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span style="color:#888">(${cityEn})</span>` : ''}</div>
-      <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span style="color:#888">(${countyEn})</span>` : ''}</div>
+      <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span class="map-popup-muted-italic">${nameEn}</span>` : ''}</div>
+      <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span class="map-popup-muted">(${provinceEn})</span>` : ''}</div>
+      <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span class="map-popup-muted">(${cityEn})</span>` : ''}</div>
+      <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span class="map-popup-muted">(${countyEn})</span>` : ''}</div>
       <div><strong>Coin type / 币类：</strong>${typeBilingual}</div>
       <div><strong>Quantity / 数量：</strong>${site.total_quantity_for_map ?? 0}</div>
-      <a href="/sites/${site.site_code}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>
+      <a href="/sites/${site.site_code}" class="map-popup-link">${t('search.viewRecord')}</a>
     </div>
   `
 }
@@ -326,11 +346,9 @@ export type ComparePoint = {
 }
 
 function buildComparePopupHtml(point: ComparePoint, t: TFunction): string {
-  const link = point.href
-    ? `<a href="${point.href}" style="color:#006d71;font-size:12px">${t('search.viewRecord')}</a>`
-    : ''
+  const link = point.href ? `<a href="${point.href}" class="map-popup-link">${t('search.viewRecord')}</a>` : ''
   return `
-    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+    <div class="map-popup" style="min-width:180px">
       <strong>${point.locationLabel}</strong><br/>
       <strong>${point.groupKindLabel}</strong>${point.groupLabel}<br/>
       <strong>Coins:</strong> ${point.qty}<br/>
@@ -472,14 +490,14 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
   const status = ratioStatusHtml(state, mint.totalQty, t)
 
   return `
-    <div style="font-family:sans-serif;font-size:13px;line-height:1.5;min-width:180px">
+    <div class="map-popup" style="min-width:180px">
       ${status}
-      <strong>${mint.mint_zh}${mint.mint_en ? ` <span style="color:#888;font-style:italic">(${mint.mint_en})</span>` : ''}</strong><br/>
+      <strong>${mint.mint_zh}${mint.mint_en ? ` <span class="map-popup-muted-italic">(${mint.mint_en})</span>` : ''}</strong><br/>
       <strong>${t('map.popup.coins')}:</strong> ${mint.totalQty}<br/>
       <strong>${t('map.popup.finds')}:</strong> ${mint.findCount}<br/>
       ${mint.inscriptions.length > 0 ? `<strong>Inscriptions:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
       ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
-      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" style="color:#006d71">View mint town →</a>` : ''}
+      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" class="map-popup-link">View mint town →</a>` : ''}
     </div>
   `
 }
@@ -521,6 +539,7 @@ function applyHeatMarkerStyle(
   sizeRange: { min: number; max: number },
   pointOpacity: number,
   inDensity: boolean,
+  noDataSize: number,
   popupHtml: string,
   hidden = false,
   showNoData = true,
@@ -562,7 +581,7 @@ function applyHeatMarkerStyle(
     : // No-data points stay small and fixed (not quantity-scaled) — there's
       // nothing to size by for a type/mint that isn't recorded there at all.
       isStaticNoData
-      ? NO_DATA_DOT_SIZE
+      ? noDataSize
       : sizePx != null
         ? sizePx
         : siteSizeByQuantity(effectiveQty(state, totalQty), maxQty, sizeRange.min, sizeRange.max)
@@ -612,9 +631,9 @@ function buildPinPopupHtml(pin: PinPoint): string {
   const linkAttrs = pin.hrefExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
   const arrow = pin.hrefExternal ? ' ↗' : ' →'
   const label = pin.href
-    ? `<a href="${pin.href}"${linkAttrs} style="color:#006d71;font-weight:600">${pin.label}${arrow}</a>`
+    ? `<a href="${pin.href}"${linkAttrs} class="map-popup-link" style="font-weight:600">${pin.label}${arrow}</a>`
     : `<strong>${pin.label}</strong>`
-  return `<div style="font-family:sans-serif;font-size:13px;line-height:1.5">${label}</div>`
+  return `<div class="map-popup">${label}</div>`
 }
 
 type SitesCanvasProps = {
@@ -729,6 +748,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
           : 'none'
       const sizeRange = dotSizeRange()
       const pointOpacity = readHeatmapOpacity()
+      const noDataSize = noDataDotSize()
       const cluster = clusterGroupRef.current as MarkerClusterLike | null
 
       if (props.kind === 'sites') {
@@ -762,6 +782,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             sizeRange,
             pointOpacity,
             inDensity,
+            noDataSize,
             buildPopupHtml(site, toDisplayState(rawState ?? { kind: 'no-filter' }, totalQty), t),
             inCompare,
             showNoData,
@@ -797,6 +818,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             mintRange,
             pointOpacity,
             inDensity,
+            noDataSize,
             buildMintPopupHtml(mint, toDisplayState(rawState ?? { kind: 'no-filter' }, mint.totalQty), t),
             inCompare,
             showNoData,
@@ -1041,16 +1063,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             [...candidateCities.values()].map(async ({ cityZh, provinceZh }) => {
               const geo = await fetchCityBoundaryGeoJson(cityZh, provinceZh)
               if (!geo || cancelled) return
-              L.geoJSON(geo as GeoJSON.GeoJsonObject, {
-                style: {
-                  color: '#8e8e8e',
-                  weight: 1.5,
-                  opacity: 0.9,
-                  fillColor: '#bfbfbf',
-                  fillOpacity: 0.1,
-                  dashArray: '4 4',
-                },
-              }).addTo(layer)
+              L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: cityBoundaryStyle() }).addTo(layer)
             })
           )
         }
@@ -1078,16 +1091,7 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             [...candidateCounties.values()].map(async ({ countyZh, cityZh, provinceZh }) => {
               const geo = await fetchCountyBoundaryGeoJson(countyZh, cityZh, provinceZh)
               if (!geo || cancelled) return
-              L.geoJSON(geo as GeoJSON.GeoJsonObject, {
-                style: {
-                  color: '#6f6f6f',
-                  weight: 2,
-                  opacity: 0.9,
-                  fillColor: '#b5b5b5',
-                  fillOpacity: 0.14,
-                  dashArray: '2 3',
-                },
-              }).addTo(layer)
+              L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: countyBoundaryStyle() }).addTo(layer)
             })
           )
         }

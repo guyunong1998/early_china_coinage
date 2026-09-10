@@ -146,7 +146,7 @@ a {
    The `.panel` class is the site's one shared "card"/"item" look: a cream
    surface, a thin quiet border, rounded corners, and a soft shadow that lifts
    slightly on hover as the border shifts to the primary accent. It's applied
-   by components/ui/DataCard.tsx, so anything built on DataCard gets this for
+   by components/ui/Panel.tsx, so anything built on Panel gets this for
    free. Add `.panel` to any other bordered box to bring it into the same
    style; tweak --paper / --card-border / --card-border-hover / --radius above
    to retheme all of them at once.
@@ -162,7 +162,7 @@ a {
   /* box-shadow: var(--shadow); */
 }
 
-/* The label bar that sits above a panel body (see DataCard.tsx) — a quiet
+/* The label bar that sits above a panel body (see Panel.tsx) — a quiet
    tinted strip, rounded on top like a tab, rather than a bold color block. */
 .panel-header {
   background: var(--brand);
@@ -229,7 +229,8 @@ button:not(:disabled):hover {
    ============================================================================ */
 .site-header {
   background: var(--background);
-  border-bottom: 1px solid var(--card-border);
+  border-bottom: 1px solid var(--background);
+  box-shadow: 0px 4px 10px 1px rgba(0, 0, 0, 0.1);
 }
 
 .search-input {
@@ -300,6 +301,34 @@ button:not(:disabled):hover {
 
 /* Map marker dot styling (base + size + per-role color classes) now lives in
    app/maps.css, imported at the top of this file. */
+
+/* Leaflet popup/tooltip body text — every map's site/mint/compare/pin/
+   mint-origin popup (CoinMap.tsx, MapVisCanvas.tsx, SinglePointMap.tsx,
+   SiteMintOrigins.tsx, MintIssueDistribution.tsx). Popups render into their
+   own DOM node outside the React tree, so this is a real CSS class the raw
+   HTML template strings reference via class="..." rather than a Tailwind
+   utility — but it's still the site's own body font (--font-sans), not a
+   bare `sans-serif` fallback hardcoded independently in each popup builder. */
+:root {
+  --map-link-color: #006d71; /* popup "View record"/"View mint town" links — not tied to --brand or --accent, a link-only teal */
+  --map-label-muted: #9ca3af; /* lib/map-layers.ts's route/node English-gloss text and the "Routes" hint underline */
+}
+
+.map-popup {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.map-popup-muted {
+  color: var(--muted);
+}
+.map-popup-muted-italic {
+  color: var(--muted);
+  font-style: italic;
+}
+.map-popup-link {
+  color: var(--map-link-color);
+}
 
 .marker-cluster-small,
 .marker-cluster-medium,

@@ -4,7 +4,8 @@
  * Base Leaflet map plotting a list of find sites as markers with popups;
  * supports fitting bounds to the sites and highlighting one site.
  *
- * Not used directly by any page — wrapped by CoinMapSection.tsx.
+ * Used by: app/search/page.tsx (search results map) and
+ * app/sites/[site_code]/page.tsx (site detail page's own-site map).
  */
 
 import { useEffect, useRef } from 'react'
@@ -14,15 +15,18 @@ import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanva
 import { toEnglishName } from '@/lib/name-translation'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
+  cityBoundaryStyle,
+  countyBoundaryStyle,
   fetchCityBoundaryGeoJson,
   fetchCountyBoundaryGeoJson,
   shouldShowCityBoundary,
   shouldShowCountyBoundary,
 } from '@/lib/city-boundaries'
 
-// Same accent SinglePointMap.tsx uses for its dropped pin — kept consistent
-// across every "this map shows exactly one place" usage.
-const SINGLE_POINT_PIN_COLOR = '#e1941f'
+// --map-pin-accent (app/maps.css) — same token SinglePointMap.tsx/
+// SiteMintOrigins.tsx use for their dropped pins, kept consistent across
+// every "this map shows exactly one place" usage.
+const SINGLE_POINT_PIN_COLOR = 'var(--map-pin-accent)'
 
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
   布币: 'Spade Coin',
@@ -75,6 +79,7 @@ export default function CoinMap({
 
     async function initMap() {
       const leafletModule = await import('leaflet')
+      // https://github.com/Leaflet/Leaflet.markercluster
       await import('leaflet.markercluster')
       await import('leaflet.markercluster/dist/MarkerCluster.css')
       await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
@@ -151,14 +156,14 @@ export default function CoinMap({
         const typeBilingual = formatCoinTypeBilingual(site.level2_types_zh)
 
         marker.bindPopup(`
-          <div style="min-width:250px;font-family:sans-serif;font-size:12.5px;line-height:1.6">
-            <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span style="color:#888;font-style:italic">${nameEn}</span>` : ''}</div>
-            <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span style="color:#888">(${provinceEn})</span>` : ''}</div>
-            <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span style="color:#888">(${cityEn})</span>` : ''}</div>
-            <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span style="color:#888">(${countyEn})</span>` : ''}</div>
+          <div class="map-popup" style="min-width:250px">
+            <div><strong>Site name / 遗址：</strong>${nameZh}${nameEn ? ` <span class="map-popup-muted-italic">${nameEn}</span>` : ''}</div>
+            <div><strong>Province / 省：</strong>${provinceZh}${provinceEn ? ` <span class="map-popup-muted">(${provinceEn})</span>` : ''}</div>
+            <div><strong>City / 市：</strong>${cityZh}${cityEn ? ` <span class="map-popup-muted">(${cityEn})</span>` : ''}</div>
+            <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span class="map-popup-muted">(${countyEn})</span>` : ''}</div>
             <div><strong>Coin type / 币类：</strong>${typeBilingual}</div>
             <div><strong>Quantity / 数量：</strong>${site.total_quantity_for_map ?? 0}</div>
-            <a href="/sites/${site.site_code}" style="color:#006d71;font-size:12px">View record →</a>
+            <a href="/sites/${site.site_code}" class="map-popup-link">View record →</a>
           </div>
         `)
 
@@ -184,16 +189,7 @@ export default function CoinMap({
           [...candidateCities.values()].map(async ({ cityZh, provinceZh }) => {
             const geo = await fetchCityBoundaryGeoJson(cityZh, provinceZh)
             if (!geo || cancelled) return
-            L.geoJSON(geo as GeoJSON.GeoJsonObject, {
-              style: {
-                color: '#8e8e8e',
-                weight: 1.5,
-                opacity: 0.9,
-                fillColor: '#bfbfbf',
-                fillOpacity: 0.1,
-                dashArray: '4 4',
-              },
-            }).addTo(boundaryLayer)
+            L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: cityBoundaryStyle() }).addTo(boundaryLayer)
           })
         )
       }
@@ -222,16 +218,7 @@ export default function CoinMap({
           [...candidateCounties.values()].map(async ({ countyZh, cityZh, provinceZh }) => {
             const geo = await fetchCountyBoundaryGeoJson(countyZh, cityZh, provinceZh)
             if (!geo || cancelled) return
-            L.geoJSON(geo as GeoJSON.GeoJsonObject, {
-              style: {
-                color: '#6f6f6f',
-                weight: 2,
-                opacity: 0.9,
-                fillColor: '#b5b5b5',
-                fillOpacity: 0.14,
-                dashArray: '2 3',
-              },
-            }).addTo(countyLayer)
+            L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: countyBoundaryStyle() }).addTo(countyLayer)
           })
         )
       }

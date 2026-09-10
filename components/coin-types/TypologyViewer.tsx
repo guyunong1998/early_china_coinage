@@ -309,8 +309,8 @@ export function TypologyViewer({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onPointerLeave={onPointerUp}
-        style={{ height, touchAction: 'none' }}
-        className="relative w-full cursor-grab overflow-hidden rounded border border-brand/15 bg-white active:cursor-grabbing"
+        style={{ height }}
+        className="relative w-full touch-none cursor-grab overflow-hidden rounded border border-brand/15 bg-white active:cursor-grabbing"
       >
         {ready && (
           <div
@@ -332,7 +332,8 @@ export function TypologyViewer({
               width={manifest.width}
               height={manifest.height}
               draggable={false}
-              style={{ width: manifest.width, height: manifest.height, maxWidth: 'none', display: 'block' }}
+              style={{ width: manifest.width, height: manifest.height }}
+              className="block max-w-none"
             />
             {/* Drawn once, behind the per-node click targets below, so it
                 never blocks a deeper node's own overlay from receiving the

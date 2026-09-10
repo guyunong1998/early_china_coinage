@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { AuthStatus } from '@/components/auth/AuthStatus'
-import { DataCard } from '@/components/ui/DataCard'
+import { Panel } from '@/components/ui/Panel'
 import { T } from '@/components/i18n/T'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
@@ -61,7 +61,7 @@ export default function AboutPage() {
       </p>
 
       <div className="mt-8 space-y-6">
-        <DataCard title={<T k="about.usage.title" />}>
+        <Panel header={<T k="about.usage.title" />}>
           <div className="divide-y divide-brand/10">
             {SITE_FUNCTIONS.map((fn) => (
               <Link
@@ -81,10 +81,10 @@ export default function AboutPage() {
               </Link>
             ))}
           </div>
-        </DataCard>
+        </Panel>
 
 
-        <DataCard title={<T k="about.schema.title" />}>
+        <Panel header={<T k="about.schema.title" />}>
           <p className="text-sm leading-7 text-gray-700">
             <T k="about.schema.body" />
           </p>
@@ -97,9 +97,9 @@ export default function AboutPage() {
               className="object-contain"
             />
           </div>
-        </DataCard>
+        </Panel>
 
-        <DataCard title={<T k="about.team.title" />}>
+        <Panel header={<T k="about.team.title" />}>
           <p className="text-sm leading-7 text-gray-700">
             {/* <T k="about.team.body" /> */}
           </p>
@@ -128,9 +128,9 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
-        </DataCard>
+        </Panel>
 
-        <DataCard title={<T k="about.collab.title" />} id="collaborations">
+        <Panel header={<T k="about.collab.title" />} id="collaborations">
           <div className="mt-2 flex flex-wrap gap-6">
             <a
               href="https://numismatics.org"
@@ -149,9 +149,9 @@ export default function AboutPage() {
               </span>
             </a>
           </div>
-        </DataCard>
+        </Panel>
 
-        <DataCard title={<T k="about.resources.title" />}>
+        <Panel header={<T k="about.resources.title" />}>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/sources"
@@ -184,7 +184,7 @@ export default function AboutPage() {
               <T k="about.resources.sitemap" /> →
             </a>
           </div>
-        </DataCard>
+        </Panel>
       </div>
 
       <AuthStatus />

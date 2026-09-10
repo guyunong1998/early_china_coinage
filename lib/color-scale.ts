@@ -27,9 +27,6 @@ export const PRESENT_UNQUANTIFIED_COLOR = '#c05fae'
 // one type, which is a much less notable pattern.
 export const SINGLE_FIND_COLOR = '#7b3fa0'
 
-// Legacy alias kept for older heatmap UI bits.
-export const ONE_OF_ONE_COLOR = SINGLE_FIND_COLOR
-
 /**
  * Fixed-order categorical palette (the dataviz skill's validated default —
  * CVD-safe adjacent pairs, checked with the palette validator) for
@@ -131,9 +128,8 @@ export function ratioToColor(ratio: number): string {
 }
 
 // Shared leaflet.heat gradient (light yellow -> red) used by every density
-// heat layer in the app (MapVisCanvas.tsx's density view mode, and the
-// homepage CoinFilterMap's always-on density layer) — one definition so
-// retinting/opacity changes apply everywhere at once.
+// heat layer in the app (MapVisCanvas.tsx's density view mode) — one
+// definition so retinting/opacity changes apply everywhere at once.
 export const DENSITY_GRADIENT_STOPS: [number, string][] = [
   [0, '#f0d56a'],
   [0.25, '#e39a2b'],

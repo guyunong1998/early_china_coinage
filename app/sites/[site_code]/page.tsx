@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CoinMapSection } from '@/components/map/CoinMapSection'
-import { HoardMintOriginsMap, type HoardMintOrigin } from '@/components/map/HoardMintOriginsMap'
+import SinglePointMap from '@/components/map/SinglePointMap'
 import { SiteDetailTabs } from '@/components/site/SiteDetailTabs'
 import { SiteRecordSection } from '@/components/site/SiteRecordSection'
+import {
+  SiteMintOrigins,
+  type HoardMintOrigin,
+  type MintOriginTypeOption,
+} from '@/components/site/SiteMintOrigins'
 import { ClickHint } from '@/components/ui/ClickHint'
 import { CopyButton } from '@/components/ui/CopyButton'
-import { DataCard } from '@/components/ui/DataCard'
+import { Panel } from '@/components/ui/Panel'
 import { LabelHint } from '@/components/ui/LabelHint'
 import { linkedList } from '@/components/ui/LinkedList'
 import { T } from '@/components/i18n/T'
@@ -15,11 +19,14 @@ import { resolveSourceLinkTargets } from '@/lib/admin/resolve-source-link-target
 import { buildCoinTypeNodes, type CoinTypeLevel } from '@/lib/coin-type-catalog'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import { formatCoordinates, formatNumber, splitCsv } from '@/lib/format'
-import { findMintByNameZh, toMintInfo } from '@/lib/mint-directory'
+import { findMintByNameZh } from '@/lib/mint-directory'
+import { findQuantity } from '@/lib/quantity'
 import {
+  buildTypeKey,
+  buildTypeLabel,
   getCoinIssues,
   getCoinTypeHierarchy,
-  getMints,
+  getMintInfos,
   getSite,
   getSiteContexts,
   getSiteFinds,
@@ -37,10 +44,6 @@ type PageProps = {
 
 const UNKNOWN_MINT_TOKENS = ['未知', '不详', '无', '—', '-', 'n/a', 'na', 'unknown', '']
 
-function findQuantity(find: Find) {
-  return find.quantity_total ?? find.quantity_estimated ?? find.quantity_min ?? 0
-}
-
 function coinTypeLabel(find: Find) {
   return (
     find.coin_issues?.inscription?.trim() ||
@@ -57,17 +60,25 @@ type MintOriginGroup = {
   quantity: number
   findCount: number
   coinTypes: Set<string>
+  typeKeys: Set<string>
 }
 
-/** Group a site's finds by the mint that issued each coin, for the "Coin Mint Origins" map. */
+/** Group a site's finds by the mint that issued each coin, for the "Coin Mint
+ * Origins" map — `mintTypeKeys`/`typeOptions` (built the same way
+ * getMintFindspotsData builds `siteTypeKeys`/`typeOptions` for the mint-town
+ * page's own coin-type filter, just keyed by mint instead of by site) drive
+ * that map's coin-type filter. */
 function buildMintOrigins(
   finds: Find[],
   mints: MintInfo[]
 ): {
   matched: HoardMintOrigin[]
   unmatched: MintOriginGroup[]
+  mintTypeKeys: Record<string, string[]>
+  typeOptions: MintOriginTypeOption[]
 } {
   const groups = new Map<string, MintOriginGroup>()
+  const typeKeyToLabel = new Map<string, string>()
 
   finds.forEach((find) => {
     const mintZh = find.coin_issues?.mint_zh?.trim() ?? ''
@@ -80,6 +91,7 @@ function buildMintOrigins(
         quantity: 0,
         findCount: 0,
         coinTypes: new Set(),
+        typeKeys: new Set(),
       })
     }
     const group = groups.get(mintZh)!
@@ -87,10 +99,16 @@ function buildMintOrigins(
     group.findCount += 1
     const label = coinTypeLabel(find)
     if (label) group.coinTypes.add(label)
+    if (find.coin_issues) {
+      const typeKey = buildTypeKey(find.coin_issues)
+      group.typeKeys.add(typeKey)
+      typeKeyToLabel.set(typeKey, buildTypeLabel(find.coin_issues))
+    }
   })
 
   const matched: HoardMintOrigin[] = []
   const unmatched: MintOriginGroup[] = []
+  const mintTypeKeys: Record<string, string[]> = {}
 
   groups.forEach((group) => {
     const mint = findMintByNameZh(mints, group.mint_zh)
@@ -105,12 +123,20 @@ function buildMintOrigins(
         findCount: group.findCount,
         coinTypes: [...group.coinTypes],
       })
+      mintTypeKeys[group.mint_zh] = [...group.typeKeys]
     } else {
       unmatched.push(group)
     }
   })
 
-  return { matched, unmatched }
+  const typeOptions: MintOriginTypeOption[] = [...typeKeyToLabel.entries()]
+    .map(([key, label]) => {
+      const mintCount = Object.values(mintTypeKeys).filter((keys) => keys.includes(key)).length
+      return { key, label, mintCount }
+    })
+    .sort((a, b) => b.mintCount - a.mintCount || a.label.localeCompare(b.label, 'zh-CN'))
+
+  return { matched, unmatched, mintTypeKeys, typeOptions }
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -251,7 +277,7 @@ export default async function SitePage({ params }: PageProps) {
   const summary = await getSiteMapSummary(site_code)
   const contexts = await getSiteContexts(site_code)
   const finds = await getSiteFinds(contexts.map((c) => c.context_code))
-  const mints = (await getMints()).map(toMintInfo)
+  const mints = await getMintInfos()
 
   // Only needed to populate the find-editing combobox, so skip the fetch in prod.
   const coinIssues = authorized ? await getCoinIssues() : []
@@ -287,10 +313,10 @@ export default async function SitePage({ params }: PageProps) {
     ? derivedTotalCoins
     : (summary?.total_quantity_for_map ?? null)
 
-  const mapSites =
+  const mapSite =
     summary?.lat != null && summary.lng != null
-      ? [{ ...summary, total_quantity_for_map: totalCoins }]
-      : []
+      ? { ...summary, total_quantity_for_map: totalCoins }
+      : null
   const infoTextZh = site.note_zh?.trim() || site.description_zh
   const infoTextEn = site.note_en?.trim() || site.description_en
   const classification = mergeLevelTypes(summary)
@@ -368,7 +394,7 @@ export default async function SitePage({ params }: PageProps) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* ── Location ── */}
-        <DataCard title={<T k="site.location.title" />}>
+        <Panel header={<T k="site.location.title" />}>
           <dl>
             <Row labelKey="site.row.province">{bi(site.province_zh, site.province_en)}</Row>
             <Row labelKey="site.row.city">{bi(site.city_zh, site.city_en)}</Row>
@@ -378,21 +404,26 @@ export default async function SitePage({ params }: PageProps) {
               {biBlock(site.location_detail_zh, site.location_detail_en)}
             </Row>
           </dl>
-          {mapSites.length > 0 && (
+          {mapSite && mapSite.lat != null && mapSite.lng != null && (
             <div className="mt-4 overflow-hidden border border-brand/20">
-              <CoinMapSection
-                sites={mapSites}
+              <SinglePointMap
+                lat={mapSite.lat}
+                lng={mapSite.lng}
+                label={
+                  mapSite.site_name_en
+                    ? `${mapSite.site_name_zh ?? '未命名遗址'} (${mapSite.site_name_en})`
+                    : (mapSite.site_name_zh ?? '未命名遗址')
+                }
                 height="280px"
-                fitBounds={false}
-                highlightSiteCode={site_code}
-                singlePin
+                zoom={10}
+                boundarySite={mapSite}
               />
             </div>
           )}
-        </DataCard>
+        </Panel>
 
         {/* ── Information ── */}
-        <DataCard title={<T k="site.information.title" />}>
+        <Panel header={<T k="site.information.title" />}>
           <dl>
             <Row labelKey="site.row.id">
               <span className="font-mono text-xs">{site.site_code}</span>
@@ -416,11 +447,11 @@ export default async function SitePage({ params }: PageProps) {
             </p>
             {biBlock(infoTextZh, infoTextEn)}
           </div>
-        </DataCard>
+        </Panel>
       </div>
 
       <div className="mt-6">
-        <DataCard title={<T k="site.classification.title" />}>
+        <Panel header={<T k="site.classification.title" />}>
           <div className="grid gap-6 lg:grid-cols-2">
             <dl>
               <Row labelKey="site.row.classification">{linkedList(classificationItems, resolveCoinType)}</Row>
@@ -434,27 +465,24 @@ export default async function SitePage({ params }: PageProps) {
               </Row>
             </dl>
           </div>
-        </DataCard>
+        </Panel>
       </div>
 
       {mintOrigins && mintOrigins.matched.length > 0 && (
         <div className="mt-6">
-          <DataCard title={<T k="site.mintOrigins.title" />}>
-            <div className="space-y-2">
-              <HoardMintOriginsMap
-                site={{
-                  site_code,
-                  name_zh: site.site_name_zh,
-                  name_en: site.site_name_en,
-                  lat: summary!.lat as number,
-                  lng: summary!.lng as number,
-                }}
-                mints={mintOrigins.matched}
-              />
-              <p className="text-xs text-gray-500">
-                <T k="site.mintOrigins.caption" />
-              </p>
-            </div>
+          <Panel header={<T k="site.mintOrigins.title" />}>
+            <SiteMintOrigins
+              site={{
+                site_code,
+                name_zh: site.site_name_zh,
+                name_en: site.site_name_en,
+                lat: summary!.lat as number,
+                lng: summary!.lng as number,
+              }}
+              mints={mintOrigins.matched}
+              mintTypeKeys={mintOrigins.mintTypeKeys}
+              typeOptions={mintOrigins.typeOptions}
+            />
             {mintOrigins.unmatched.length > 0 && (
               <p className="mt-3 text-xs text-gray-500">
                 <ClickHint
@@ -467,15 +495,15 @@ export default async function SitePage({ params }: PageProps) {
                 </ClickHint>
               </p>
             )}
-          </DataCard>
+          </Panel>
         </div>
       )}
 
       {authorized && (
         <div className="mt-6">
-          <DataCard title="Site Record (dev only)">
+          <Panel header="Site Record (dev only)">
             <SiteRecordSection site={site} />
-          </DataCard>
+          </Panel>
         </div>
       )}
 

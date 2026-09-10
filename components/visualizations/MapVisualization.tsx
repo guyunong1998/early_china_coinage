@@ -33,16 +33,9 @@ import { MultiSelectSearch } from '@/components/ui/MultiSelectSearch'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { PrecisionFilter } from '@/lib/city-boundaries'
 import {
-  NO_DATA_ALPHA,
-  NO_DATA_COLOR,
-  PRESENT_UNQUANTIFIED_COLOR,
   SELECTION_COLORS,
-  SINGLE_FIND_COLOR,
-  hexToRgba,
-  ratioToColor,
   useSelectionColors,
   buildDensityLayer,
-  densityLegendCss,
   type DensityRange,
 } from '@/lib/color-scale'
 import { computeSiteHeatStates, filterToFullyQuantifiedContexts } from '@/lib/context-heatmap'
@@ -198,10 +191,7 @@ function DensityLegend({ range }: { range: DensityRange }) {
         <T k="map.legend.density" />
       </span>
       <span className="tabular-nums text-gray-500">{range?.min ?? '—'}</span>
-      <span
-        className="inline-block h-2 w-28 rounded-sm"
-        style={{ background: `linear-gradient(90deg, ${densityLegendCss()})` }}
-      />
+      <span className="inline-block h-2 w-28 rounded-sm map-density-legend-gradient" />
       <span className="tabular-nums text-gray-500">{range?.max ?? '—'}</span>
       <span className="text-gray-500">
         <T k="map.legend.densityHint" />
@@ -258,13 +248,10 @@ function RatioLegend({ presentNoCount, noData }: { presentNoCount?: ReactNode; n
         <T k="map.legend.title" />
       </span>
       <span className="tabular-nums text-gray-500">0%</span>
-      <span
-        className="inline-block h-2 w-20 rounded-sm"
-        style={{ background: `linear-gradient(90deg, ${ratioToColor(0)}, ${ratioToColor(1)})` }}
-      />
+      <span className="inline-block h-2 w-20 rounded-sm map-ratio-legend-gradient" />
       <span className="tabular-nums text-gray-500">100%</span>
       <span className="flex items-center gap-1">
-        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: SINGLE_FIND_COLOR }} />
+        <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-single-find" />
         <T k="map.legend.singleFind" />
       </span>
       {presentNoCount}
@@ -955,10 +942,7 @@ export function FindSpotsVisualization({
                     onChange={(e) => setIncludeUnquantified(e.target.checked)}
                     className="accent-brand"
                   />
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: PRESENT_UNQUANTIFIED_COLOR }}
-                  />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-unquantified" />
                   <T k="heatmap.legend.presentNoCount" />
                 </label>
               }
@@ -970,10 +954,7 @@ export function FindSpotsVisualization({
                     onChange={(e) => setShowNoData(e.target.checked)}
                     className="accent-brand"
                   />
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                  />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-no-data" />
                   <T k="heatmap.legend.noData" />
                 </label>
               }
@@ -1277,10 +1258,7 @@ export function MintTownVisualization({
                     onChange={(e) => setShowNoData(e.target.checked)}
                     className="accent-brand"
                   />
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                  />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-no-data" />
                   <T k="heatmap.legend.noData" />
                 </label>
               }
@@ -1666,10 +1644,7 @@ export function AnsMintTownVisualization({
             <RatioLegend
               noData={
                 <span className="flex items-center gap-1">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: hexToRgba(NO_DATA_COLOR, NO_DATA_ALPHA) }}
-                  />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-no-data" />
                   <T k="heatmap.legend.noData" />
                 </span>
               }

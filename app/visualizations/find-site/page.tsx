@@ -1,17 +1,12 @@
+import { FullViewportMapShell } from '@/components/visualizations/FullViewportMapShell'
 import { FindSpotsVisualization } from '@/components/visualizations/MapVisualization'
 import {
   countSitesByPrecision,
   parsePrecisionFilter,
   siteMatchesPrecisionFilter,
 } from '@/lib/city-boundaries'
-import { toMintInfo } from '@/lib/mint-directory'
-import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap, getMints } from '@/lib/queries'
-import {
-  decodeMintNames,
-  decodeTypologySelections,
-  parseFilterMode,
-  parseViewMode,
-} from '@/lib/visualization-deeplink'
+import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap, getMintInfos } from '@/lib/queries'
+import { decodeMintNames, parseCommonDeeplinkParams, parseFilterMode } from '@/lib/visualization-deeplink'
 
 type PageProps = {
   searchParams: Promise<{ precision?: string; mode?: string; view?: string; mints?: string; types?: string }>
@@ -27,20 +22,19 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
   const { precision: precisionParam, mode, view, mints: mintsParam, types } = await searchParams
   const currentPrecision = parsePrecisionFilter(precisionParam)
 
-  const [allSites, coinIssues, hierarchyRows, finds, dbMints] = await Promise.all([
+  const [allSites, coinIssues, hierarchyRows, finds, mints] = await Promise.all([
     getFindSpotsMapSites(),
     getCoinIssues(),
     getCoinTypeHierarchy(),
     getFindsForHeatmap(),
-    getMints(),
+    getMintInfos(),
   ])
-  const mints = dbMints.map(toMintInfo)
 
   const counts = countSitesByPrecision(allSites)
   const sites = allSites.filter((site) => siteMatchesPrecisionFilter(site, currentPrecision))
 
   return (
-    <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
+    <FullViewportMapShell>
       <FindSpotsVisualization
         sites={sites}
         coinIssues={coinIssues}
@@ -50,10 +44,9 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
         currentPrecision={currentPrecision}
         precisionCounts={counts}
         initialMode={parseFilterMode(mode)}
-        initialViewMode={parseViewMode(view)}
         initialMintNames={decodeMintNames(mintsParam)}
-        initialTypeSelections={decodeTypologySelections(types)}
+        {...parseCommonDeeplinkParams(view, types)}
       />
-    </div>
+    </FullViewportMapShell>
   )
 }

@@ -28,11 +28,3 @@ export function ActionFormStatus<T>({ state }: { state: ActionState<T> }) {
     <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{text}</p>
   )
 }
-
-/** Inline field-level error, rendered under a single input. */
-export function FieldError<T>({ state, name }: { state: ActionState<T>; name: string }) {
-  if (state.ok) return null
-  const message = state.fieldErrors?.[name]?.[0]
-  if (!message) return null
-  return <p className="mt-0.5 text-xs text-red-600">{message}</p>
-}

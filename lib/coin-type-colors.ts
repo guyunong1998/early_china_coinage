@@ -45,7 +45,10 @@ const TYPE_COLORS: Record<string, string> = {
  * "no data" bucket and must read as the same neutral gray, not two
  * different hash-derived hues. */
 const UNCLASSIFIED_LABELS = new Set(['未知', 'Unclassified', '未分类'])
-const UNCLASSIFIED_COLOR = '#9ca3af' // neutral gray, distinct from every hue in TYPE_COLORS/PALETTE
+/** Exported so callers that need this exact "no data" gray outside colorForType
+ * (e.g. CoinTypePieChart's own unquantified-ring swatch) derive it from one
+ * place instead of re-typing the hex. */
+export const UNCLASSIFIED_COLOR = '#9ca3af' // neutral gray, distinct from every hue in TYPE_COLORS/PALETTE
 
 /** Deterministic string hash, so a type absent from TYPE_COLORS (a new
  *  hierarchy entry not yet listed above) still always renders the same

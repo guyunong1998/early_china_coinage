@@ -346,10 +346,6 @@ export function formatSourceCitation(
   return formatByType(filled, page) ?? assembleFromFields(filled, page)
 }
 
-export function sourceTypeLabel(type: string | null | undefined): string {
-  return trim(type)
-}
-
 export function sourceDisplayType(source: Source | null | undefined): string {
   if (!source) return ''
   return displaySourceType(enrichSourceFields(source))

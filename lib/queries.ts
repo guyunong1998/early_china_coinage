@@ -1,4 +1,7 @@
+import { cache } from 'react'
 import { splitCsv } from '@/lib/format'
+import { toMintInfo } from '@/lib/mint-directory'
+import { findQuantity } from '@/lib/quantity'
 import { supabase } from '@/lib/supabase'
 import { matchHierarchyForLegacyType, parseLegacyTypeTokens } from '@/lib/typology-filter'
 import type {
@@ -11,6 +14,7 @@ import type {
   ImageRecord,
   Inscription,
   MapSite,
+  MintInfo,
   Site,
   Source,
   SourceLink,
@@ -340,21 +344,6 @@ function typeFieldsFromIssues(
   return bucketsToTypeFields(buckets)
 }
 
-/** Overlay type/mint/inscription/state CSVs from each find's coin_issues
- * (including legacy_type → hierarchy fallback) onto a v_coin_map_sites row
- * so sites whose view columns are empty still show types in map popups and
- * the site classification panel. */
-export function overlayMapSiteTypesFromFinds(
-  site: MapSite | null,
-  finds: Find[],
-  hierarchyRows: CoinTypeHierarchyRow[]
-): MapSite | null {
-  if (!site) return null
-  const issues = finds.map((find) => find.coin_issues).filter((issue): issue is CoinIssueDisplay => issue != null)
-  if (issues.length === 0) return site
-  return unionMapSiteTypeFields(site, typeFieldsFromIssues(issues, hierarchyRows))
-}
-
 function siteHasTypeCsv(site: MapSite): boolean {
   return !!(
     site.level1_types_zh ||
@@ -656,7 +645,10 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
   }
 }
 
-export async function getSite(siteCode: string): Promise<Site | null> {
+/** Wrapped in React's cache() so app/sites/[site_code]/page.tsx's
+ * generateMetadata and the page component — both called for the same
+ * request — share one fetch instead of two. */
+export const getSite = cache(async function getSite(siteCode: string): Promise<Site | null> {
   const { data, error } = await supabase
     .from('sites')
     .select('*, periods(period_zh, period_en)')
@@ -665,7 +657,7 @@ export async function getSite(siteCode: string): Promise<Site | null> {
 
   if (error) throw error
   return data ? flattenPeriod(data) : null
-}
+})
 
 export async function getSiteMapSummary(siteCode: string): Promise<MapSite | null> {
   const { data, error } = await supabase
@@ -873,22 +865,10 @@ export async function getAllSources(): Promise<Source[]> {
   )
 }
 
-export async function getSource(sourceCode: string): Promise<Source | null> {
-  const { data, error } = await supabase.from('sources').select('*').eq('source_code', sourceCode).maybeSingle()
-  if (error) throw error
-  return data
-}
-
 export async function getAllSourceLinks(): Promise<SourceLink[]> {
   return fetchAllPages<SourceLink>((from, to) =>
     supabase.from('source_links').select('*').order('source_code').range(from, to)
   )
-}
-
-export async function getSourceLinksBySourceCode(sourceCode: string): Promise<SourceLink[]> {
-  const { data, error } = await supabase.from('source_links').select('*').eq('source_code', sourceCode)
-  if (error) throw error
-  return data ?? []
 }
 
 /**
@@ -1003,6 +983,13 @@ export async function getMints(): Promise<MintRow[]> {
       .order('name_zh')
       .range(from, to)
   )
+}
+
+/** getMints, already flattened to MintInfo — the shape most page-level
+ * callers actually want (name/state/coordinates), rather than the raw
+ * `mints` row + nested `states` join. */
+export async function getMintInfos(): Promise<MintInfo[]> {
+  return (await getMints()).map(toMintInfo)
 }
 
 export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
@@ -1156,7 +1143,7 @@ const EMPTY_MINT_FINDSPOTS_DATA: MintFindspotsData = {
   siteCount: 0,
 }
 
-function buildTypeKey(coin: {
+export function buildTypeKey(coin: {
   coin_type_code: string
   major_type_zh: string | null
   minor_type_zh: string | null
@@ -1168,7 +1155,7 @@ function buildTypeKey(coin: {
   return `code:${coin.coin_type_code}`
 }
 
-function buildTypeLabel(coin: {
+export function buildTypeLabel(coin: {
   major_type_zh: string | null
   minor_type_zh: string | null
   inscription: string | null
@@ -1254,10 +1241,7 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
   )
   if (finds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels }
 
-  const totalCoinCount = finds.reduce(
-    (sum, f) => sum + (f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? 0),
-    0
-  )
+  const totalCoinCount = finds.reduce((sum, f) => sum + findQuantity(f), 0)
 
   const contextCodes = [...new Set(finds.map((f) => f.context_code).filter(Boolean))]
   const contexts = await fetchAllPages<{ context_code: string; site_code: string }>((from, to) =>

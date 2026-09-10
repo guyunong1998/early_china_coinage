@@ -1,3 +1,5 @@
+import { slugify } from '@/lib/format'
+import { findQuantity } from '@/lib/quantity'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
 export type CoinTypeLevel = 'level1' | 'level2' | 'level3' | 'level4' | 'level5'
@@ -59,15 +61,6 @@ function zhOf(row: CoinTypeHierarchyRow, level: CoinTypeLevel): string | null {
 
 function enOf(row: CoinTypeHierarchyRow, level: CoinTypeLevel): string | null {
   return row[`${level}_en` as const]
-}
-
-function slugify(label: string): string {
-  return (
-    label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'type'
-  )
 }
 
 function uniqueSlug(candidate: string, used: Set<string>, fallbackPrefix: string): string {
@@ -170,7 +163,7 @@ function buildLevel(
     .sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
     .forEach((group) => {
       const fallbackPrefix = parents.length > 0 ? parents[parents.length - 1].slug : level
-      const slug = uniqueSlug(slugify(group.en), used, fallbackPrefix)
+      const slug = uniqueSlug(slugify(group.en, 'type'), used, fallbackPrefix)
       used.add(slug)
 
       const hierarchyIds = new Set(group.rows.map((r) => r.id))
@@ -303,7 +296,7 @@ export function computeCoinTypeCounts(
     if (!f.coin_issues_id) return
     const hierarchyId = hierarchyIdByIssueId.get(f.coin_issues_id)
     if (!hierarchyId || !idSet.has(hierarchyId)) return
-    coinCount += f.quantity_total ?? f.quantity_estimated ?? f.quantity_min ?? 0
+    coinCount += findQuantity(f)
     findCount += 1
     if (f.site_code) sites.add(f.site_code)
   })

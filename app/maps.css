@@ -40,7 +40,7 @@
      a single coin sits at the minimum size, growing logarithmically up to
      the maximum as quantity increases relative to the current list's max. */
   --map-dot-qty-size-min: 14px;
-  --map-dot-qty-size-max: 40px;
+  --map-dot-qty-size-max: 36px;
 
   /* Mint Town importance sizing — wider span so Find occurrences (and the
      other size-by modes) can separate mid vs high ranks visually. */
@@ -52,10 +52,57 @@
      layer) — baked into each gradient stop's color, since leaflet.heat has
      no single "layer opacity" knob that applies evenly across the ramp. */
   --heatmap-opacity: 0.7;
+
+  /* MapVisCanvas.tsx's "no record at all" marker — fixed pixel size (see
+     .map-dot-no-data below). Read into JS via a getComputedStyle helper
+     (mirroring --map-dot-qty-size-min/-max) so the iconSize/iconAnchor
+     passed to Leaflet always match what actually renders. */
+  --map-dot-no-data-size: 10px;
+
+  /* Dropped-pin accent for every "this map shows exactly one point" marker
+     (CoinMap.tsx's singlePin mode, SinglePointMap.tsx, and the origin pin in
+     SiteMintOrigins.tsx) — the solid form of --accent-rgb (see globals.css),
+     always fully opaque per dropPinHtml's own doc comment. One named token
+     so all three read the same value instead of each writing
+     rgb(var(--accent-rgb)) independently. */
+  --map-pin-accent: rgb(var(--accent-rgb));
+
+  /* Fixed swatch colors also used as flat (non-alpha-blended) legend chips
+     in components/visualizations/MapVisualization.tsx — kept in sync by
+     hand with lib/color-scale.ts's SINGLE_FIND_COLOR/PRESENT_UNQUANTIFIED_COLOR,
+     same tradeoff as --map-dot-nodata-fill/NO_DATA_COLOR above (that JS
+     module also alpha-blends these for the actual per-marker fill, which a
+     CSS variable can't do). */
+  --map-single-find-color: #7b3fa0;
+  --map-unquantified-color: #c05fae;
+
+  /* City/county administrative-boundary overlay — the fallback shading shown
+     when a site/mint's location is only known to city or county precision
+     (CoinMap.tsx, SinglePointMap.tsx, MapVisCanvas.tsx all draw this the
+     same way; see lib/city-boundaries.ts's cityBoundaryStyle()/
+     countyBoundaryStyle(), which read these into Leaflet's style option). */
+  --map-boundary-city-color: #8e8e8e;
+  --map-boundary-city-fill: #bfbfbf;
+  --map-boundary-city-weight: 1.5;
+  --map-boundary-city-opacity: 0.9;
+  --map-boundary-city-fill-opacity: 0.1;
+  --map-boundary-city-dash: 4 4;
+
+  --map-boundary-county-color: #6f6f6f;
+  --map-boundary-county-fill: #b5b5b5;
+  --map-boundary-county-weight: 2;
+  --map-boundary-county-opacity: 0.9;
+  --map-boundary-county-fill-opacity: 0.14;
+  --map-boundary-county-dash: 2 3;
+
+  /* MapVisCanvas.tsx popup ratio bar (ratioBarHtml/ratioStatusHtml) — flat
+     neutral grays unrelated to the ratio color scale itself. */
+  --map-popup-bar-track: #e2e2e2;
+  --map-popup-divider: #ddd;
 }
 .map-dot {
   border-width: 2px;
-  border-style: solid;
+  border-style: white solid 1px;
   border-radius: 50%;
   background: var(--map-dot-fill);
   border-color: var(--map-dot-border);
@@ -102,33 +149,12 @@
   border-color: var(--map-dot-disabled-border);
 }
 
-/* HoardMintOriginsMap.tsx (site detail page's mint-origins map): the
-   findspot/hoard itself (a dropped-pin marker, not a dot — see
-   `.map-pin-hoard-site` below), and each contributing mint town. Both are
-   fully opaque on this map (unlike every other role above, which uses the
-   translucent --map-dot-special/--map-dot-fill) since there's only ever one
-   hoard's markers on screen at a time, so there's no overlap for
-   translucency to help disambiguate. */
-
-.map-dot-hoard-mint {
-  background: rgb(var(--accent-rgb));
-}
-
-/* Dropped-pin marker (teardrop, not a circle) for the hoard/findspot itself
-   — distinguishes it from the round mint-town dots it's connected to. */
-.map-pin-hoard-site {
-  fill: rgb(var(--accent-rgb));
-  stroke: white;
-  stroke-width: 1.5px;
-}
-
-/* MintIssueDistributionMapCanvas.tsx (mint town page's issued-coin
-   distribution map): each findspot dot. Fully opaque, matching the mint's
-   own dropped-pin marker (always opaque -- see dropPinHtml's doc comment)
-   so every marker on this map reads as the same solid yellow. */
-.map-dot-mint-issue-site {
-  background: #eda100;
-}
+/* OriginDistributionMap.tsx (site detail page's mint-origins map, and mint
+   town page's issued-coin distribution map — one origin plus many
+   destinations, both directions): origin pin and destination dots are
+   colored inline (a caller-chosen `color` prop shared by both, fully
+   opaque), not via CSS role classes — see dropPinHtml's own doc comment for
+   why a dropped pin is always opaque regardless. */
 
 /* MintsOverviewMap.tsx (all mint towns overview). */
 .map-dot-mints-overview {
@@ -157,13 +183,40 @@
 }
 
 /* MapVisCanvas.tsx: a point where the active filter (coin type or mint) has
-   no record at all — fixed 12px (not quantity-scaled, since there's nothing
+   no record at all — not quantity-scaled, since there's nothing
    to size by) and a darker gray than any ratio-scale color. */
 .map-dot-no-data {
-  width: 10px;
-  height: 10px;
+  width: var(--map-dot-no-data-size);
+  height: var(--map-dot-no-data-size);
   background: var(--map-dot-nodata-fill);
   border-color: var(--map-dot-nodata-border);
+}
+
+/* Flat (non-alpha-blended) legend chips — components/visualizations/
+   MapVisualization.tsx's Points-view legend. */
+.map-legend-swatch-single-find {
+  background: var(--map-single-find-color);
+}
+.map-legend-swatch-unquantified {
+  background: var(--map-unquantified-color);
+}
+.map-legend-swatch-no-data {
+  background: var(--map-dot-nodata-fill);
+}
+
+/* Density/ratio legend gradient bars — mirror lib/color-scale.ts's
+   DENSITY_GRADIENT_STOPS and RAMP_LIGHT/RAMP_DARK (ratioToColor's
+   interpolation endpoints) by value. Independently declared because the JS
+   values also drive leaflet.heat's imperative gradient option and the
+   continuous per-point ratioToColor() interpolation — an imperative Leaflet
+   API and a runtime color computation, neither of which a CSS class can
+   express — so these two only need to reproduce the same *static* look for
+   the legend swatch. Keep the stops in sync by hand if either changes. */
+.map-density-legend-gradient {
+  background: linear-gradient(90deg, #f0d56a 0%, #e39a2b 25%, #d04a1c 50%, #a01515 75%, #6e0c0c 100%);
+}
+.map-ratio-legend-gradient {
+  background: linear-gradient(90deg, #d9a406, #a01515);
 }
 
 .loc_precision_map {

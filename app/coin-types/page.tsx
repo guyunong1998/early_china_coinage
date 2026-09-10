@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CoinTypeListClient } from '@/components/coin-types/CoinTypeListClient'
 import { TypologyHierarchyCard } from '@/components/coin-types/TypologyHierarchyCard'
+import { MapOverviewCard } from '@/components/home/MapOverviewCard'
 import { T } from '@/components/i18n/T'
 import { buildCoinTypeNodes, computeAllCoinTypeCounts } from '@/lib/coin-type-catalog'
 import { getCoinTypeImagePaths, type CoinTypeImagePaths } from '@/lib/coin-images'
@@ -49,41 +50,23 @@ export default async function CoinTypesPage() {
         </p>
       </div>
 
-      {/* Overview map — same left-third title/link + right-two-thirds
-          preview card the home page uses for its own map section, reusing
-          that same demo's static (pre-cropped, 16:9) screenshot rather than
-          a second live map, since its subject (a coin-type Compare view)
-          already matches this page's. Links to the same pre-built URL. */}
-      <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
-        <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
-          <h2 className="font-serif text-xl font-semibold text-brand">
-            <T k="navcards.map.label" />
-          </h2>
-          <p className="text-sm leading-6 text-gray-600">
-            <T k="navcards.map.desc" />
-          </p>
-          <Link
-            href="/visualizations"
-            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
-          >
-            <T k="home.mapSection.title" /> →
-          </Link>
-        </div>
-        <div className="lg:col-span-2 p-4">
-          <Link
-            href={demoHref(OVERVIEW_DEMO)}
-            className="group relative block aspect-video w-full overflow-hidden rounded border border-brand/15 bg-gray-100"
-          >
-            <Image
-              src={OVERVIEW_DEMO.image}
-              alt={`${OVERVIEW_DEMO.title.zh} (${OVERVIEW_DEMO.title.en})`}
-              fill
-              sizes="(min-width: 1024px) 66vw, 100vw"
-              className="object-cover transition duration-300 group-hover:scale-[1.02]"
-            />
-          </Link>
-        </div>
-      </div>
+      {/* Reuses OVERVIEW_DEMO's static (pre-cropped, 16:9) screenshot rather
+          than a second live map, since its subject (a coin-type Compare
+          view) already matches this page's. */}
+      <MapOverviewCard href="/visualizations">
+        <Link
+          href={demoHref(OVERVIEW_DEMO)}
+          className="group relative block aspect-video w-full overflow-hidden rounded border border-brand/15 bg-gray-100"
+        >
+          <Image
+            src={OVERVIEW_DEMO.image}
+            alt={`${OVERVIEW_DEMO.title.zh} (${OVERVIEW_DEMO.title.en})`}
+            fill
+            sizes="(min-width: 1024px) 66vw, 100vw"
+            className="object-cover transition duration-300 group-hover:scale-[1.02]"
+          />
+        </Link>
+      </MapOverviewCard>
 
       {/* Typology Hierarchy — both level1 roots (钱币 Coin, 钱范 Mould) down
           through every descendant, browsable either as the pannable/zoomable

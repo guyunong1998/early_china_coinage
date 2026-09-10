@@ -1,7 +1,7 @@
+import { FullViewportMapShell } from '@/components/visualizations/FullViewportMapShell'
 import { MintTownVisualization } from '@/components/visualizations/MapVisualization'
-import { toMintInfo } from '@/lib/mint-directory'
-import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap, getMints } from '@/lib/queries'
-import { decodeTypologySelections, parseViewMode } from '@/lib/visualization-deeplink'
+import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap, getMintInfos } from '@/lib/queries'
+import { parseCommonDeeplinkParams } from '@/lib/visualization-deeplink'
 
 type PageProps = {
   searchParams: Promise<{ view?: string; types?: string }>
@@ -15,24 +15,22 @@ export const metadata = {
 export default async function MintTownVisualizationPage({ searchParams }: PageProps) {
   const { view, types } = await searchParams
 
-  const [coinIssues, hierarchyRows, finds, dbMints] = await Promise.all([
+  const [coinIssues, hierarchyRows, finds, mints] = await Promise.all([
     getCoinIssues(),
     getCoinTypeHierarchy(),
     getFindsForHeatmap(),
-    getMints(),
+    getMintInfos(),
   ])
-  const mints = dbMints.map(toMintInfo)
 
   return (
-    <div className="relative h-[calc(100dvh-4.5rem)] overflow-hidden">
+    <FullViewportMapShell>
       <MintTownVisualization
         finds={finds}
         coinIssues={coinIssues}
         hierarchyRows={hierarchyRows}
         mints={mints}
-        initialViewMode={parseViewMode(view)}
-        initialTypeSelections={decodeTypologySelections(types)}
+        {...parseCommonDeeplinkParams(view, types)}
       />
-    </div>
+    </FullViewportMapShell>
   )
 }

@@ -1,17 +1,11 @@
 import { findMintByNameZh } from '@/lib/mint-directory'
+import { findQuantity } from '@/lib/quantity'
 import type { CoinIssueDisplay, HeatmapFind, MintInfo } from '@/lib/types'
 
 /** coin_issues.id -> mint_id, the join every mint aggregation here needs
  * since `finds` only carries coin_issues_id, not mint_id directly. */
 function buildMintIdByIssueId(coinIssues: CoinIssueDisplay[]): Map<string, string> {
   return new Map(coinIssues.filter((c) => c.mint_id).map((c) => [c.id, c.mint_id as string]))
-}
-
-function findQuantity(find: HeatmapFind): number {
-  if (find.quantity_total != null) return find.quantity_total
-  if (find.quantity_estimated != null) return find.quantity_estimated
-  if (find.quantity_min != null) return find.quantity_min
-  return find.presence ? 1 : 0
 }
 
 export type MintFilterOption = {
@@ -137,7 +131,7 @@ export function computeSiteMintQuantities(
     if (!find.site_code || !find.coin_issues_id) return
     const mintId = mintIdByIssueId.get(find.coin_issues_id)
     if (!mintId || !mintIdSet.has(mintId)) return
-    const qty = findQuantity(find)
+    const qty = findQuantity(find, { includePresence: true })
     if (qty <= 0) return
 
     if (!result.has(find.site_code)) result.set(find.site_code, new Map())

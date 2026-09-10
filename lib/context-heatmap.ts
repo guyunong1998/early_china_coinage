@@ -1,3 +1,4 @@
+import { rawQuantity } from '@/lib/quantity'
 import type { HeatmapFind } from '@/lib/types'
 
 /** Find-spots map: filtering by coin type or by mint. */
@@ -34,15 +35,8 @@ export type SiteHeatState =
     }
   | { kind: 'unquantified' }
 
-function coalesceQuantity(find: HeatmapFind): number | null {
-  if (find.quantity_total != null) return find.quantity_total
-  if (find.quantity_estimated != null) return find.quantity_estimated
-  if (find.quantity_min != null) return find.quantity_min
-  return null
-}
-
 export function findHasUsableQuantity(find: HeatmapFind): boolean {
-  return coalesceQuantity(find) != null
+  return rawQuantity(find) != null
 }
 
 /** Keeps only finds whose archaeological context is fully quantified — every
@@ -64,7 +58,7 @@ export function filterToFullyQuantifiedContexts(finds: HeatmapFind[]): HeatmapFi
 function sumQuantityIfComplete(finds: HeatmapFind[]): number | null {
   let total = 0
   for (const find of finds) {
-    const qty = coalesceQuantity(find)
+    const qty = rawQuantity(find)
     if (qty == null) return null
     total += qty
   }
@@ -96,7 +90,7 @@ export function computeContextHeatState(
   let totalQuantified = 0
 
   finds.forEach((find) => {
-    const qty = coalesceQuantity(find)
+    const qty = rawQuantity(find)
     if (qty == null) return
     totalQuantified += 1
     totalQty += qty

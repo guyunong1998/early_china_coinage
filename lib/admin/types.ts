@@ -5,7 +5,3 @@
 export type ActionState<T> =
   | { ok: true; data: T; message?: string }
   | { ok: false; formError?: string; fieldErrors?: Record<string, string[] | undefined> }
-
-export function initialActionState<T>(data: T): ActionState<T> {
-  return { ok: true, data }
-}

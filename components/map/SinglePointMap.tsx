@@ -7,18 +7,29 @@
  * one point, a pin reads immediately as "the location," not as one data
  * point among many.
  *
- * Used by: app/mints/[mint_code]/page.tsx (the mint town's own location).
+ * Used by: app/mints/[mint_code]/page.tsx (the mint town's own location) and
+ * app/sites/[site_code]/page.tsx (the site's own location, via `boundarySite`
+ * for sites whose location is only known to city/county precision).
  */
 
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap, Layer } from 'leaflet'
 import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
+import {
+  cityBoundaryStyle,
+  countyBoundaryStyle,
+  fetchCityBoundaryGeoJson,
+  fetchCountyBoundaryGeoJson,
+  shouldShowCityBoundary,
+  shouldShowCountyBoundary,
+} from '@/lib/city-boundaries'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { MapSite } from '@/lib/types'
 
-// Solid form of --accent-rgb (app/globals.css) — the same hue
-// .map-dot-single-point used at 0.6 opacity, but a dropped pin is always
-// fully opaque (see dropPinHtml's own doc comment).
-const SINGLE_POINT_PIN_COLOR = '#e1941f'
+// --map-pin-accent (app/maps.css) — the same hue .map-dot-single-point uses
+// at 0.6 opacity, but a dropped pin is always fully opaque (see
+// dropPinHtml's own doc comment).
+const SINGLE_POINT_PIN_COLOR = 'var(--map-pin-accent)'
 
 type SinglePointMapProps = {
   lat: number
@@ -26,6 +37,11 @@ type SinglePointMapProps = {
   label: string
   height?: string
   zoom?: number
+  /** When given, shades the city/county administrative boundary instead of
+   * trusting the pin's exact placement — for a point only known to
+   * city/county precision (see getSitePrecisionLevel in lib/city-boundaries).
+   * Omitted by callers whose point is always exact (e.g. a mint town). */
+  boundarySite?: MapSite
 }
 
 export default function SinglePointMap({
@@ -34,6 +50,7 @@ export default function SinglePointMap({
   label,
   height = '320px',
   zoom = 12,
+  boundarySite,
 }: SinglePointMapProps) {
   const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -72,6 +89,27 @@ export default function SinglePointMap({
         .addTo(map)
         .bindPopup(`<strong>${label}</strong>`)
         .openPopup()
+
+      // City/county precision (see lib/city-boundaries) — the pin above is
+      // still dropped at the city/county centroid, but shading the admin
+      // boundary signals the location isn't known any more precisely than
+      // that. Mutually exclusive: getSitePrecisionLevel only ever resolves
+      // to one of 'site' | 'county' | 'city' for a given site.
+      if (boundarySite && shouldShowCityBoundary(boundarySite) && boundarySite.city_zh) {
+        const geo = await fetchCityBoundaryGeoJson(boundarySite.city_zh, boundarySite.province_zh)
+        if (geo && !cancelled) {
+          L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: cityBoundaryStyle() }).addTo(map)
+        }
+      } else if (boundarySite && shouldShowCountyBoundary(boundarySite) && boundarySite.county_zh) {
+        const geo = await fetchCountyBoundaryGeoJson(
+          boundarySite.county_zh,
+          boundarySite.city_zh,
+          boundarySite.province_zh
+        )
+        if (geo && !cancelled) {
+          L.geoJSON(geo as GeoJSON.GeoJsonObject, { style: countyBoundaryStyle() }).addTo(map)
+        }
+      }
     }
 
     initMap()
@@ -84,7 +122,7 @@ export default function SinglePointMap({
     // `lang` is deliberately omitted: the separate [lang] effect below swaps
     // the label layer without rebuilding the whole map on toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lng, label, zoom])
+  }, [lat, lng, label, zoom, boundarySite])
 
   // Swap the place-name label layer whenever the language toggle changes,
   // without rebuilding the whole map.

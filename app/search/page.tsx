@@ -4,7 +4,7 @@ import { PrecisionAllHint } from '@/components/search/PrecisionAllHint'
 import { SearchFilters } from '@/components/search/SearchFilters'
 import { SearchFiltersToggle } from '@/components/search/SearchFiltersToggle'
 import { SearchResultCard } from '@/components/search/SearchResultCard'
-import { CoinMapSection } from '@/components/map/CoinMapSection'
+import CoinMap from '@/components/map/CoinMap'
 import { CoinTypePieChart, type PieGroup } from '@/components/site/CoinTypePieChart'
 import { colorForType } from '@/lib/coin-type-colors'
 import { T } from '@/components/i18n/T'
@@ -36,8 +36,8 @@ const PAGE_SIZE = 20
 // allow it (ignored on shorter-cap hobby tiers).
 export const maxDuration = 60
 
-// Same glossary/format used by the map popups (CoinMap.tsx, CoinFilterMap.tsx,
-// CoinTypeHeatmapMap.tsx) so the result list matches what clicking a dot shows.
+// Same glossary/format used by the map popups (CoinMap.tsx, CoinTypeHeatmapMap.tsx)
+// so the result list matches what clicking a dot shows.
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {
   布币: 'Spade Coin',
   刀币: 'Knife-Shaped Coin',
@@ -403,7 +403,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 {/* Slim payload for the client map — full SearchSite rows for
                     every hit bloat the RSC response (~1–2MB) and can stall
                     the browser / Vercel edge when opening unfiltered /search. */}
-                <CoinMapSection
+                <CoinMap
                   sites={filtered
                     .filter((s) => s.lat != null && s.lng != null)
                     .map((s) => ({

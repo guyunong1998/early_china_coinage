@@ -10,11 +10,8 @@ import { Tabs } from '@/components/ui/Tabs'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
+import { rawQuantity } from '@/lib/quantity'
 import type { CoinIssueDisplay, Context, Find, Source, SourceLink } from '@/lib/types'
-
-function findQuantity(find: Find) {
-  return find.quantity_total ?? find.quantity_estimated ?? find.quantity_min ?? null
-}
 
 /** Level 1 of the chart: coin type (major/minor type). */
 function coinTypeLabel(find: Find) {
@@ -94,7 +91,7 @@ type BreakdownGroup = PieGroup & { majorZh: string | null }
  * misleading.
  */
 function buildContextBreakdown(findsForContext: Find[]): BreakdownGroup[] | null {
-  const withQuantity = findsForContext.filter((f) => findQuantity(f) != null && (findQuantity(f) ?? 0) > 0)
+  const withQuantity = findsForContext.filter((f) => rawQuantity(f) != null && (rawQuantity(f) ?? 0) > 0)
   if (withQuantity.length === 0) return null
 
   const typeGroups = new Map<
@@ -103,7 +100,7 @@ function buildContextBreakdown(findsForContext: Find[]): BreakdownGroup[] | null
   >()
 
   withQuantity.forEach((find) => {
-    const qty = findQuantity(find) ?? 0
+    const qty = rawQuantity(find) ?? 0
     const type = coinTypeLabel(find)
     const insc = inscriptionLabel(find)
 
@@ -163,7 +160,7 @@ type UnquantifiedType = {
  * invisible because none of those particular finds were ever counted.
  */
 function buildUnquantifiedTypes(findsForContext: Find[]): UnquantifiedType[] {
-  const withoutQuantity = findsForContext.filter((f) => findQuantity(f) == null || (findQuantity(f) ?? 0) <= 0)
+  const withoutQuantity = findsForContext.filter((f) => rawQuantity(f) == null || (rawQuantity(f) ?? 0) <= 0)
 
   const byKey = new Map<string, UnquantifiedType>()
   withoutQuantity.forEach((find) => {
@@ -394,7 +391,7 @@ export function SiteDetailTabs({
             breakdown ?? [],
             unquantifiedTypes
           )
-          const totalCoins = findsForContext.reduce((sum, f) => sum + (findQuantity(f) ?? 0), 0)
+          const totalCoins = findsForContext.reduce((sum, f) => sum + (rawQuantity(f) ?? 0), 0)
 
           return (
             <ContextCard

@@ -238,36 +238,6 @@ create table public.source_links (
 
 create unique INDEX IF not exists source_links_unique on public.source_links using btree (source_code, target_type, target_code) TABLESPACE pg_default;
 
-create table public.source_links (
-  id uuid not null default extensions.uuid_generate_v4 (),
-  source_link_code text not null,
-  source_code text not null,
-  target_type text not null,
-  target_code text not null,
-  page text null,
-  note_zh text null,
-  note_en text null,
-  created_at timestamp with time zone null default now(),
-  constraint source_links_pkey primary key (id),
-  constraint source_links_source_link_code_key unique (source_link_code),
-  constraint source_links_source_code_fkey foreign KEY (source_code) references sources (source_code) on update CASCADE on delete RESTRICT,
-  constraint source_links_target_type_check check (
-    (
-      target_type = any (
-        array[
-          'site'::text,
-          'context'::text,
-          'find'::text,
-          'coin_item'::text,
-          'coin_type'::text
-        ]
-      )
-    )
-  )
-) TABLESPACE pg_default;
-
-create unique INDEX IF not exists source_links_unique on public.source_links using btree (source_code, target_type, target_code) TABLESPACE pg_default;
-
 create table public.sources (
   id uuid not null default extensions.uuid_generate_v4 (),
   source_code text not null,

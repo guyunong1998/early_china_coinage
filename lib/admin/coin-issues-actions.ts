@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
+import { beginMutation } from '@/lib/admin/mutation'
 import { coinIssueSchema } from '@/lib/admin/schemas'
 import { COIN_ISSUE_FIELDS, flattenCoinIssue, type CoinIssueEmbed } from '@/lib/queries'
 import type { ActionState } from '@/lib/admin/types'
@@ -13,12 +13,11 @@ export async function updateCoinIssue(
   _prev: ActionState<CoinIssueDisplay>,
   formData: FormData
 ): Promise<ActionState<CoinIssueDisplay>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = coinIssueSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(coinIssueSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
-  const { id, ...rest } = parsed.data
+  const { id, ...rest } = parsed
   const { data, error } = await db
     .from('coin_issues')
     .update(rest)

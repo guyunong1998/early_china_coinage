@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { cache } from 'react'
 import { MintIssueDistribution } from '@/components/mints/MintIssueDistribution'
 import { MintImageGallery } from '@/components/mints/MintImageGallery'
 import { MintCoinTypeHints, type MintCoinTypeHint } from '@/components/mints/MintCoinTypeHints'
@@ -31,9 +32,18 @@ type PageProps = {
   params: Promise<{ mint_code: string }>
 }
 
+/** Wrapped in React's cache() so generateMetadata and the page component
+ * below — both called for the same request — share one directory build
+ * instead of each fetching+flattening the mints table separately. */
+const resolveMintPage = cache(async (mint_code: string) => {
+  const [dbMints, images] = await Promise.all([getMints(), getImages()])
+  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints, images), mint_code)
+  return { mint, dbMints }
+})
+
 export async function generateMetadata({ params }: PageProps) {
   const { mint_code } = await params
-  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(await getMints()), mint_code)
+  const { mint } = await resolveMintPage(mint_code)
   if (!mint) return { title: 'Not found' }
   return {
     title: `${mint.name_zh} ${mint.name_en} | Mint Town Locations`,
@@ -43,8 +53,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function MintDetailPage({ params }: PageProps) {
   const { mint_code } = await params
-  const [dbMints, images] = await Promise.all([getMints(), getImages()])
-  const mint = getMintDirectoryEntryBySlug(buildMintDirectory(dbMints, images), mint_code)
+  const { mint, dbMints } = await resolveMintPage(mint_code)
   if (!mint) notFound()
   const rawMint = dbMints.find((m) => m.id === mint.id)
   const authorized = await isAuthorized()
@@ -150,17 +159,24 @@ export default async function MintDetailPage({ params }: PageProps) {
               labelKey="mintDetail.row.name"
               value={
                 <>
-                  {mint.name_zh}{' '}
-                  <span className="text-xs italic text-gray-400">({mint.name_en})</span>
+                  {mint.name_zh}
+                  <span className="ml-2 text-sm italic text-gray-400">{mint.name_en}</span>
                 </>
               }
             />
             <DetailRow
               labelKey="mintDetail.row.coinsAndSites"
               value={
-                distribution.totalCoinCount > 0
-                  ? `${distribution.totalCoinCount} coins across ${distribution.siteCount} sites`
-                  : '—'
+                distribution.totalCoinCount > 0 ? (
+                  <Link
+                    href={`/search?mint=${encodeURIComponent(mint.name_zh)}`}
+                    className="text-brand hover:underline"
+                  >
+                    {distribution.totalCoinCount} coins across {distribution.siteCount} sites
+                  </Link>
+                ) : (
+                  '—'
+                )
               }
             />
             <DetailRow
@@ -170,9 +186,19 @@ export default async function MintDetailPage({ params }: PageProps) {
             <DetailRow
               labelKey="mintDetail.row.inscriptions"
               value={
-                distribution.inscriptions.length > 0
-                  ? distribution.inscriptions.map((i) => (i.en ? `${i.zh} (${i.en})` : i.zh)).join('、')
-                  : '—'
+                distribution.inscriptions.length > 0 ? (
+                  <>
+                    {distribution.inscriptions.map((i, idx) => (
+                      <span key={i.zh}>
+                        {idx > 0 && '、'}
+                        {i.zh}
+                        {i.en && <span className="ml-1 text-xs italic text-gray-400">({i.en})</span>}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  '—'
+                )
               }
             />
           </dl>

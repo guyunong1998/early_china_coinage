@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
+import type { getWriteClient } from '@/lib/admin/guard'
+import { beginMutation, beginWrite } from '@/lib/admin/mutation'
 import { contextSchema, findSchema, siteSchema } from '@/lib/admin/schemas'
 import { COIN_ISSUE_FIELDS, flattenCoinIssue, flattenPeriod, type CoinIssueEmbed } from '@/lib/queries'
 import type { ActionState } from '@/lib/admin/types'
@@ -57,12 +58,11 @@ function revalidateSite(siteCode: string) {
 // ── sites ────────────────────────────────────────────────────────────────
 
 export async function updateSite(_prev: ActionState<Site>, formData: FormData): Promise<ActionState<Site>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = siteSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(siteSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
-  const { site_code, period_zh, period_en, ...rest } = parsed.data
+  const { site_code, period_zh, period_en, ...rest } = parsed
   let period_id: string | null
   try {
     period_id = await resolvePeriodId(db, period_zh, period_en)
@@ -86,14 +86,13 @@ export async function updateSite(_prev: ActionState<Site>, formData: FormData): 
 // ── contexts ─────────────────────────────────────────────────────────────
 
 export async function createContext(_prev: ActionState<Context>, formData: FormData): Promise<ActionState<Context>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = contextSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(contextSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
-  // parsed.data.id is undefined on create (contextSchema's id is .optional())
-  // and JSON.stringify drops undefined-valued keys, so no need to strip it.
-  const { period_zh, period_en, ...rest } = parsed.data
+  // parsed.id is undefined on create (contextSchema's id is .optional()) and
+  // JSON.stringify drops undefined-valued keys, so no need to strip it.
+  const { period_zh, period_en, ...rest } = parsed
   let period_id: string | null
   try {
     period_id = await resolvePeriodId(db, period_zh, period_en)
@@ -108,18 +107,17 @@ export async function createContext(_prev: ActionState<Context>, formData: FormD
     .single()
   if (error) return { ok: false, formError: error.message }
 
-  revalidateSite(parsed.data.site_code)
+  revalidateSite(parsed.site_code)
   return { ok: true, data: flattenPeriod(data), message: 'Added.' }
 }
 
 export async function updateContext(_prev: ActionState<Context>, formData: FormData): Promise<ActionState<Context>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = contextSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
-  if (!parsed.data.id) return { ok: false, formError: 'Missing context id.' }
+  const begun = await beginMutation(contextSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
+  if (!parsed.id) return { ok: false, formError: 'Missing context id.' }
 
-  const { id, period_zh, period_en, ...rest } = parsed.data
+  const { id, period_zh, period_en, ...rest } = parsed
   let period_id: string | null
   try {
     period_id = await resolvePeriodId(db, period_zh, period_en)
@@ -135,14 +133,14 @@ export async function updateContext(_prev: ActionState<Context>, formData: FormD
     .single()
   if (error) return { ok: false, formError: error.message }
 
-  revalidateSite(parsed.data.site_code)
+  revalidateSite(parsed.site_code)
   return { ok: true, data: flattenPeriod(data), message: 'Saved.' }
 }
 
 export async function deleteContext(id: string, siteCode: string): Promise<ActionState<null>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const { error } = await db.from('contexts').delete().eq('id', id)
+  const begun = await beginWrite()
+  if (!begun.ok) return begun.result
+  const { error } = await begun.db.from('contexts').delete().eq('id', id)
   if (error) return { ok: false, formError: error.message }
 
   revalidateSite(siteCode)
@@ -152,14 +150,13 @@ export async function deleteContext(id: string, siteCode: string): Promise<Actio
 // ── finds ────────────────────────────────────────────────────────────────
 
 export async function createFind(_prev: ActionState<Find>, formData: FormData): Promise<ActionState<Find>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = findSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(findSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
   const { data, error } = await db
     .from('finds')
-    .insert(parsed.data)
+    .insert(parsed)
     .select(`*, coin_issues(${COIN_ISSUE_FIELDS})`)
     .single()
   if (error) return { ok: false, formError: error.message }
@@ -169,13 +166,12 @@ export async function createFind(_prev: ActionState<Find>, formData: FormData): 
 }
 
 export async function updateFind(_prev: ActionState<Find>, formData: FormData): Promise<ActionState<Find>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = findSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
-  if (!parsed.data.id) return { ok: false, formError: 'Missing find id.' }
+  const begun = await beginMutation(findSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
+  if (!parsed.id) return { ok: false, formError: 'Missing find id.' }
 
-  const { id, ...rest } = parsed.data
+  const { id, ...rest } = parsed
   const { data, error } = await db
     .from('finds')
     .update(rest)
@@ -189,9 +185,9 @@ export async function updateFind(_prev: ActionState<Find>, formData: FormData): 
 }
 
 export async function deleteFind(id: string): Promise<ActionState<null>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const { error } = await db.from('finds').delete().eq('id', id)
+  const begun = await beginWrite()
+  if (!begun.ok) return begun.result
+  const { error } = await begun.db.from('finds').delete().eq('id', id)
   if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/sites/[site_code]', 'page')

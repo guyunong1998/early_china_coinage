@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { colorForType, shadesOf } from '@/lib/coin-type-colors'
+import { colorForType, shadesOf, UNCLASSIFIED_COLOR } from '@/lib/coin-type-colors'
 
 export type PieChild = {
   label: string
@@ -104,7 +104,7 @@ function clampSpan(startAngle: number, endAngle: number) {
 function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" className={`${className} shrink-0`} aria-hidden="true">
-      <circle cx="8" cy="8" r="8" fill="#9ca3af" />
+      <circle cx="8" cy="8" r="8" fill={UNCLASSIFIED_COLOR} />
       <rect x="7.25" y="3.5" width="1.5" height="5.5" rx="0.75" fill="white" />
       <rect x="7.25" y="10.5" width="1.5" height="1.5" rx="0.75" fill="white" />
     </svg>
@@ -271,7 +271,7 @@ export function CoinTypePieChart({
               cy={cy}
               r={rOuter + RING_WIDTH / 2}
               fill="none"
-              stroke="#9ca3af"
+              stroke={UNCLASSIFIED_COLOR}
               strokeWidth={RING_WIDTH}
             >
               <title>{`${unquantified.length} unquantified type(s) not shown as slices`}</title>

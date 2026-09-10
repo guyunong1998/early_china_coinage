@@ -1,10 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
+import type { getWriteClient } from '@/lib/admin/guard'
+import { beginMutation, insertOrFindExisting } from '@/lib/admin/mutation'
 import { createMintSchema, mintSchema } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
-import { slugify } from '@/lib/mint-directory'
+import { slugify } from '@/lib/format'
 import { toEnglishName } from '@/lib/name-translation'
 import type { Mint } from '@/lib/types'
 
@@ -20,7 +21,7 @@ async function generateMintCode(
   nameZh: string,
   nameEn: string | null
 ): Promise<string> {
-  const base = slugify(toEnglishName(nameZh, nameEn) || nameZh)
+  const base = slugify(toEnglishName(nameZh, nameEn) || nameZh, 'mint')
   let candidate = base
   let i = 2
   for (;;) {
@@ -32,12 +33,11 @@ async function generateMintCode(
 }
 
 export async function updateMint(_prev: ActionState<Mint>, formData: FormData): Promise<ActionState<Mint>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = mintSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(mintSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
-  const { id, ...rest } = parsed.data
+  const { id, ...rest } = parsed
   const { data, error } = await db
     .from('mints')
     .update(rest)
@@ -60,32 +60,18 @@ export async function updateMint(_prev: ActionState<Mint>, formData: FormData): 
  * already-catalogued mint name by accident just resolves to that mint.
  */
 export async function createMint(_prev: ActionState<Mint>, formData: FormData): Promise<ActionState<Mint>> {
-  await assertAuthorized()
-  const db = await getWriteClient()
-  const parsed = createMintSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) return { ok: false, fieldErrors: parsed.error.flatten().fieldErrors }
+  const begun = await beginMutation(createMintSchema, formData)
+  if (!begun.ok) return begun.result
+  const { db, data: parsed } = begun
 
-  const mint_code = await generateMintCode(db, parsed.data.name_zh, parsed.data.name_en)
-  const { data, error } = await db
-    .from('mints')
-    .insert({ ...parsed.data, mint_code })
-    .select(MINT_FIELDS)
-    .single()
-
-  if (error) {
-    if (error.code === '23505') {
-      const { data: existing, error: selectError } = await db
-        .from('mints')
-        .select(MINT_FIELDS)
-        .eq('name_zh', parsed.data.name_zh)
-        .single()
-      if (selectError) return { ok: false, formError: selectError.message }
-      revalidatePath('/mints')
-      return { ok: true, data: existing, message: 'A mint with this name already exists — using it.' }
-    }
-    return { ok: false, formError: error.message }
-  }
+  const mint_code = await generateMintCode(db, parsed.name_zh, parsed.name_en)
+  const result = await insertOrFindExisting<Mint>(
+    () => db.from('mints').insert({ ...parsed, mint_code }).select(MINT_FIELDS).single(),
+    () => db.from('mints').select(MINT_FIELDS).eq('name_zh', parsed.name_zh).single(),
+    'A mint with this name already exists — using it.'
+  )
+  if (!result.ok) return result
 
   revalidatePath('/mints')
-  return { ok: true, data, message: 'Created.' }
+  return { ok: true, data: result.data, message: result.message }
 }

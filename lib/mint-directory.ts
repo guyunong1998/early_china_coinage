@@ -51,24 +51,6 @@ export function findMintByNameZh(mints: MintInfo[], nameZh: string | null | unde
   return mints.find((m) => m.name_zh === trimmed)
 }
 
-/** Human-facing search only (the /mints search box) — matches
- * alternative_names too, since a researcher typing a historical spelling
- * they recognize should still find the mint. Not used for any data-matching
- * path. */
-export function searchMintInfos(mints: MintInfo[], query: string): MintInfo[] {
-  const q = query.trim().toLowerCase()
-  if (!q) return mints
-  return mints.filter(
-    (m) =>
-      m.name_en.toLowerCase().includes(q) ||
-      m.name_zh.includes(q) ||
-      m.state_en.toLowerCase().includes(q) ||
-      m.state_zh.includes(q) ||
-      m.modern_location_en.toLowerCase().includes(q) ||
-      m.alternative_names.some((alt) => alt.includes(q))
-  )
-}
-
 /**
  * A live `mints` row, flattened and with its images/description/etc. fully
  * resolved for display — everything here comes straight from the database
@@ -85,17 +67,6 @@ export type MintDirectoryEntry = MintInfo & {
    * manual-verification queue, not a finished bibliography. */
   sources_unlinked: string[]
   images: MintImage[]
-}
-
-/** Exported for lib/admin/mints-actions.ts, which needs the same slugging
- * rule to generate a mint_code for a brand-new mint at insert time. */
-export function slugify(label: string): string {
-  return (
-    label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'mint'
-  )
 }
 
 /**

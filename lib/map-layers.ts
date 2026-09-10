@@ -3,6 +3,8 @@
  */
 import { PLACE_LABELS } from '@/lib/place-labels'
 import { toEnglishName } from '@/lib/name-translation'
+// https://github.com/ghybs/Leaflet.TileLayer.Fallback
+import 'leaflet.tilelayer.fallback'
 
 type LeafletNS = typeof import('leaflet')
 
@@ -187,7 +189,7 @@ const ROUTE_LEVEL_LABELS: Record<number, { zh: string; en: string }> = {
 }
 
 function bilingualHtml(zh: string, en: string) {
-  return `<span>${zh}<span style="margin-left:6px;font-style:italic;color:#9ca3af;font-size:0.85em;">${en}</span></span>`
+  return `<span>${zh}<span style="margin-left:6px;font-style:italic;color:var(--map-label-muted);font-size:0.85em;">${en}</span></span>`
 }
 
 function pathLength(coords: number[][]) {
@@ -370,8 +372,13 @@ export function buildBaseLayers(L: LeafletNS) {
   // the default CyclOSM base layer (see the cyclosm tile layer below) for a
   // historical/archaeological atlas look. Its own tiles only go up to zoom
   // 11 (maxNativeZoom); maxZoom stays high so Leaflet just upscales the
-  // last tile instead of leaving deep zooms blank.
-  const cawm = L.tileLayer('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png', {
+  // last tile instead of leaving deep zooms blank. A handful of CAWM's own
+  // native tiles are also just missing outright (e.g. the zoom-6 tile over
+  // South Korea returns a 200 with an empty body) — L.tileLayer.fallback
+  // (leaflet.tilelayer.fallback) retries a failed tile one zoom level out
+  // and scales that in, so a gap reads as briefly blurry instead of the
+  // default gray "failed to load" square.
+  const cawm = L.tileLayer.fallback('https://cawm.lib.uiowa.edu/tiles/{z}/{x}/{y}.png', {
     attribution:
       'Basemap © <a href="https://cawm.lib.uiowa.edu">Consortium of Ancient World Mappers</a>',
     maxZoom: 19,
@@ -531,7 +538,7 @@ export function addLayerControl(
   // not React) the same dotted-underline look every other in-app hint uses.
   const routesLabel =
     '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change)." ' +
-    'style="cursor:help;border-bottom:1px dotted #9ca3af">Routes</span>'
+    'style="cursor:help;border-bottom:1px dotted var(--map-label-muted)">Routes</span>'
 
   const control = L.control
     .layers(
@@ -584,11 +591,4 @@ export function addLayerControl(
  */
 export function addStaticMajorRivers(L: LeafletNS, map: import('leaflet').Map) {
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
-}
-
-/** Opt-in helper if a map without layer chrome still wants the network on.
- *  Visualization pages do not call this — routes stay off until the user
- *  ticks "Routes" in the layer control. */
-export function addStaticRoutes(L: LeafletNS, map: import('leaflet').Map) {
-  buildRoutesLayer(L, map).addTo(map)
 }

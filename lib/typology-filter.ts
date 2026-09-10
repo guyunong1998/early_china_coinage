@@ -1,4 +1,4 @@
-import { splitCsv } from '@/lib/format'
+import { findQuantity } from '@/lib/quantity'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind } from '@/lib/types'
 
 /**
@@ -252,53 +252,6 @@ export function getMatchingCoinIssueIds(
   return ids
 }
 
-type SiteLevelFields = {
-  level1_types_zh: string | null
-  level2_types_zh: string | null
-  level3_types_zh: string | null
-  level4_types_zh: string | null
-  level5_types_zh: string | null
-  inscriptions: string | null
-}
-
-/** The deepest level set in `sel`, and its value — v_coin_map_sites carries
- * one CSV column per level, so a selection at depth N is matched directly
- * against that site's levelN_types_zh, no derivation needed. */
-function deepestSelectedLevel(sel: TypologyFilterSelection): { depth: 1 | 2 | 3 | 4 | 5; value: string } | null {
-  for (let i = LEVEL_KEYS.length - 1; i >= 0; i--) {
-    const value = sel[LEVEL_KEYS[i]]
-    if (value) return { depth: (i + 1) as 1 | 2 | 3 | 4 | 5, value }
-  }
-  return null
-}
-
-/**
- * Site-aggregate match for the homepage CoinFilterMap (CSV text fields on
- * MapSite). Sites only carry text, not hierarchy ids, so an inscription-only
- * selection needs its zh text resolved by the caller (from the same
- * inscription option list the UI already fetched) and passed as
- * `inscriptionZh`.
- */
-export function siteMatchesTypologyFilter(
-  site: SiteLevelFields,
-  sel: TypologyFilterSelection,
-  inscriptionZh: string | null
-): boolean {
-  const deepest = deepestSelectedLevel(sel)
-  if (!deepest) {
-    if (!sel.inscriptionId) return false
-    return !!inscriptionZh && splitCsv(site.inscriptions).includes(inscriptionZh)
-  }
-
-  const siteValues = splitCsv(site[`level${deepest.depth}_types_zh` as const])
-  if (!siteValues.includes(deepest.value)) return false
-
-  if (sel.inscriptionId) {
-    return !!inscriptionZh && splitCsv(site.inscriptions).includes(inscriptionZh)
-  }
-  return true
-}
-
 export function optionLabel(en: string, zh: string, lang: 'en' | 'zh'): string {
   if (lang === 'zh' && zh) return zh
   if (en && zh) return `${en} · ${zh}`
@@ -397,24 +350,6 @@ export type TypologyOptionCounts = {
   inscription: (inscriptionId: string) => number
 }
 
-/** Builds a TypologyOptionCounts whose per-option number comes from
- * `countMatches`, which receives the selection to match (level path plus
- * optionally inscriptionId) and returns however many items match it. */
-function buildTypologyOptionCounts(
-  sel: TypologyFilterSelection,
-  countMatches: (matchSel: TypologyFilterSelection) => number
-): TypologyOptionCounts {
-  return {
-    level: (depth, value) => {
-      const levelSel = emptyTypologySelection()
-      for (let i = 0; i < depth - 1; i++) levelSel[LEVEL_KEYS[i]] = sel[LEVEL_KEYS[i]]
-      levelSel[LEVEL_KEYS[depth - 1]] = value
-      return countMatches(levelSel)
-    },
-    inscription: (inscriptionId) => countMatches({ ...sel, inscriptionId }),
-  }
-}
-
 /**
  * One-pass aggregation for dropdown option counts. The previous path called
  * getMatchingCoinIssueIds + a full finds scan once per option, which made
@@ -466,7 +401,7 @@ function buildTypologyCountsFromFinds(
 
   finds.forEach((find) => {
     if (!find.coin_issues_id) return
-    const qty = mode === 'specimens' ? findQuantity(find) : 0
+    const qty = mode === 'specimens' ? findQuantity(find, { includePresence: true }) : 0
     if (mode === 'specimens' && qty <= 0) return
     const coin = coinIssueById.get(find.coin_issues_id)
     if (!coin) return
@@ -570,13 +505,6 @@ function matchedIdsPerEntry(
   return result
 }
 
-function findQuantity(find: HeatmapFind): number {
-  if (find.quantity_total != null) return find.quantity_total
-  if (find.quantity_estimated != null) return find.quantity_estimated
-  if (find.quantity_min != null) return find.quantity_min
-  return find.presence ? 1 : 0
-}
-
 /** Per-site, per-selection-entry coin quantities for Compare mode — outer
  * key is site_code, inner key is entry.key. Used by Find Site's "by type"
  * Compare view (one point per site per matching entry). */
@@ -590,7 +518,7 @@ export function computeSiteTypeQuantities(
   const result = new Map<string, Map<string, number>>()
   finds.forEach((find) => {
     if (!find.site_code || !find.coin_issues_id) return
-    const qty = findQuantity(find)
+    const qty = findQuantity(find, { includePresence: true })
     if (qty <= 0) return
     entries.forEach((entry) => {
       if (!idsByEntry.get(entry.key)!.has(find.coin_issues_id!)) return
@@ -619,7 +547,7 @@ export function computeMintTypeQuantities(
     const coinIssue = coinIssueById.get(find.coin_issues_id)
     const mintZh = coinIssue?.mint_zh?.trim()
     if (!mintZh) return
-    const qty = findQuantity(find)
+    const qty = findQuantity(find, { includePresence: true })
     if (qty <= 0) return
     entries.forEach((entry) => {
       if (!idsByEntry.get(entry.key)!.has(find.coin_issues_id!)) return

@@ -18,7 +18,7 @@ export type MintCoinTypeHint = {
 
 function CoinTypeHintPanel({ item }: { item: MintCoinTypeHint }) {
   return (
-    <div className="w-44">
+    <div className="w-full">
       {item.obverseSrc ? (
         <div className="relative h-24 w-full overflow-hidden rounded border border-gray-200 bg-white">
           <Image src={item.obverseSrc} alt={item.zh} fill sizes="176px" className="object-contain" />
@@ -48,7 +48,12 @@ export function MintCoinTypeHints({ items }: { items: MintCoinTypeHint[] }) {
   return (
     <span className="flex flex-wrap items-baseline gap-x-1">
       {items.map((item, i) => {
-        const label = item.en ? `${item.zh} (${item.en})` : item.zh
+        const label = (
+          <>
+            {item.zh}
+            {item.en && <span className="ml-1 text-xs italic text-gray-400">({item.en})</span>}
+          </>
+        )
         return (
           <span key={`${item.slug ?? item.zh}-${i}`}>
             {item.slug ? (

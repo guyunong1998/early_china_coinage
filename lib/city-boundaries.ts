@@ -83,11 +83,6 @@ export function countSitesByPrecision(
   return counts
 }
 
-/** @deprecated Use getSitePrecisionLevel */
-export function getSitePrecision(site: PrecisionSiteFields): SitePrecisionLevel {
-  return getSitePrecisionLevel(site)
-}
-
 /** City-level precision: draw the city admin boundary. */
 export function shouldShowCityBoundary(site: MapSite) {
   return getSitePrecisionLevel(site) === 'city' && !!site.city_zh?.trim()
@@ -149,4 +144,57 @@ export async function fetchCountyBoundaryGeoJson(
 ) {
   const key = cacheKey('county', countyZh, provinceZh, cityZh)
   return fetchBoundaryGeoJson(key, [countyZh, cityZh, provinceZh])
+}
+
+export type BoundaryStyle = {
+  color: string
+  weight: number
+  opacity: number
+  fillColor: string
+  fillOpacity: number
+  dashArray: string
+}
+
+/** Reads one of app/maps.css's --map-boundary-{city,county}-* variable sets
+ * into a Leaflet PathOptions-shaped object, so the city/county boundary look
+ * has one definition (in CSS) shared by every map that draws it (CoinMap.tsx,
+ * SinglePointMap.tsx, MapVisCanvas.tsx) instead of each hardcoding its own
+ * copy of the same style literal. */
+function boundaryStyle(level: 'city' | 'county', fallback: BoundaryStyle): BoundaryStyle {
+  if (typeof document === 'undefined') return fallback
+  const styles = getComputedStyle(document.documentElement)
+  const prefix = `--map-boundary-${level}`
+  const weight = parseFloat(styles.getPropertyValue(`${prefix}-weight`))
+  const opacity = parseFloat(styles.getPropertyValue(`${prefix}-opacity`))
+  const fillOpacity = parseFloat(styles.getPropertyValue(`${prefix}-fill-opacity`))
+  return {
+    color: styles.getPropertyValue(`${prefix}-color`).trim() || fallback.color,
+    weight: Number.isFinite(weight) ? weight : fallback.weight,
+    opacity: Number.isFinite(opacity) ? opacity : fallback.opacity,
+    fillColor: styles.getPropertyValue(`${prefix}-fill`).trim() || fallback.fillColor,
+    fillOpacity: Number.isFinite(fillOpacity) ? fillOpacity : fallback.fillOpacity,
+    dashArray: styles.getPropertyValue(`${prefix}-dash`).trim() || fallback.dashArray,
+  }
+}
+
+export function cityBoundaryStyle(): BoundaryStyle {
+  return boundaryStyle('city', {
+    color: '#8e8e8e',
+    weight: 1.5,
+    opacity: 0.9,
+    fillColor: '#bfbfbf',
+    fillOpacity: 0.1,
+    dashArray: '4 4',
+  })
+}
+
+export function countyBoundaryStyle(): BoundaryStyle {
+  return boundaryStyle('county', {
+    color: '#6f6f6f',
+    weight: 2,
+    opacity: 0.9,
+    fillColor: '#b5b5b5',
+    fillOpacity: 0.14,
+    dashArray: '2 3',
+  })
 }

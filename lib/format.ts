@@ -3,14 +3,6 @@ export function displayValue(value: string | number | null | undefined, fallback
   return String(value)
 }
 
-export function formatLocation(site: {
-  province_zh?: string | null
-  city_zh?: string | null
-  county_zh?: string | null
-}) {
-  return [site.province_zh, site.city_zh, site.county_zh].filter(Boolean).join(' · ')
-}
-
 export function formatNumber(value: number | null | undefined) {
   if (value === null || value === undefined) return '—'
   return value.toLocaleString('en-US')
@@ -27,4 +19,16 @@ export function splitCsv(value: string | null | undefined): string[] {
     .split(/[、,，;；|]/)
     .map((s) => s.trim())
     .filter(Boolean)
+}
+
+/** Lowercases, strips to [a-z0-9-], collapses to single dashes — for URL
+ * slugs derived from a (usually English) label. `fallback` covers labels
+ * that reduce to nothing (e.g. an all-CJK string with no romanization). */
+export function slugify(label: string, fallback: string): string {
+  return (
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || fallback
+  )
 }

@@ -625,24 +625,8 @@ export const DICTIONARY = {
   'coinTypeDetail.imagePlaceholder': { en: 'Coin image', zh: '钱币图片' },
   'coinType.mouldTag': { en: 'M', zh: '范' },
 
-  // ── home map filter panel (CoinFilterMap) ────────────────────────────
   'home.mapSection.title': { en: 'View More Map Visualizations', zh: '查看更多地图可视化' },
   'home.coinTypesSection.title': { en: 'Explore Coin Types', zh: '探索币种分类' },
-  'coinFilterMap.byType': { en: 'Filter by Coin Type', zh: '按币种筛选' },
-  'coinFilterMap.byMint': { en: 'Filter by Mint', zh: '按铸地筛选' },
-  'coinFilterMap.clearFilter': { en: '✕ Clear filter', zh: '✕ 清除筛选' },
-  'coinFilterMap.category': { en: '1 · Coin category', zh: '1 · 币种大类' },
-  'coinFilterMap.subcategory': { en: '2 · Sub-category', zh: '2 · 子类' },
-  'coinFilterMap.type': { en: '3 · Type', zh: '3 · 类型' },
-  'coinFilterMap.inscription': { en: '4 · Inscription', zh: '4 · 铭文' },
-  'coinFilterMap.clear': { en: '✕ clear', zh: '✕ 清除' },
-  'coinFilterMap.searchMint': { en: 'Search mint name…', zh: '搜索铸地名称…' },
-  'coinFilterMap.selectMint': { en: 'Select mint', zh: '选择铸地' },
-  'coinFilterMap.match': { en: 'Match', zh: '匹配' },
-  'coinFilterMap.noMatch': { en: 'No match', zh: '不匹配' },
-  'coinFilterMap.matchSites': { en: '({count} sites)', zh: '（{count} 处遗址）' },
-  'coinFilterMap.inscriptionCount': { en: '4 · Inscription ({count})', zh: '4 · 铭文（{count}）' },
-  'coinFilterMap.mintLabel': { en: 'mint:', zh: '铸地：' },
 } as const
 
 export type DictionaryKey = keyof typeof DICTIONARY

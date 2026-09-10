@@ -58,3 +58,14 @@ export function parseViewMode(raw: string | undefined): ViewMode | undefined {
 export function parseFilterMode(raw: string | undefined): FilterMode | undefined {
   return raw === 'type' || raw === 'mint' ? raw : undefined
 }
+
+/** The view-mode/type-selection pair every map-visualization page decodes
+ * from its searchParams and spreads onto whichever visualization component
+ * it renders — the one deep-link pair all three pages (Museum Collections,
+ * Find Site, Mint Town) forward, whatever else differs between them. */
+export function parseCommonDeeplinkParams(view: string | undefined, types: string | undefined) {
+  return {
+    initialViewMode: parseViewMode(view),
+    initialTypeSelections: decodeTypologySelections(types),
+  }
+}

@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { AddMintSection } from '@/components/mints/AddMintSection'
 import { MintListClient } from '@/components/mints/MintListClient'
+import { MapOverviewCard } from '@/components/home/MapOverviewCard'
 import { MapVisCanvas } from '@/components/map/MapVisCanvas'
 import { T } from '@/components/i18n/T'
 import { isAuthorized } from '@/lib/admin/guard'
@@ -75,37 +75,19 @@ export default async function MintsPage() {
         </div>
       </div>
 
-      {/* Overview map — same left-third title/link + right-two-thirds map
-          card the home page uses for its own map section. */}
-      <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
-        <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
-          <h2 className="font-serif text-xl font-semibold text-brand">
-            <T k="navcards.map.label" />
-          </h2>
-          <p className="text-sm leading-6 text-gray-600">
-            <T k="navcards.map.desc" />
-          </p>
-          <Link
-            href="/visualizations/mint-town"
-            className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
-          >
-            <T k="home.mapSection.title" /> →
-          </Link>
+      <MapOverviewCard href="/visualizations/mint-town">
+        <div className="relative h-[340px] w-full overflow-hidden">
+          <MapVisCanvas
+            kind="mints"
+            mintPoints={mintPoints}
+            mintStates={null}
+            viewMode="points"
+            densityLatLngs={[]}
+            fullControls={false}
+            height="340px"
+          />
         </div>
-        <div className="lg:col-span-2 p-4">
-          <div className="relative overflow-hidden" style={{ height: '340px', width: '100%' }}>
-            <MapVisCanvas
-              kind="mints"
-              mintPoints={mintPoints}
-              mintStates={null}
-              viewMode="points"
-              densityLatLngs={[]}
-              fullControls={false}
-              height="340px"
-            />
-          </div>
-        </div>
-      </div>
+      </MapOverviewCard>
 
       {/* Searchable list */}
       <div className="mt-8">
