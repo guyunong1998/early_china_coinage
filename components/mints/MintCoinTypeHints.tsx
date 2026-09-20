@@ -21,7 +21,13 @@ function CoinTypeHintPanel({ item }: { item: MintCoinTypeHint }) {
     <div className="w-full">
       {item.obverseSrc ? (
         <div className="relative h-24 w-full overflow-hidden rounded border border-gray-200 bg-white">
-          <Image src={item.obverseSrc} alt={item.zh} fill sizes="176px" className="object-contain" />
+          <Image
+            src={item.obverseSrc}
+            alt={item.en ? `${item.zh} (${item.en})` : item.zh}
+            fill
+            sizes="176px"
+            className="object-contain"
+          />
         </div>
       ) : (
         <ImagePlaceholder label={<T k="coinTypeDetail.imagePlaceholder" />} className="h-24 w-full rounded" />

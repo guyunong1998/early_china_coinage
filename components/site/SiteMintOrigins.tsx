@@ -15,6 +15,7 @@
 import { useMemo, useState } from 'react'
 import { OriginDistributionMap, type OriginDistributionPoint } from '@/components/map/OriginDistributionMap'
 import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export type HoardMintOrigin = {
   mint_code?: string
@@ -55,6 +56,7 @@ type SiteMintOriginsProps = {
 const SITE_ORIGIN_COLOR = 'var(--map-pin-accent)'
 
 export function SiteMintOrigins({ site, mints, mintTypeKeys, typeOptions }: SiteMintOriginsProps) {
+  const { t } = useLanguage()
   const [selectedType, setSelectedType] = useState('all')
 
   const filteredMints = useMemo(() => {
@@ -83,7 +85,7 @@ export function SiteMintOrigins({ site, mints, mintTypeKeys, typeOptions }: Site
         <strong>Mint town / 铸币地：</strong>${mint.mint_zh}${mint.mint_en ? ` <span class="map-popup-muted-italic">(${mint.mint_en})</span>` : ''}<br/>
         <strong>Coin types / 币类：</strong>${coinTypesList}<br/>
         <strong>Quantity in this hoard / 数量：</strong>${mint.quantity || mint.findCount}<br/>
-        ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" class="map-popup-link">View mint town →</a>` : ''}
+        ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" class="map-popup-link">${t('map.popup.viewMintTown')}</a>` : ''}
       </div>`,
     }
   })
@@ -92,7 +94,7 @@ export function SiteMintOrigins({ site, mints, mintTypeKeys, typeOptions }: Site
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="site-mint-type-filter" className="text-sm font-semibold text-gray-700">
-          Coin type filter:
+          {t('originDistribution.filterLabel')}
         </label>
         <select
           id="site-mint-type-filter"
@@ -100,7 +102,7 @@ export function SiteMintOrigins({ site, mints, mintTypeKeys, typeOptions }: Site
           onChange={(e) => setSelectedType(e.target.value)}
           className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
         >
-          <option value="all">All coin types ({mints.length} mints)</option>
+          <option value="all">{t('siteMintOrigins.allTypes', { count: mints.length })}</option>
           {typeOptions.map((option) => (
             <option key={option.key} value={option.key}>
               {option.label} ({option.mintCount})

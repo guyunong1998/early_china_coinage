@@ -94,7 +94,7 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            aria-label="Toggle filters"
+            aria-label={t('ui.toggleFilters')}
             className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand/30 text-brand lg:hidden"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

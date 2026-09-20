@@ -36,6 +36,8 @@ const PAGE_SIZE = 20
 // allow it (ignored on shorter-cap hobby tiers).
 export const maxDuration = 60
 
+export const revalidate = 86400
+
 // Same glossary/format used by the map popups (CoinMap.tsx, CoinTypeHeatmapMap.tsx)
 // so the result list matches what clicking a dot shows.
 const COIN_TYPE_TRANSLATIONS: Record<string, string> = {

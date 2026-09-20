@@ -238,7 +238,9 @@ export function CitationsSection({
             <CitationText text={formatSourceCitation(source, link.page)} />
           </p>
         ) : (
-          <p className="mt-1 italic text-gray-400">Source not found.</p>
+          <p className="mt-1 italic text-gray-400">
+            <T k="sources.notFound" />
+          </p>
         )}
         {(link.note_zh || link.note_en) && (
           <p className="mt-1 text-xs text-gray-500">{link.note_zh || link.note_en}</p>
@@ -343,7 +345,7 @@ export function CitationsSection({
       {legacy != null && (
         <div className="border-t border-gray-100 pt-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Legacy / unlinked references
+            <T k="sources.legacyReferences" />
           </p>
           {legacy}
         </div>

@@ -27,7 +27,7 @@ export function SubtypeImageGrid({ subtypes }: { subtypes: CoinTypeNode[] }) {
               {obverseSrc ? (
                 <Image
                   src={obverseSrc}
-                  alt={subtype.label_en}
+                  alt={`${subtype.label_zh} (${subtype.label_en})`}
                   width={200}
                   height={200}
                   className="h-full w-full object-contain transition group-hover:opacity-90"

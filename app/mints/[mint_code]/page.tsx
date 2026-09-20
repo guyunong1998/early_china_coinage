@@ -28,6 +28,8 @@ import {
 
 const LEVEL_RANK: Record<CoinTypeLevel, number> = { level1: 1, level2: 2, level3: 3, level4: 4, level5: 5 }
 
+export const revalidate = 86400
+
 type PageProps = {
   params: Promise<{ mint_code: string }>
 }
@@ -131,7 +133,7 @@ export default async function MintDetailPage({ params }: PageProps) {
               value={
                 mint.lat != null && mint.lng != null
                   ? `${mint.lat.toFixed(6)}, ${mint.lng.toFixed(6)}`
-                  : 'Not yet established'
+                  : <T k="mintDetail.notYetEstablished" />
               }
             />
           </dl>
@@ -146,7 +148,7 @@ export default async function MintDetailPage({ params }: PageProps) {
               />
             ) : (
               <div className="flex h-[280px] items-center justify-center bg-gray-50 text-sm text-gray-400">
-                Geolocation not yet established for this mint town.
+                <T k="mintDetail.noGeolocation" />
               </div>
             )}
           </div>
@@ -172,7 +174,10 @@ export default async function MintDetailPage({ params }: PageProps) {
                     href={`/search?mint=${encodeURIComponent(mint.name_zh)}`}
                     className="text-brand hover:underline"
                   >
-                    {distribution.totalCoinCount} coins across {distribution.siteCount} sites
+                    <T
+                      k="stats.coinsAcrossSites"
+                      vars={{ coins: distribution.totalCoinCount, sites: distribution.siteCount }}
+                    />
                   </Link>
                 ) : (
                   '—'
@@ -211,11 +216,13 @@ export default async function MintDetailPage({ params }: PageProps) {
         {descriptionEn ? (
           <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
         ) : (
-          <p className="text-sm italic text-gray-400">No English description recorded yet.</p>
+          <p className="text-sm italic text-gray-400">
+            <T k="mintDetail.noEnglishDescription" />
+          </p>
         )}
         {!descriptionZh && !descriptionEn && (
           <p className="text-sm italic text-gray-400">
-            No description recorded yet for this mint town.
+            <T k="mintDetail.noDescription" />
           </p>
         )}
         {mint.location_note && (
@@ -233,10 +240,10 @@ export default async function MintDetailPage({ params }: PageProps) {
       )}
 
       {/* Mint + issued-coin findspot distribution */}
-      <Panel header="Issued Coin Distribution" className="mt-6">
+      <Panel header={<T k="mintDetail.issueDistribution.title" />} className="mt-6">
         {distribution.sites.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No findspot records linked to this mint in the current database.
+            <T k="mintDetail.issueDistribution.noFindspots" />
           </p>
         ) : (
           <MintIssueDistribution
@@ -294,7 +301,10 @@ export default async function MintDetailPage({ params }: PageProps) {
                 )}
                 {mint.citation && (
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Citation:</span> {mint.citation}
+                    <span className="font-semibold">
+                      <T k="mintDetail.citationLabel" />
+                    </span>{' '}
+                    {mint.citation}
                   </p>
                 )}
               </div>

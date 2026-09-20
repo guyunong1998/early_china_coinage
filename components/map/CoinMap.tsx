@@ -145,7 +145,7 @@ export default function CoinMap({
               }),
         })
 
-        const nameZh = site.site_name_zh ?? '未命名遗址'
+        const nameZh = site.site_name_zh ?? '未命名遗址 (Unnamed site)'
         const nameEn = toEnglishName(site.site_name_zh, site.site_name_en)
         const provinceZh = site.province_zh ?? '—'
         const provinceEn = toEnglishName(site.province_zh, site.province_en)
@@ -163,7 +163,7 @@ export default function CoinMap({
             <div><strong>County / 县：</strong>${countyZh}${countyEn ? ` <span class="map-popup-muted">(${countyEn})</span>` : ''}</div>
             <div><strong>Coin type / 币类：</strong>${typeBilingual}</div>
             <div><strong>Quantity / 数量：</strong>${site.total_quantity_for_map ?? 0}</div>
-            <a href="/sites/${site.site_code}" class="map-popup-link">View record →</a>
+            <a href="/sites/${site.site_code}" class="map-popup-link">View record / 查看记录 →</a>
           </div>
         `)
 

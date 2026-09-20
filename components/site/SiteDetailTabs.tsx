@@ -19,8 +19,9 @@ function coinTypeLabel(find: Find) {
     find.coin_issues?.minor_type_zh?.trim() ||
     find.coin_issues?.major_type_zh?.trim() ||
     find.description_zh?.trim() ||
-    'Unclassified'
+    null
   const en = find.coin_issues?.minor_type_en?.trim() || find.coin_issues?.major_type_en?.trim() || null
+  if (!zh) return { zh: '未分类', en: 'Unclassified' }
   return { zh, en }
 }
 

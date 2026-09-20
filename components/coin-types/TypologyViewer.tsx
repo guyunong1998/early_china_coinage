@@ -328,7 +328,7 @@ export function TypologyViewer({
                 responsive-sizing pipeline isn't a fit for this. */}
             <img
               src={src}
-              alt="Coin type hierarchy diagram"
+              alt={t('coinTypeList.typologyViewer.diagramAlt')}
               width={manifest.width}
               height={manifest.height}
               draggable={false}

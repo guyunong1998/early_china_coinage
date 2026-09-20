@@ -24,7 +24,7 @@ Required environment variables (`.env.local`, see that file for the current temp
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (required for **local** admin editing — Add citation, create/edit sources, etc. Get it from Supabase → Project Settings → API → `service_role`. Never expose this key in client code or commit it.)
+- `SUPABASE_SERVICE_ROLE_KEY` (required for **local** admin editing)
 
 Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
@@ -43,10 +43,9 @@ Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, Supabase (Postg
 
 ## Data
 
-Two sources, kept deliberately separate — see §3 of `docs/ARCHITECTURE.md` for the full rule:
 
 - **Supabase (remote)**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
-- **Local (bundled in the repo)**: reference/gazetteer data that rarely changes (river overlays, specimen photography) — used as a fallback or supplement wherever the database doesn't carry a field yet. Mint town data itself now lives entirely in the `mints` table.
+- **Local (bundled in the repo)**: reference/gazetteer data that rarely changes (river overlays, specimen photography) — used as a fallback or supplement wherever the database doesn't carry a field yet. 
 
 ## Deployment
 

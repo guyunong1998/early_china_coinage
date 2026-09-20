@@ -536,9 +536,11 @@ export function addLayerControl(
   // nodes" can carry its own hover-title explanation (a native tooltip, not
   // the app's usual ClickHint popover — this control is plain Leaflet DOM,
   // not React) the same dotted-underline look every other in-app hint uses.
+  // Bilingual and not gated by the language toggle (like ROUTE_LEVEL_LABELS
+  // above) — this control is built once and never rebuilt on a lang change.
   const routesLabel =
-    '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change)." ' +
-    'style="cursor:help;border-bottom:1px dotted var(--map-label-muted)">Routes</span>'
+    '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change.) / 古代贸易路线网络，源自唐代（说明可能变更）。" ' +
+    'style="cursor:help;border-bottom:1px dotted var(--map-label-muted)">Routes / 路线</span>'
 
   const control = L.control
     .layers(
@@ -552,8 +554,8 @@ export function addLayerControl(
         OpenStreetMap: osm,
       },
       {
-        'Major rivers': majorRivers,
-        'Minor rivers': minorRivers,
+        'Major rivers / 主要河流': majorRivers,
+        'Minor rivers / 次要河流': minorRivers,
         [routesLabel]: routes,
       },
       { collapsed: options?.collapsed ?? false, position }

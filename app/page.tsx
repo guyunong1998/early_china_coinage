@@ -8,6 +8,8 @@ import { getCoinTypeImagePaths } from '@/lib/coin-images'
 import { buildCoinTypeNodes, pickLevel2ShowcasePhotos } from '@/lib/coin-type-catalog'
 import { getCoinIssues, getCoinTypeHierarchy } from '@/lib/queries'
 
+export const revalidate = 86400
+
 export default async function Home() {
   const [hierarchyRows, coinIssues] = await Promise.all([getCoinTypeHierarchy(), getCoinIssues()])
   const nodes = buildCoinTypeNodes(hierarchyRows, coinIssues)

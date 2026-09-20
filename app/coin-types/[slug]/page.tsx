@@ -52,11 +52,13 @@ const LEVEL_LABEL_KEY: Record<CoinTypeLevel, DictionaryKey> = {
 // API and can't be resolved at build time — Next renders each slug on
 // request instead. notFound() below still 404s unknown slugs correctly.
 
+export const revalidate = 86400
+
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
   const hierarchyRows = await getCoinTypeHierarchy()
   const node = getCoinTypeNodeBySlug(buildCoinTypeNodes(hierarchyRows, []), slug)
-  if (!node) return { title: 'Not found' }
+  if (!node) return { title: 'Not found / 未找到' }
   return {
     title: `${node.label_zh} ${node.label_en} | Coin Types`,
     description: `${node.label_en} (${node.label_zh}) — typology, related finds, inscriptions, and mints.`,
@@ -174,7 +176,13 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             />
             <DetailRow
               labelKey="mintDetail.row.coinsAndSites"
-              value={counts.coinCount > 0 ? `${counts.coinCount} coins across ${counts.siteCount} sites` : '—'}
+              value={
+                counts.coinCount > 0 ? (
+                  <T k="stats.coinsAcrossSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+                ) : (
+                  '—'
+                )
+              }
             />
             <DetailRow
               labelKey="coinTypeDetail.row.mints"
@@ -254,9 +262,9 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                  <th className="py-2 pr-4">Site</th>
-                  <th className="py-2 pr-4">Province</th>
-                  <th className="py-2">Quantity</th>
+                  <th className="py-2 pr-4"><T k="coinTypeDetail.table.site" /></th>
+                  <th className="py-2 pr-4"><T k="coinTypeDetail.table.province" /></th>
+                  <th className="py-2"><T k="coinTypeDetail.table.quantity" /></th>
                 </tr>
               </thead>
               <tbody>

@@ -594,6 +594,10 @@ export const DICTIONARY = {
   'coinTypeList.typologyViewer.zoomIn': { en: 'Zoom in', zh: '放大' },
   'coinTypeList.typologyViewer.zoomOut': { en: 'Zoom out', zh: '缩小' },
   'coinTypeList.typologyViewer.reset': { en: 'Reset view', zh: '重置视图' },
+  'coinTypeList.description': {
+    en: '{count} coin types documented, grouped by the typology hierarchy.',
+    zh: '已收录 {count} 个币种，按类型学层级分组。',
+  },
   'coinTypeDetail.back': { en: '← Coin Types', zh: '← 币种分布' },
   'coinTypeDetail.row.level': { en: 'Level', zh: '层级' },
   'coinTypeDetail.row.parentTypes': { en: 'Parent types', zh: '上级类型' },
@@ -627,6 +631,105 @@ export const DICTIONARY = {
 
   'home.mapSection.title': { en: 'View More Map Visualizations', zh: '查看更多地图可视化' },
   'home.coinTypesSection.title': { en: 'Explore Coin Types', zh: '探索币种分类' },
+
+  // ── shared bits reused across several components ──────────────────────
+  'ui.close': { en: '✕ Close', zh: '✕ 关闭' },
+  'ui.copy': { en: 'Copy', zh: '复制' },
+  'ui.copied': { en: 'Copied', zh: '已复制' },
+  'ui.code': { en: 'Code', zh: '编号' },
+  'ui.coins': { en: 'Coins', zh: '钱币数' },
+  'ui.toggleLanguage': { en: 'Toggle language', zh: '切换语言' },
+  'ui.toggleNavMenu': { en: 'Toggle navigation menu', zh: '切换导航菜单' },
+  'ui.toggleFilters': { en: 'Toggle filters', zh: '切换筛选面板' },
+  'stats.coinsAcrossSites': { en: '{coins} coins across {sites} sites', zh: '{sites} 个遗址，共 {coins} 枚钱币' },
+
+  // ── home demo carousel controls ────────────────────────────────────────
+  'home.demos.prev': { en: 'Previous', zh: '上一张' },
+  'home.demos.next': { en: 'Next', zh: '下一张' },
+  'home.demos.goToSlide': { en: 'Go to slide {n}', zh: '跳转到第 {n} 张' },
+
+  // ── coin type pie chart (site detail) ──────────────────────────────────
+  'site.pieChart.ariaLabel': { en: 'Coin type and inscription breakdown', zh: '币种与铭文分布图' },
+  'site.pieChart.unquantifiedHint': {
+    en: '{count} unquantified type(s) not shown as slices',
+    zh: '{count} 个数量不明的类型未显示为切片',
+  },
+
+  // ── mint image gallery ──────────────────────────────────────────────────
+  'mintDetail.gallery.imageAlt': { en: 'Site map', zh: '遗址地图' },
+  'mintDetail.gallery.clickToEnlarge': { en: 'Click to enlarge', zh: '点击放大' },
+
+  // ── typology viewer poster ──────────────────────────────────────────────
+  'coinTypeList.typologyViewer.diagramAlt': { en: 'Coin type hierarchy diagram', zh: '币种层级关系图' },
+
+  // ── map popup additions ──────────────────────────────────────────────────
+  'map.popup.viewMintTown': { en: 'View mint town →', zh: '查看铸地 →' },
+
+  // ── mint/site origin-distribution shared filter (MintIssueDistribution,
+  // SiteMintOrigins) ────────────────────────────────────────────────────
+  'originDistribution.filterLabel': { en: 'Coin type filter:', zh: '币种筛选：' },
+  'mintDetail.issueDistribution.allTypes': {
+    en: 'All issued coin types ({count} sites)',
+    zh: '全部已铸币种（{count} 处遗址）',
+  },
+  'siteMintOrigins.allTypes': { en: 'All coin types ({count} mints)', zh: '全部币种（{count} 处铸地）' },
+
+  // ── mint detail page additions ───────────────────────────────────────────
+  'mintDetail.notYetEstablished': { en: 'Not yet established', zh: '尚未确定' },
+  'mintDetail.noGeolocation': {
+    en: 'Geolocation not yet established for this mint town.',
+    zh: '该铸地的地理位置尚未确定。',
+  },
+  'mintDetail.noEnglishDescription': { en: 'No English description recorded yet.', zh: '暂无英文描述。' },
+  'mintDetail.noDescription': {
+    en: 'No description recorded yet for this mint town.',
+    zh: '该铸地暂无描述。',
+  },
+  'mintDetail.issueDistribution.title': { en: 'Issued Coin Distribution', zh: '钱币流布' },
+  'mintDetail.issueDistribution.noFindspots': {
+    en: 'No findspot records linked to this mint in the current database.',
+    zh: '数据库中暂无与该铸地关联的出土记录。',
+  },
+  'mintDetail.citationLabel': { en: 'Citation:', zh: '引用：' },
+
+  // ── mint placeholder checklist ───────────────────────────────────────────
+  'mintDetail.placeholder.geolocation': { en: 'Geolocation established', zh: '已确定地理位置' },
+  'mintDetail.placeholder.description': { en: 'Site description', zh: '遗址描述' },
+  'mintDetail.placeholder.images': { en: 'Maps & site images', zh: '地图与遗址图片' },
+  'mintDetail.placeholder.recordInPrep': { en: 'Record in preparation', zh: '记录编制中' },
+  'mintDetail.placeholder.note': {
+    en: 'This entry is a placeholder. Content will be added progressively.',
+    zh: '此条目为占位记录，内容将逐步完善。',
+  },
+  'mintDetail.placeholder.toBeAdded': { en: 'To be added', zh: '待补充' },
+  'mintDetail.placeholder.completed': { en: 'Completed', zh: '已完成' },
+  'mintDetail.placeholder.noneYet': { en: 'None yet', zh: '暂无' },
+
+  // ── coin type detail page additions ──────────────────────────────────────
+  'coinTypeDetail.table.site': { en: 'Site', zh: '遗址' },
+  'coinTypeDetail.table.province': { en: 'Province', zh: '省份' },
+  'coinTypeDetail.table.quantity': { en: 'Quantity', zh: '数量' },
+
+  // ── sources page ──────────────────────────────────────────────────────────
+  'sources.title': { en: 'Sources', zh: '文献来源' },
+  'sources.summary': {
+    en: '{sources} catalogued sources, {links} linked citations across sites, contexts, finds, and museum specimens.',
+    zh: '共收录 {sources} 条文献、{links} 条引用，涵盖遗址、出土单位、出土记录与馆藏标本。',
+  },
+  'sources.searchPlaceholder': {
+    en: 'Search by code, author, title, publication, or citation text…',
+    zh: '按编号、作者、标题、出版信息或引文内容搜索…',
+  },
+  'sources.countAll': { en: '{count} sources', zh: '共 {count} 条文献' },
+  'sources.countFiltered': { en: '{filtered} of {total} sources', zh: '{total} 条中的 {filtered} 条文献' },
+  'sources.pageOf': { en: 'page {page} of {total}', zh: '第 {page} / {total} 页' },
+  'sources.noneYet': { en: 'No sources catalogued yet.', zh: '暂无文献记录。' },
+  'sources.noMatches': { en: 'No sources match this search.', zh: '没有符合搜索条件的文献。' },
+  'sources.citedBy': { en: 'Cited by ({count})', zh: '被引用次数（{count}）' },
+  'sources.noLinkedRecords': { en: 'No linked records yet.', zh: '暂无关联记录。' },
+  'sources.missingTarget': { en: '{label} (missing)', zh: '{label}（缺失）' },
+  'sources.notFound': { en: 'Source not found.', zh: '未找到该文献。' },
+  'sources.legacyReferences': { en: 'Legacy / unlinked references', zh: '旧版／未关联引用' },
 } as const
 
 export type DictionaryKey = keyof typeof DICTIONARY

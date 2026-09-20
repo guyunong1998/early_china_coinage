@@ -91,7 +91,7 @@ export default function AboutPage() {
           <div className="relative mt-3 aspect-[1941/1065] w-full overflow-hidden rounded border border-brand/15 bg-white">
             <Image
               src="/images/database_schema.png"
-              alt="Database schema"
+              alt="Database schema / 数据库结构图"
               fill
               sizes="(min-width: 1024px) 768px, 100vw"
               className="object-contain"

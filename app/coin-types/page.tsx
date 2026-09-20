@@ -15,6 +15,8 @@ export const metadata = {
   description: 'Every documented coin type, grouped by the typology hierarchy, with find-site counts.',
 }
 
+export const revalidate = 86400
+
 // Same "spade, knife, round & ant-nose coins compared" demo the homepage
 // carousel leads with — its screenshot doubles as this page's map preview
 // since the subject matches (a coin-type Compare view), rather than
@@ -46,7 +48,7 @@ export default async function CoinTypesPage() {
           <T k="nav.coinTypes" />
         </h1>
         <p className="mt-1 text-sm text-gray-600">
-          {cardNodes.length} coin types documented, grouped by the typology hierarchy.
+          <T k="coinTypeList.description" vars={{ count: cardNodes.length }} />
         </p>
       </div>
 

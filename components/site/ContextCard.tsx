@@ -5,6 +5,7 @@ import type { ActionState } from '@/lib/admin/types'
 import type { Context } from '@/lib/types'
 import { EditableSection } from '@/components/edit/EditableSection'
 import { FieldLabel, fieldInputClass } from '@/components/edit/FieldRow'
+import { T } from '@/components/i18n/T'
 import { formatNumber } from '@/lib/format'
 
 function bi(zh: string | null | undefined, en: string | null | undefined) {
@@ -89,7 +90,7 @@ function ContextFields({ ctx }: { ctx: Partial<Context> }) {
 
 /** One labeled "Legend: value" line — used instead of dangling, unlabeled
  * text so Code/State/Period are unambiguous at a glance. */
-function FieldLine({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldLine({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <p className="text-sm text-gray-600">
       <span className="font-semibold text-gray-500">{label}:</span> {children}
@@ -119,14 +120,16 @@ function ContextDisplay({
           <p className="text-sm italic text-gray-500">{ctx.context_name_en}</p>
         )}
         <div className="mt-2 space-y-0.5">
-          <FieldLine label="Code">
+          <FieldLine label={<T k="ui.code" />}>
             <span className="font-mono text-xs text-gray-500">{ctx.context_code}</span>
           </FieldLine>
           {(ctx.context_type_zh || ctx.context_type_en) && (
-            <FieldLine label="State">{bi(ctx.context_type_zh, ctx.context_type_en)}</FieldLine>
+            <FieldLine label={<T k="siteTabs.table.state" />}>{bi(ctx.context_type_zh, ctx.context_type_en)}</FieldLine>
           )}
-          {(ctx.period_zh || ctx.period_en) && <FieldLine label="Period">{bi(ctx.period_zh, ctx.period_en)}</FieldLine>}
-          {totalCoins != null && <FieldLine label="Coins">{formatNumber(totalCoins)}</FieldLine>}
+          {(ctx.period_zh || ctx.period_en) && (
+            <FieldLine label={<T k="site.row.period" />}>{bi(ctx.period_zh, ctx.period_en)}</FieldLine>
+          )}
+          {totalCoins != null && <FieldLine label={<T k="ui.coins" />}>{formatNumber(totalCoins)}</FieldLine>}
         </div>
         {(ctx.description_zh || ctx.description_en) && (
           <div className="mt-2 text-sm">{biBlock(ctx.description_zh, ctx.description_en)}</div>

@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type Pane = { src: string; labelKey: 'heatmap.obverse' | 'heatmap.reverse' }
 
@@ -15,6 +16,7 @@ export function CoinTypeImages({
   reverseSrc: string | null
   accNum: string | null
 }) {
+  const { t } = useLanguage()
   const [lightbox, setLightbox] = useState<Pane | null>(null)
 
   const panes: Pane[] = [
@@ -36,7 +38,7 @@ export function CoinTypeImages({
             <div className="relative h-56 w-full overflow-hidden bg-white">
               <Image
                 src={pane.src}
-                alt={pane.labelKey}
+                alt={t(pane.labelKey)}
                 width={400}
                 height={400}
                 className="h-full w-full object-contain transition group-hover:opacity-90"
@@ -63,11 +65,11 @@ export function CoinTypeImages({
               onClick={() => setLightbox(null)}
               className="absolute right-2 top-2 z-10 rounded bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black"
             >
-              ✕ Close
+              <T k="ui.close" />
             </button>
             <Image
               src={lightbox.src}
-              alt={lightbox.labelKey}
+              alt={t(lightbox.labelKey)}
               width={900}
               height={900}
               className="max-h-[80vh] w-auto object-contain"

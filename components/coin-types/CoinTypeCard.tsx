@@ -41,7 +41,7 @@ export function CoinTypeCard({
             >
               <Image
                 src={pane.src}
-                alt={node.label_en}
+                alt={`${node.label_zh} (${node.label_en})`}
                 width={300}
                 height={200}
                 className="h-full w-full object-contain"
@@ -71,16 +71,12 @@ export function CoinTypeCard({
           excluded here the same way it's excluded from the card grid itself
           (app/coin-types/page.tsx filters level1 nodes out of cardNodes). */}
       {node.parents.length > 1 && (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {node.parents.slice(1).map((p) => (
-            <span
-              key={p.slug}
-              className="rounded border border-brand/20 bg-brand-light px-2 py-0.5 text-xs text-brand"
-            >
-              {lang === 'zh' ? p.label_zh : p.label_en}
-            </span>
-          ))}
-        </div>
+        <p className="mt-3 text-xs text-gray-500">
+          {node.parents
+            .slice(1)
+            .map((p) => (lang === 'zh' ? p.label_zh : p.label_en))
+            .join(' > ')}
+        </p>
       )}
 
       {node.states.length > 0 && (

@@ -23,7 +23,7 @@ export function MapLoadingOverlay() {
         <div className="relative h-32 w-32 overflow-hidden rounded border border-gray-200 bg-white">
           <Image
             src={coin.src}
-            alt={coin.label_en}
+            alt={`${coin.label_zh} (${coin.label_en})`}
             fill
             sizes="128px"
             className="object-contain"

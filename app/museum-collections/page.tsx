@@ -13,6 +13,8 @@ export const metadata = {
   description: 'Mint-town distribution of ANS museum specimens, searchable by accession number.',
 }
 
+export const revalidate = 86400
+
 export default async function MuseumCollectionsPage({ searchParams }: PageProps) {
   const { view, types } = await searchParams
 

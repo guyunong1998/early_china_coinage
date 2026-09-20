@@ -2,6 +2,12 @@ import { toEnglishName } from '@/lib/name-translation'
 import type { MintRow } from '@/lib/queries'
 import type { CoinIssueDisplay, ImageRecord, MintImage, MintInfo } from '@/lib/types'
 
+/** Shown in place of a modern-location value when neither language is
+ * recorded, pointing readers at the description field instead — bilingual so
+ * it never displays as English-only text next to a Chinese place name (see
+ * toMintInfo below). Also compared against directly in mintCompleteness. */
+const MODERN_LOCATION_FALLBACK = 'See description / 见描述'
+
 /** Resolves a public.images row to the shape MintImageGallery renders —
  * `filename` is stored relative to public/images/, so the actual asset path
  * is `/images/${filename}`. `source_id` and `source_text` are mutually
@@ -31,7 +37,7 @@ export function toMintInfo(row: MintRow): MintInfo {
     name_en: toEnglishName(row.name_zh, row.name_en),
     state_zh: state?.state_zh ?? '未知',
     state_en: state?.state_en ?? 'Unknown',
-    modern_location_en: row.modern_location_en ?? 'See description',
+    modern_location_en: row.modern_location_en ?? MODERN_LOCATION_FALLBACK,
     modern_location_zh: row.modern_location_zh,
     lat: row.latitude,
     lng: row.longitude,
@@ -117,7 +123,7 @@ export function getMintDirectoryEntryBySlug(
 export function mintCompleteness(mint: MintDirectoryEntry): number {
   let score = 0
   if (mint.state_zh !== '未知') score += 1
-  if (mint.modern_location_zh || mint.modern_location_en !== 'See description') score += 1
+  if (mint.modern_location_zh || mint.modern_location_en !== MODERN_LOCATION_FALLBACK) score += 1
   if (mint.lat != null && mint.lng != null) score += 1
   if (mint.description_en.length > 60 || (mint.description_zh?.length ?? 0) > 0) score += 1
   if (mint.sources_unlinked.length > 0) score += 1

@@ -18,6 +18,8 @@ export const metadata = {
     'Interactive map of georeferenced coin find sites with coin-type and mint-based filtering.',
 }
 
+export const revalidate = 86400
+
 export default async function FindSiteVisualizationPage({ searchParams }: PageProps) {
   const { precision: precisionParam, mode, view, mints: mintsParam, types } = await searchParams
   const currentPrecision = parsePrecisionFilter(precisionParam)

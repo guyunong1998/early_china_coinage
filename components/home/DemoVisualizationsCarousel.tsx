@@ -22,7 +22,7 @@ import { DEMO_VISUALIZATIONS, demoHref } from '@/lib/demo-visualizations'
  * markup below.
  */
 export function DemoVisualizationsCarousel() {
-  const { lang } = useLanguage()
+  const { lang, t } = useLanguage()
   const [index, setIndex] = useState(0)
   const lastWheelAt = useRef(0)
 
@@ -120,7 +120,7 @@ export function DemoVisualizationsCarousel() {
               <button
                 type="button"
                 onClick={() => go(-1)}
-                aria-label="Previous"
+                aria-label={t('home.demos.prev')}
                 className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-lg font-semibold text-brand shadow-lg ring-1 ring-black/10 transition hover:bg-brand-light"
               >
                 ‹
@@ -128,7 +128,7 @@ export function DemoVisualizationsCarousel() {
               <button
                 type="button"
                 onClick={() => go(1)}
-                aria-label="Next"
+                aria-label={t('home.demos.next')}
                 className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-lg font-semibold text-brand shadow-lg ring-1 ring-black/10 transition hover:bg-brand-light"
               >
                 ›
@@ -159,7 +159,7 @@ export function DemoVisualizationsCarousel() {
                 type="button"
                 data-demo-id={d.id}
                 onClick={() => setIndex(i)}
-                aria-label={`Go to slide ${i + 1}`}
+                aria-label={t('home.demos.goToSlide', { n: i + 1 })}
                 aria-current={i === index}
                 className={`h-2 rounded-full transition-all ${
                   i === index ? 'w-5 bg-brand' : 'w-2 bg-brand/25 hover:bg-brand/50'

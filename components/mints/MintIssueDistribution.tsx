@@ -11,6 +11,7 @@
 import { useMemo, useState } from 'react'
 import { OriginDistributionMap, type OriginDistributionPoint } from '@/components/map/OriginDistributionMap'
 import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { MapSite } from '@/lib/types'
 import type { MintTypeOption } from '@/lib/queries'
 
@@ -33,6 +34,7 @@ type MintIssueDistributionProps = {
 const MINT_ISSUE_COLOR = '#eda100'
 
 export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }: MintIssueDistributionProps) {
+  const { t } = useLanguage()
   const [selectedType, setSelectedType] = useState('all')
 
   const filteredSites = useMemo(() => {
@@ -46,7 +48,7 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
         lat: mint.lat,
         lng: mint.lng,
         popupHtml: `<div class="map-popup">
-          <strong>Mint town</strong><br/>
+          <strong>Mint town / 铸地</strong><br/>
           ${mint.name_zh} ${mint.name_en}
         </div>`,
       }
@@ -61,8 +63,8 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
       popupHtml: `<div class="map-popup" style="min-width:190px">
         <strong>${site.site_name_zh ?? site.site_code}</strong><br/>
         ${[site.province_zh, site.city_zh, site.county_zh].filter(Boolean).join(' ')}<br/>
-        数量: ${site.total_quantity_for_map ?? 0}<br/>
-        <a href="/sites/${site.site_code}" class="map-popup-link">View record →</a>
+        Quantity / 数量: ${site.total_quantity_for_map ?? 0}<br/>
+        <a href="/sites/${site.site_code}" class="map-popup-link">${t('search.viewRecord')}</a>
       </div>`,
     }))
 
@@ -70,7 +72,7 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <label htmlFor="mint-type-filter" className="text-sm font-semibold text-gray-700">
-          Coin type filter:
+          {t('originDistribution.filterLabel')}
         </label>
         <select
           id="mint-type-filter"
@@ -78,7 +80,7 @@ export function MintIssueDistribution({ mint, sites, siteTypeKeys, typeOptions }
           onChange={(e) => setSelectedType(e.target.value)}
           className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
         >
-          <option value="all">All issued coin types ({sites.length} sites)</option>
+          <option value="all">{t('mintDetail.issueDistribution.allTypes', { count: sites.length })}</option>
           {typeOptions.map((option) => (
             <option key={option.key} value={option.key}>
               {option.label} ({option.siteCount})

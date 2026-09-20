@@ -1,8 +1,10 @@
+import { T } from '@/components/i18n/T'
+import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import type { MintDirectoryEntry } from '@/lib/mint-directory'
 
 type Section = {
   key: string
-  label: string
+  labelKey: DictionaryKey
   done: boolean
 }
 
@@ -10,22 +12,22 @@ function getSections(mint: MintDirectoryEntry): Section[] {
   return [
     {
       key: 'geolocation',
-      label: 'Geolocation established',
+      labelKey: 'mintDetail.placeholder.geolocation',
       done: mint.lat != null && mint.lng != null,
     },
     {
       key: 'description',
-      label: 'Site description',
+      labelKey: 'mintDetail.placeholder.description',
       done: mint.description_en.length > 60,
     },
     {
       key: 'images',
-      label: 'Maps & site images',
+      labelKey: 'mintDetail.placeholder.images',
       done: mint.images.length > 0,
     },
     {
       key: 'sources',
-      label: 'Sources',
+      labelKey: 'sources.title',
       done: mint.sources_unlinked.length > 0,
     },
   ]
@@ -47,9 +49,11 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
           ◷
         </span>
         <div>
-          <p className="text-sm font-semibold text-brand">Record in preparation</p>
+          <p className="text-sm font-semibold text-brand">
+            <T k="mintDetail.placeholder.recordInPrep" />
+          </p>
           <p className="text-xs text-gray-500">
-            This entry is a placeholder. Content will be added progressively.
+            <T k="mintDetail.placeholder.note" />
           </p>
         </div>
       </div>
@@ -58,7 +62,7 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
         {/* Pending */}
         <div className="p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            To be added
+            <T k="mintDetail.placeholder.toBeAdded" />
           </p>
           <ul className="space-y-2">
             {pending.map((s) => (
@@ -66,7 +70,7 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-300 text-xs text-gray-300">
                   ○
                 </span>
-                {s.label}
+                <T k={s.labelKey} />
               </li>
             ))}
           </ul>
@@ -75,18 +79,20 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
         {/* Completed */}
         <div className="p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Completed
+            <T k="mintDetail.placeholder.completed" />
           </p>
           <ul className="space-y-2">
             {done.length === 0 ? (
-              <li className="text-xs text-gray-400 italic">None yet</li>
+              <li className="text-xs text-gray-400 italic">
+                <T k="mintDetail.placeholder.noneYet" />
+              </li>
             ) : (
               done.map((s) => (
                 <li key={s.key} className="flex items-center gap-2 text-sm text-gray-600">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/10 text-xs text-brand">
                     ✓
                   </span>
-                  {s.label}
+                  <T k={s.labelKey} />
                 </li>
               ))
             )}

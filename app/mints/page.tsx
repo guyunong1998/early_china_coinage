@@ -13,7 +13,7 @@ export const metadata = {
   description: 'Browse and search recorded coin-producing centres of pre-Qin and early Han China.',
 }
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 export default async function MintsPage() {
   // Same points list the Mint Town map visualization shows by default (no

@@ -38,6 +38,8 @@ import type { Find, MapSite, MintInfo } from '@/lib/types'
 
 const LEVEL_RANK: Record<CoinTypeLevel, number> = { level1: 1, level2: 2, level3: 3, level4: 4, level5: 5 }
 
+export const revalidate = 86400
+
 type PageProps = {
   params: Promise<{ site_code: string }>
 }
@@ -142,7 +144,7 @@ function buildMintOrigins(
 export async function generateMetadata({ params }: PageProps) {
   const { site_code } = await params
   const site = await getSite(site_code)
-  if (!site) return { title: 'Site not found' }
+  if (!site) return { title: 'Site not found / 未找到该遗址' }
   return {
     title: `${site.site_name_zh ?? site_code} | Early Chinese Coin Finds`,
     description: site.description_en ?? site.description_zh ?? undefined,
@@ -411,8 +413,8 @@ export default async function SitePage({ params }: PageProps) {
                 lng={mapSite.lng}
                 label={
                   mapSite.site_name_en
-                    ? `${mapSite.site_name_zh ?? '未命名遗址'} (${mapSite.site_name_en})`
-                    : (mapSite.site_name_zh ?? '未命名遗址')
+                    ? `${mapSite.site_name_zh ?? '未命名遗址 (Unnamed site)'} (${mapSite.site_name_en})`
+                    : (mapSite.site_name_zh ?? '未命名遗址 (Unnamed site)')
                 }
                 height="280px"
                 zoom={10}

@@ -23,7 +23,7 @@ export function Level2TypeShowcase({ items }: { items: Level2TypeShowcaseItem[] 
           <div className="relative h-24 w-full overflow-hidden bg-white">
             <Image
               src={obverseSrc}
-              alt={node.label_en}
+              alt={`${node.label_zh} (${node.label_en})`}
               width={200}
               height={200}
               className="h-full w-full object-contain transition group-hover:opacity-90"

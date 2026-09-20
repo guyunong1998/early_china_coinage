@@ -12,6 +12,8 @@ export const metadata = {
   description: 'Visualize mint-town coin production by quantity, filterable by coin type.',
 }
 
+export const revalidate = 86400
+
 export default async function MintTownVisualizationPage({ searchParams }: PageProps) {
   const { view, types } = await searchParams
 

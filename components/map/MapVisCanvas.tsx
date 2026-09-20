@@ -283,7 +283,7 @@ function ratioStatusHtml(state: DisplayState, totalQty: number, t: TFunction): s
 }
 
 function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): string {
-  const nameZh = site.site_name_zh ?? '未命名遗址'
+  const nameZh = site.site_name_zh ?? '未命名遗址 (Unnamed site)'
   const nameEn = toEnglishName(site.site_name_zh, site.site_name_en)
   const provinceZh = site.province_zh ?? '—'
   const provinceEn = toEnglishName(site.province_zh, site.province_en)
@@ -351,7 +351,7 @@ function buildComparePopupHtml(point: ComparePoint, t: TFunction): string {
     <div class="map-popup" style="min-width:180px">
       <strong>${point.locationLabel}</strong><br/>
       <strong>${point.groupKindLabel}</strong>${point.groupLabel}<br/>
-      <strong>Coins:</strong> ${point.qty}<br/>
+      <strong>${t('map.popup.coins')}:</strong> ${point.qty}<br/>
       ${link}
     </div>
   `
@@ -495,9 +495,9 @@ function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction):
       <strong>${mint.mint_zh}${mint.mint_en ? ` <span class="map-popup-muted-italic">(${mint.mint_en})</span>` : ''}</strong><br/>
       <strong>${t('map.popup.coins')}:</strong> ${mint.totalQty}<br/>
       <strong>${t('map.popup.finds')}:</strong> ${mint.findCount}<br/>
-      ${mint.inscriptions.length > 0 ? `<strong>Inscriptions:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
+      ${mint.inscriptions.length > 0 ? `<strong>${t('siteTabs.row.inscriptions')}:</strong> ${mint.inscriptions.slice(0, 6).join('、')}${mint.inscriptions.length > 6 ? '…' : ''}<br/>` : ''}
       ${mint.modern_location_en ? `${mint.modern_location_en}<br/>` : ''}
-      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" class="map-popup-link">View mint town →</a>` : ''}
+      ${mint.mint_code ? `<a href="/mints/${mint.mint_code}" class="map-popup-link">${t('map.popup.viewMintTown')}</a>` : ''}
     </div>
   `
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { CoinIssueDisplay } from '@/lib/types'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
+import { T } from '@/components/i18n/T'
 import { CoinIssueRow } from './CoinIssueRow'
 
 export function CoinIssuesTable({
@@ -30,12 +31,12 @@ export function CoinIssuesTable({
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-          <th className="py-2 pr-4">Code</th>
-          <th className="py-2 pr-4">Type</th>
-          <th className="py-2 pr-4">Inscription</th>
-          <th className="py-2 pr-4">State</th>
-          <th className="py-2 pr-4">Mint</th>
-          <th className="py-2">Description</th>
+          <th className="py-2 pr-4"><T k="ui.code" /></th>
+          <th className="py-2 pr-4"><T k="siteTabs.table.type" /></th>
+          <th className="py-2 pr-4"><T k="siteTabs.table.inscription" /></th>
+          <th className="py-2 pr-4"><T k="siteTabs.table.state" /></th>
+          <th className="py-2 pr-4"><T k="siteTabs.table.mint" /></th>
+          <th className="py-2"><T k="site.descriptionLabel" /></th>
         </tr>
       </thead>
       <tbody>

@@ -11,6 +11,7 @@ import { formatSourceCitation, sourceDisplayType } from '@/lib/format-citation'
 import { ConfirmDeleteButton } from '@/components/edit/ConfirmDeleteButton'
 import { EditableSection } from '@/components/edit/EditableSection'
 import { FieldLabel, fieldInputClass } from '@/components/edit/FieldRow'
+import { T } from '@/components/i18n/T'
 import { AddSourceLinkForm } from './AddSourceLinkForm'
 
 export function SourceFields({ source }: { source: Partial<Source> }) {
@@ -216,9 +217,13 @@ export function SourceCard({
       />
 
       <div className="mt-3 border-t border-gray-100 pt-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Cited by ({links.length})</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <T k="sources.citedBy" vars={{ count: links.length }} />
+        </p>
         {links.length === 0 ? (
-          <p className="mt-1 text-xs italic text-gray-400">No linked records yet.</p>
+          <p className="mt-1 text-xs italic text-gray-400">
+            <T k="sources.noLinkedRecords" />
+          </p>
         ) : (
           <ul className="mt-1 space-y-1">
             {links.map((link) => {
@@ -232,7 +237,9 @@ export function SourceCard({
                         {target.label}
                       </Link>
                     ) : (
-                      <span className="italic text-gray-400">{target?.label ?? link.target_code} (missing)</span>
+                      <span className="italic text-gray-400">
+                      <T k="sources.missingTarget" vars={{ label: target?.label ?? link.target_code }} />
+                    </span>
                     )}
                   </span>
                   {isDevMode && (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { colorForType, shadesOf, UNCLASSIFIED_COLOR } from '@/lib/coin-type-colors'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export type PieChild = {
   label: string
@@ -143,6 +144,7 @@ export function CoinTypePieChart({
    * triangle instead of a color swatch) that expands to list them. */
   unquantified?: UnquantifiedItem[]
 }) {
+  const { t } = useLanguage()
   // Row budget for the legend: a type with a single inscription folds into
   // one row, so only types with >1 inscription contribute extra rows beyond
   // their own. Within budget, inscriptions default open; over budget, they
@@ -241,7 +243,7 @@ export function CoinTypePieChart({
           viewBox={`0 0 ${size} ${size}`}
           className="shrink-0"
           role="img"
-          aria-label="Coin type and inscription breakdown"
+          aria-label={t('site.pieChart.ariaLabel')}
         >
           {groups.map((g) => (
             <path
@@ -249,7 +251,7 @@ export function CoinTypePieChart({
               d={describeSlice(cx, cy, rMid, g.startAngle, clampSpan(g.startAngle, g.endAngle))}
               fill={g.color}
             >
-              <title>{`${g.label}: ${g.value} (${Math.round((g.value / total) * 100)}%)`}</title>
+              <title>{`${g.label}${g.labelEn && g.labelEn !== g.label ? ` (${g.labelEn})` : ''}: ${g.value} (${Math.round((g.value / total) * 100)}%)`}</title>
             </path>
           ))}
           {groups.flatMap((g) =>
@@ -261,7 +263,7 @@ export function CoinTypePieChart({
                 stroke="white"
                 strokeWidth={0.5}
               >
-                <title>{`${g.label} · ${c.label}: ${c.value} (${Math.round((c.value / total) * 100)}%)`}</title>
+                <title>{`${g.label} · ${c.label}${c.labelEn && c.labelEn !== c.label ? ` (${c.labelEn})` : ''}: ${c.value} (${Math.round((c.value / total) * 100)}%)`}</title>
               </path>
             ))
           )}
@@ -274,7 +276,7 @@ export function CoinTypePieChart({
               stroke={UNCLASSIFIED_COLOR}
               strokeWidth={RING_WIDTH}
             >
-              <title>{`${unquantified.length} unquantified type(s) not shown as slices`}</title>
+              <title>{t('site.pieChart.unquantifiedHint', { count: unquantified.length })}</title>
             </circle>
           )}
         </svg>

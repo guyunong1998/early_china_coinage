@@ -43,7 +43,7 @@ export function MobileNav() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label="Toggle navigation menu"
+        aria-label={t('ui.toggleNavMenu')}
         className="flex h-9 w-9 items-center justify-center rounded border border-brand/30 text-brand"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">

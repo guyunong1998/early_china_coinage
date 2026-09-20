@@ -6,6 +6,8 @@ import type { ResolvedTarget } from '@/lib/admin/resolve-source-link-target'
 import type { ActionState } from '@/lib/admin/types'
 import type { Source, SourceLink } from '@/lib/types'
 import { EditableSection } from '@/components/edit/EditableSection'
+import { T } from '@/components/i18n/T'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { SourceCard, SourceFields } from './SourceCard'
 
 const BLANK_SOURCE: Source = {
@@ -53,6 +55,7 @@ export function SourcesListClient({
   initialResolved: Map<string, ResolvedTarget>
   isDevMode: boolean
 }) {
+  const { t } = useLanguage()
   const [sources, setSources] = useState(initialSources)
   const [links, setLinks] = useState(initialLinks)
   const [resolved, setResolved] = useState(initialResolved)
@@ -144,12 +147,14 @@ export function SourcesListClient({
             setQuery(e.target.value)
             setCurrentPage(1)
           }}
-          placeholder="Search by code, author, title, publication, or citation text…"
+          placeholder={t('sources.searchPlaceholder')}
           className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand"
         />
         <p className="text-xs text-gray-500">
-          {query.trim() ? `${filteredSources.length} of ${sources.length} sources` : `${sources.length} sources`}
-          {totalPages > 1 && ` · page ${clampedPage} of ${totalPages}`}
+          {query.trim()
+            ? t('sources.countFiltered', { filtered: filteredSources.length, total: sources.length })
+            : t('sources.countAll', { count: sources.length })}
+          {totalPages > 1 && ` · ${t('sources.pageOf', { page: clampedPage, total: totalPages })}`}
         </p>
       </div>
 
@@ -181,7 +186,7 @@ export function SourcesListClient({
 
       {filteredSources.length === 0 ? (
         <p className="text-sm italic text-gray-500">
-          {sources.length === 0 ? 'No sources catalogued yet.' : 'No sources match this search.'}
+          <T k={sources.length === 0 ? 'sources.noneYet' : 'sources.noMatches'} />
         </p>
       ) : (
         pageSources.map((source, index) => (
@@ -208,10 +213,10 @@ export function SourcesListClient({
             disabled={clampedPage <= 1}
             className="rounded border border-brand/30 bg-white px-3 py-1.5 text-brand transition hover:bg-brand-light disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white"
           >
-            Prev
+            <T k="pagination.prev" />
           </button>
           <span className="text-gray-500">
-            Page {clampedPage} of {totalPages}
+            <T k="sources.pageOf" vars={{ page: clampedPage, total: totalPages }} />
           </span>
           <button
             type="button"
@@ -219,7 +224,7 @@ export function SourcesListClient({
             disabled={clampedPage >= totalPages}
             className="rounded border border-brand/30 bg-white px-3 py-1.5 text-brand transition hover:bg-brand-light disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300 disabled:hover:bg-white"
           >
-            Next
+            <T k="pagination.next" />
           </button>
         </nav>
       )}
