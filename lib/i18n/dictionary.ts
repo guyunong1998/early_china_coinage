@@ -538,7 +538,6 @@ export const DICTIONARY = {
     en: '{coins} coins found in {sites} sites',
     zh: '{sites} 个遗址中共发现 {coins} 枚钱币',
   },
-  'mintList.viewDetails': { en: 'View details →', zh: '查看详情 →' },
   'mintList.sortBy': { en: 'Sort by', zh: '排序方式' },
   'mintList.sort.name': { en: 'Name', zh: '名称' },
   'mintList.sort.finds': { en: 'Number of finds', zh: '出土记录数' },

@@ -21,9 +21,9 @@
    variables live in the COLOR PALETTE section of globals.css.
    ============================================================================ */
 :root {
-  --map-dot-fill: rgba(var(--brand-rgb), 0.6);
+  --map-dot-fill: rgba(var(--brand-rgb), 0.8);
   --map-dot-special: rgba(var(--accent-rgb), 0.6);
-  --map-dot-border: rgba(255, 255, 255, 0.2); /* white with low opacity, so the dot's fill color shows through */
+  --map-dot-border: rgba(255, 255, 255, 0.9); /* white with low opacity, so the dot's fill color shows through */
 
   --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
   --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
@@ -101,8 +101,8 @@
   --map-popup-divider: #ddd;
 }
 .map-dot {
-  border-width: 2px;
-  border-style: white solid 1px;
+  border-width: 1px;
+  border-style: solid;
   border-radius: 50%;
   background: var(--map-dot-fill);
   border-color: var(--map-dot-border);

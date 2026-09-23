@@ -72,17 +72,16 @@
   --brand-bright: #365727;
   --brand-dark: #213509;
   --brand: #304912;
-  --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
-  /* Raw R,G,B channels of --brand, for rgba(var(--brand-rgb), alpha) — a hex
-     custom property can't be fed directly into rgba(), so this is kept in
-     sync by hand whenever --brand changes (used by app/maps.css). */
   --brand-rgb: 48, 73, 18;
+  --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
+
+  /* --brand-bright: #c9d5ba;
+  --brand-dark: #97a487;
+  --brand: #afbca0; */
 
   /* --- Secondary accent: bronze — use sparingly (a rare highlight, never
      the default interactive color) --- */
   --accent: #e1941f;
-  --accent-dark: #6b4520;
-  --accent-light: #efe0c3;
   /* Raw R,G,B channels of --accent — see --brand-rgb above. */
   --accent-rgb: 225, 148, 31;
 
@@ -155,6 +154,15 @@ a {
   background: var(--paper);
   border: 1px solid var(--brand);
   border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* Mint/coin-type list cards (MintListClient, CoinTypeCard): a very slight
+   tint on hover instead of the old "view details" reveal. Written here
+   rather than as a Tailwind hover: utility, since Tailwind v4 utilities live
+   in a CSS @layer and this file's unlayered .panel background rule above
+   would otherwise always win the cascade over a layered hover utility. */
+.panel-hover-tint:hover {
+  background: color-mix(in srgb, var(--brand-light) 40%, var(--paper));
 }
 .panel .home-panel {
   background: var(--paper);

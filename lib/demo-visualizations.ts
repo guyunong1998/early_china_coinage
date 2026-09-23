@@ -80,18 +80,23 @@ export const DEMO_VISUALIZATIONS: DemoVisualization[] = [
     },
   },
   {
-    id: 'mint-compare-anyang-anyi',
-    title: { zh: '安阳与安邑铸地对比', en: 'Anyang vs. Anyi mints' },
+    id: 'mould-coin-compare',
+    title: { zh: '圆足布范与圆足布对比', en: 'Round-foot spade mould vs. coin' },
     description: {
-      zh: '对比安阳与安邑两处铸地的铸币产量与出土遗址分布',
-      en: 'Compares coin output and find-site reach between the Anyang and Anyi mints',
+      zh: '对比圆足布范与圆足布两者的出土遗址分布',
+      en: 'Compares find-site distributions between round-foot spade moulds and the coins they cast',
     },
     via: {
-      zh: '按铸地，对比视图',
-      en: 'Mint, Compare view',
+      zh: '按币种，对比视图',
+      en: 'Coin Type, Compare view',
     },
-    image: '/images/home-demos/mint-compare-anyang-anyi.png',
-    target: { page: 'find-site', mode: 'mint', view: 'compare', mints: ['安阳', '安邑'] },
+    image: '/images/home-demos/mould-coin-compare.png',
+    target: {
+      page: 'find-site',
+      mode: 'type',
+      view: 'compare',
+      types: [typeSel('钱范', '布币范', '平首布范', '圆足布范'), typeSel('钱币', '布币', '平首布', '圆足布')],
+    },
   },
   {
     id: 'knife-density',

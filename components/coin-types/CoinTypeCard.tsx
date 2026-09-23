@@ -11,7 +11,7 @@ import type { CoinTypeCounts, CoinTypeNode } from '@/lib/coin-type-catalog'
 import type { CoinTypeImagePaths } from '@/lib/coin-images'
 
 /** One typology node (L1–L4) as a card — mirrors MintListClient's card
- * shape/CSS (`panel`, tag styling, hover reveal) so the two list pages read
+ * shape/CSS (`panel`, tag styling, hover tint) so the two list pages read
  * as one system. */
 export function CoinTypeCard({
   node,
@@ -31,7 +31,7 @@ export function CoinTypeCard({
   ].filter((p): p is { src: string; key: string } => p !== null)
 
   return (
-    <Link href={`/coin-types/${node.slug}`} className="panel group flex flex-col p-5">
+    <Link href={`/coin-types/${node.slug}`} className="panel panel-hover-tint group flex flex-col p-5 transition-colors">
       {panes.length > 0 ? (
         <div className={`grid gap-1.5 ${panes.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {panes.map((pane) => (
@@ -91,10 +91,6 @@ export function CoinTypeCard({
           ))}
         </div>
       )}
-
-      <span className="mt-4 text-xs text-brand opacity-0 transition group-hover:opacity-100">
-        <T k="mintList.viewDetails" />
-      </span>
     </Link>
   )
 }

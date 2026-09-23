@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { T } from '@/components/i18n/T'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { DictionaryKey } from '@/lib/i18n/dictionary'
 import type { MintDirectoryEntry, MintTypeLabel } from '@/lib/mint-directory'
@@ -141,7 +140,7 @@ export function MintListClient({
               <Link
                 key={mint.mint_code}
                 href={`/mints/${mint.mint_code}`}
-                className="panel group flex flex-col p-5"
+                className="panel panel-hover-tint group flex flex-col p-5 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-serif text-lg font-semibold text-gray-900 group-hover:text-brand">
@@ -174,10 +173,6 @@ export function MintListClient({
                     </span>
                   ))}
                 </div>
-
-                <span className="mt-4 text-xs text-brand opacity-0 transition group-hover:opacity-100">
-                  <T k="mintList.viewDetails" />
-                </span>
               </Link>
             )
           })}
