@@ -1368,7 +1368,7 @@ function MuseumMapOverlay({
           </button>
         </div>
 
-        <div className={`map-vis-panel-body ${open ? 'block' : 'hidden'}`}>
+        <div className={`map-vis-panel-body museum-panel-body ${open ? 'block' : 'hidden'}`}>
           <div className="map-vis-panel-body-header">
             <ClickHint hint={t('visualizations.viewByLabelHint.museum')} className="shrink-0 hint-underline text-sm font-semibold text-gray-700">
               <T k="visualizations.viewByLabel" />
@@ -1618,6 +1618,7 @@ export function AnsMintTownVisualization({
           <AccessionNumberSearch
             specimens={specimens}
             mints={mints}
+            inscriptionSource={inscriptionSource}
             selectedKeys={selectedKeys}
             selectedSpecimens={selectedSpecimens}
             onToggle={toggleSelected}
@@ -1648,7 +1649,7 @@ export function AnsMintTownVisualization({
             <div className="space-y-2 map-filter-section">
               <p className="text-sm leading-snug text-gray-700">
                 {typeEntries.length === 0 ? (
-                  <T k="map.currentView.mintTownAnsNone" />
+                  <T k="map.currentView.mintTownAnsNone" vars={{ count: specimens.length }} />
                 ) : (
                   <T
                     k={
@@ -1669,9 +1670,6 @@ export function AnsMintTownVisualization({
                 >
                   <QuestionCircleIcon />
                 </ClickHint>
-              </p>
-              <p className="text-sm text-gray-700">
-                <T k="visualizations.stats.specimens" vars={{ count: specimens.length }} />
               </p>
               <TypologyMultiSelect
                 staged={stagedType}

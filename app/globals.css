@@ -200,10 +200,10 @@ a {
    just the text/link column on the map panel (not the map itself). */
 .panel-nav-card{
   background: var(--paper);
-  border: 3px solid var(--brand);
+  border: 3px solid var(--light-brand);
 }
 .panel-nav-card-inner {
-  border: 5px dotted var(--brand);
+  border: 5px dotted var(--light-brand);
 }
 
 
@@ -291,77 +291,6 @@ button:not(:disabled):hover {
 }
 
 
-/* ============================================================================
-   7. MAP OVERRIDES (Leaflet)
-   ----------------------------------------------------------------------------
-   Leaflet ships its own CSS; these overrides just retint its cluster bubbles
-   to match the palette above instead of leaving them in Leaflet's default blue.
-   ============================================================================ */
-.leaflet-container {
-  font-family: inherit;
-  /* border: 3px solid var(--brand); */
-}
-
-/* Map marker dot styling (base + size + per-role color classes) now lives in
-   app/maps.css, imported at the top of this file. */
-
-/* Leaflet popup/tooltip body text — every map's site/mint/compare/pin/
-   mint-origin popup (CoinMap.tsx, MapVisCanvas.tsx, SinglePointMap.tsx,
-   SiteMintOrigins.tsx, MintIssueDistribution.tsx). Popups render into their
-   own DOM node outside the React tree, so this is a real CSS class the raw
-   HTML template strings reference via class="..." rather than a Tailwind
-   utility — but it's still the site's own body font (--font-sans), not a
-   bare `sans-serif` fallback hardcoded independently in each popup builder. */
-:root {
-  --map-link-color: #006d71; /* popup "View record"/"View mint town" links — not tied to --brand or --accent, a link-only teal */
-  --map-label-muted: #9ca3af; /* lib/map-layers.ts's route/node English-gloss text and the "Routes" hint underline */
-}
-
-.map-popup {
-  font-family: var(--font-sans), sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.map-popup-muted {
-  color: var(--muted);
-}
-.map-popup-muted-italic {
-  color: var(--muted);
-  font-style: italic;
-}
-.map-popup-link {
-  color: var(--map-link-color);
-}
-
-.marker-cluster-small,
-.marker-cluster-medium,
-.marker-cluster-large {
-  background-color: color-mix(in srgb, var(--brand) 25%, transparent);
-}
-
-.marker-cluster-small div,
-.marker-cluster-medium div,
-.marker-cluster-large div {
-  background-color: color-mix(in srgb, var(--brand) 85%, transparent);
-  color: white;
-  font-weight: 700;
-}
-
-/* Find Site / Mint Town overview clusters — heat-ramp red (#a01515 = ratio
-   100%), not brand green, so they match the unfiltered map dots. Search
-   maps above keep the brand tint. */
-.map-vis-canvas .marker-cluster-small,
-.map-vis-canvas .marker-cluster-medium,
-.map-vis-canvas .marker-cluster-large {
-  background-color: color-mix(in srgb, #a01515 25%, transparent);
-}
-
-.map-vis-canvas .marker-cluster-small div,
-.map-vis-canvas .marker-cluster-medium div,
-.map-vis-canvas .marker-cluster-large div {
-  background-color: color-mix(in srgb, #a01515 85%, transparent);
-}
-
 /* Hero banner: flat --light-brand, matching .site-header above (edit that
    variable to retint both). The coins SVG itself is rendered as a plain
    <img> in HeroBanner.tsx, not here — .hero-banner__overlay below is just
@@ -369,7 +298,7 @@ button:not(:disabled):hover {
 .hero-banner {
   position: relative;
   overflow: hidden;
-  background: var(--light-brand);
+  background: #788b64;
 }
 
 /* Tints the coins <img> with the same color, so the illustration reads as
@@ -381,8 +310,8 @@ button:not(:disabled):hover {
 .hero-banner__overlay {
   position: absolute;
   inset: 0;
-  background: var(--light-brand);
-  mix-blend-mode: multiply;
+  /* background: var(--light-brand);
+  mix-blend-mode: multiply; */
   pointer-events: none;
 }
 
@@ -398,14 +327,14 @@ button:not(:disabled):hover {
 
 .title-en {
   font-family: serif;
-  font-size: 1.125rem; /* text-lg */
+  font-size: 1.1rem;
   font-weight: 600;    /* font-semibold */
-  color: var(--brand); /* replace with your brand color */
+  color: var(--brand); 
 }
 
 .title-zh {
-  font-size: 0.75rem;  /* text-xs */
-  color: #6b7280;      /* gray-500 */
+  font-size: 0.8rem;  /* text-xs */
+  color: var(--brand); 
 }
 
 .filter-button{

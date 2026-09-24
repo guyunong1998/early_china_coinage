@@ -377,10 +377,13 @@ export const DICTIONARY = {
   // never relabels this tab again.
   'museum.tabs.search': { en: 'Search', zh: '搜索' },
   'museum.search.hint': {
-    en: 'Search ANS museum specimens by accession number. Each result links to its record in the ANS Online Collection.',
-    zh: '按藏品编号搜索 ANS 博物馆标本。每条结果链接至其在 ANS 在线藏品库中的记录。',
+    en: 'Search ANS museum specimens ({count} recorded) by accession number, mint, state, or inscription (either language). Each result links to its record in the ANS Online Collection.',
+    zh: '搜索 ANS 博物馆标本（已收录 {count} 件），可按藏品编号、铸地、诸侯国或铭文（中英文均可）查找。每条结果链接至其在 ANS 在线藏品库中的记录。',
   },
-  'museum.search.placeholder': { en: 'Enter accession number, e.g. 1937.146.16801…', zh: '输入藏品编号，如 1937.146.16801…' },
+  'museum.search.placeholder': {
+    en: 'Search accession number, mint, state, or inscription…',
+    zh: '搜索藏品编号、铸地、诸侯国或铭文…',
+  },
   'museum.search.noResults': { en: 'No specimens found for “{query}”.', zh: '未找到编号包含“{query}”的标本。' },
   'museum.search.empty': { en: 'No specimens available yet.', zh: '暂无标本数据。' },
   'museum.search.truncated': {
@@ -388,12 +391,11 @@ export const DICTIONARY = {
     zh: '显示 {shown} / {total} 条 — 请输入更多关键词以缩小范围。',
   },
   'museum.search.unmapped': { en: 'no mapped mint', zh: '暂无铸地坐标' },
-  'museum.search.reverseLabel': { en: 'Reverse:', zh: '背文：' },
-  'museum.search.mintLabel': { en: 'Mint:', zh: '铸地：' },
+  'museum.search.unmappedHint': { en: 'Mint has no coordinates.', zh: '铸地暂无坐标。' },
+  'museum.search.inscriptionLabel': { en: 'Inscription:', zh: '铭文：' },
   'museum.search.stateLabel': { en: 'State:', zh: '诸侯国：' },
   'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
   'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
-  'visualizations.stats.specimens': { en: '{count} specimens', zh: '{count} 件标本' },
 
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
@@ -476,8 +478,8 @@ export const DICTIONARY = {
     zh: '对比已选币种在数据库各铸地的分布。',
   },
   'map.currentView.mintTownAnsNone': {
-    en: 'Showing all mint towns from the ANS museum specimens — select one or more coin types below to filter.',
-    zh: '显示 ANS 博物馆标本中全部铸地——请在下方选择一个或多个币种进行筛选。',
+    en: 'Showing all mint towns from the ANS museum specimens ({count} recorded) — select one or more coin types below to filter.',
+    zh: '显示 ANS 博物馆标本（已收录 {count} 件）中全部铸地——请在下方选择一个或多个币种进行筛选。',
   },
   'map.currentView.mintTownAnsActiveOr': {
     en: 'Showing mint towns from the ANS museum specimens with coins matching any of the selected types.',

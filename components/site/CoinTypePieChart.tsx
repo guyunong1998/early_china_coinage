@@ -101,8 +101,11 @@ function clampSpan(startAngle: number, endAngle: number) {
 /** Same footprint as a type row's colored square swatch, but a gray circle
  * with an exclamation mark (no type color of its own) — marks the
  * "unquantified types" legend row as a different kind of thing
- * (present-but-uncounted) rather than another color-coded slice. */
-function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
+ * (present-but-uncounted) rather than another color-coded slice. Also reused
+ * by AccessionNumberSearch (Museum Collections' Search tab) to mark a
+ * specimen whose mint has no map coordinates, for the same
+ * present-but-not-fully-resolved reason. */
+export function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" className={`${className} shrink-0`} aria-hidden="true">
       <circle cx="8" cy="8" r="8" fill={UNCLASSIFIED_COLOR} />

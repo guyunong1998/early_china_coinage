@@ -10,7 +10,7 @@ export function SiteHeader() {
   const { t } = useLanguage()
   return (
     <header className="site-header">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2">
         <Link href="/" className="group flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- plain
               img keeps this a static, non-Next-Image-optimized asset load
