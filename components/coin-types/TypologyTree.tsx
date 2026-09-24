@@ -29,7 +29,7 @@ function TreeNode({
       href={`/coin-types/${node.slug}`}
       className={`text-sm hover:underline ${isCurrent ? 'font-bold text-brand' : 'text-gray-700 hover:text-brand'}`}
     >
-      {node.label_zh} <span className="text-xs italic text-gray-400">({node.label_en})</span>
+      {node.label_zh} <span className="text-xs muted-italic">({node.label_en})</span>
     </Link>
   )
 

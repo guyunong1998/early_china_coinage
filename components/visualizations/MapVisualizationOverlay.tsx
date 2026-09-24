@@ -5,8 +5,10 @@
  * Site tabs, that tab's brief description (plus a placeholder slot for a
  * longer write-up — see visualizations.mintTown.detail / findSite.detail in
  * lib/i18n/dictionary.ts), and whatever mode-specific filter controls the
- * caller passes as children. Below the `lg` breakpoint the controls collapse
- * behind a toggle button so the map underneath stays reachable.
+ * caller passes as children. The controls collapse behind a toggle button
+ * at every breakpoint (including desktop, where the panel otherwise
+ * stretches to the map box's full height) so the map underneath stays
+ * reachable.
  *
  * Used by: MintTownVisualization and FindSpotsVisualization in
  * components/visualizations/MapVisualization.tsx.
@@ -14,7 +16,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { T } from '@/components/i18n/T'
 import { ClickHint } from '@/components/ui/ClickHint'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
@@ -47,6 +49,14 @@ export const VISUALIZATION_TABS: {
 // makes it survive that remount within the same client session.
 let lastOpenState = false
 
+// Desktop has room for the panel to sit open by default (unlike mobile/
+// tablet, where it starts collapsed so the map stays reachable). Applied
+// once per client session — not in the initial useState (that would
+// mismatch the server-rendered "closed" HTML) and guarded so a later tab
+// switch (which remounts this component) doesn't re-open a panel the user
+// already explicitly collapsed.
+let appliedDesktopDefault = false
+
 export function MapVisualizationOverlay({ children }: { children?: React.ReactNode }) {
   const pathname = usePathname()
   const { t } = useLanguage()
@@ -60,29 +70,31 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
     })
   }
 
+  useEffect(() => {
+    if (appliedDesktopDefault) return
+    appliedDesktopDefault = true
+    if (window.matchMedia('(min-width: 1024px)').matches) setOpen(true)
+  }, [])
+
   const active = VISUALIZATION_TABS.find((tab) => pathname.startsWith(tab.href)) ?? VISUALIZATION_TABS[0]
   const detail = t(active.detailKey)
 
   return (
-    <div className="map-vis-overlay ">
-      <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <ClickHint hint={t('visualizations.viewByLabelHint')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
+    <div className={`map-vis-overlay ${open ? '' : 'map-vis-overlay-collapsed'}`}>
+      <div className="map-vis-panel">
+        <div className="map-vis-panel-header">
+          <ClickHint hint={t('visualizations.viewByLabelHint')} className="shrink-0 hint-underline text-sm font-semibold text-gray-700">
             <T k="visualizations.viewByLabel" />
           </ClickHint>
 
-          <div className={`flex-wrap gap-1.5 ${open ? 'flex' : 'hidden'} lg:flex`}>
+          <div className={`map-vis-tabs ${open ? 'flex' : 'hidden'}`}>
             {VISUALIZATION_TABS.map((tab) => {
               const isActive = tab === active
               return (
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
-                    isActive
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-                  }`}
+                  className={`large-pill rounded px-2.5 py-1 text-sm font-semibold transition ${isActive ? 'large-pill-active' : 'large-pill-inactive'}`}
                 >
                   <T k={tab.labelKey} />
                 </Link>
@@ -95,7 +107,7 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-label={t('ui.toggleFilters')}
-            className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand/30 text-brand lg:hidden"
+            className="map-vis-panel-toggle"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path
@@ -109,13 +121,11 @@ export function MapVisualizationOverlay({ children }: { children?: React.ReactNo
           </button>
         </div>
 
-        <p className={`px-2.5 pb-2 text-sm text-gray-700 sm:px-3 ${open ? 'block' : 'hidden'} lg:block`}>
+        <p className={`map-vis-brief ${open ? 'block' : 'hidden'}`}>
           <T k={active.briefKey} />
         </p>
 
-        <div
-          className={`${open ? 'block' : 'hidden'} max-h-[min(60dvh,28rem)] overflow-y-auto border-t border-brand/10 px-2.5 py-2.5 sm:px-3 lg:block`}
-        >
+        <div className={`map-vis-panel-body ${open ? 'block' : 'hidden'}`}>
           {detail && <p className="mb-2.5 text-sm text-gray-700">{detail}</p>}
           {children}
         </div>

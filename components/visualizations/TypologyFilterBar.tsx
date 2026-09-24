@@ -39,6 +39,15 @@ type TypologyFilterBarProps = {
    * Museum Collections alike). See TypologyOptionCounts' doc comment. */
   optionCounts?: TypologyOptionCounts
   compact?: boolean
+  /** Locks the current `sel` in as a committed multiselect pick and resets
+   * `sel` back to empty — rendered as an "Add" button alongside the
+   * dropdowns. Omitted by callers that only need a single selection. */
+  onAddAnother?: () => void
+  canAddAnother?: boolean
+  /** Clears the active filter — rendered as a "Clear filter" button next to
+   * Add, shown only while `showClearFilters` is true. */
+  onClearFilters?: () => void
+  showClearFilters?: boolean
 }
 
 const LEVEL_DICT_KEY: DictionaryKey[] = [
@@ -56,6 +65,10 @@ export function TypologyFilterBar({
   coinIssues,
   optionCounts,
   compact = false,
+  onAddAnother,
+  canAddAnother,
+  onClearFilters,
+  showClearFilters,
 }: TypologyFilterBarProps) {
   const { lang, t } = useLanguage()
 
@@ -68,51 +81,49 @@ export function TypologyFilterBar({
 
   const toOptions = (opts: HierarchyLevelOption[], depth: 1 | 2 | 3 | 4 | 5) =>
     opts.map((o) => {
-      const label = optionLabel(o.label_en, o.label_zh, lang)
+      const label = optionLabel(o.label_zh, o.label_en, lang)
       return { value: o.value, label: optionCounts ? `${label} (${optionCounts.level(depth, o.value)})` : label }
     })
 
+  // Levels 2-5 all follow the same cascade rule: only shown once the level
+  // above it is picked and has narrower options below it, and picking one
+  // clears every deeper level (they're no longer valid once an ancestor
+  // changes). Level 1 is special-cased above/below since it resets the
+  // whole selection instead of just its own descendants.
+  const cascadeLevels: Array<{ depth: 2 | 3 | 4 | 5; prevValue: string; value: string; options: HierarchyLevelOption[] }> = [
+    { depth: 2, prevValue: sel.level1, value: sel.level2, options: level2Options },
+    { depth: 3, prevValue: sel.level2, value: sel.level3, options: level3Options },
+    { depth: 4, prevValue: sel.level3, value: sel.level4, options: level4Options },
+    { depth: 5, prevValue: sel.level4, value: sel.level5, options: level5Options },
+  ]
+
+  function renderCascadeLevel({ depth, prevValue, value, options }: (typeof cascadeLevels)[number]) {
+    if (!prevValue || options.length === 0) return null
+    return (
+      <FilterSelect
+        key={depth}
+        label={t(LEVEL_DICT_KEY[depth - 1])}
+        value={value}
+        options={toOptions(options, depth)}
+        onChange={(v) => {
+          const next = { ...sel, [`level${depth}`]: v }
+          for (let d = depth + 1; d <= 5; d++) next[`level${d}` as keyof TypologyFilterSelection] = ''
+          onChange(next)
+        }}
+      />
+    )
+  }
+
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      <div className="flex flex-wrap items-start gap-2.5">
+      <div className="flex flex-col gap-2">
         <FilterSelect
           label={t(LEVEL_DICT_KEY[0])}
           value={sel.level1}
           options={toOptions(level1Options, 1)}
           onChange={(v) => onChange({ ...emptyTypologySelection(), level1: v, inscriptionId: sel.inscriptionId })}
         />
-        {sel.level1 && level2Options.length > 0 && (
-          <FilterSelect
-            label={t(LEVEL_DICT_KEY[1])}
-            value={sel.level2}
-            options={toOptions(level2Options, 2)}
-            onChange={(v) => onChange({ ...sel, level2: v, level3: '', level4: '', level5: '' })}
-          />
-        )}
-        {sel.level2 && level3Options.length > 0 && (
-          <FilterSelect
-            label={t(LEVEL_DICT_KEY[2])}
-            value={sel.level3}
-            options={toOptions(level3Options, 3)}
-            onChange={(v) => onChange({ ...sel, level3: v, level4: '', level5: '' })}
-          />
-        )}
-        {sel.level3 && level4Options.length > 0 && (
-          <FilterSelect
-            label={t(LEVEL_DICT_KEY[3])}
-            value={sel.level4}
-            options={toOptions(level4Options, 4)}
-            onChange={(v) => onChange({ ...sel, level4: v, level5: '' })}
-          />
-        )}
-        {sel.level4 && level5Options.length > 0 && (
-          <FilterSelect
-            label={t(LEVEL_DICT_KEY[4])}
-            value={sel.level5}
-            options={toOptions(level5Options, 5)}
-            onChange={(v) => onChange({ ...sel, level5: v })}
-          />
-        )}
+        {cascadeLevels.map(renderCascadeLevel)}
 
         <FilterSelect
           label={t('map.filter.inscription', { count: inscriptionOptions.length })}
@@ -124,6 +135,26 @@ export function TypologyFilterBar({
           onChange={(v) => onChange({ ...sel, inscriptionId: v })}
         />
       </div>
+
+      {(onAddAnother || (onClearFilters && showClearFilters)) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {onAddAnother && (
+            <button
+              type="button"
+              onClick={onAddAnother}
+              disabled={!canAddAnother}
+              className="rounded border border-brand/30 bg-background px-2 py-0.5 text-xs font-semibold text-brand transition hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-background disabled:hover:text-brand"
+            >
+              {t('map.filter.addSelection')}
+            </button>
+          )}
+          {onClearFilters && showClearFilters && (
+            <button type="button" onClick={onClearFilters} className="btn-clear-filters">
+              {t('heatmap.clearFilter')}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -148,12 +179,12 @@ function FilterSelect({
   const { t } = useLanguage()
 
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm font-semibold text-gray-700">{label}</span>
+    <label className="flex min-w-0 items-center gap-2">
+      <span className="shrink-0 text-sm font-semibold text-gray-700">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+        className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap rounded form-input px-2 py-1.5"
       >
         <option value="">{`${label} – ${t('map.filter.none')}`}</option>
         {options.map((opt) => (

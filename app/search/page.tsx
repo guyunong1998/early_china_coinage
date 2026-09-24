@@ -294,7 +294,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6 text-center">
-        <h1 className="font-serif text-3xl font-semibold text-brand">
+        <h1 className="page-heading">
           <T k="search.title" />{' '}
           <span className="text-2xl font-normal text-gray-500">
             (
@@ -339,11 +339,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                 {tab.id === 'all' && <PrecisionAllHint />}
                 <Link
                   href={href}
-                  className={`rounded border px-3 py-1.5 text-sm transition ${
-                    active
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-                  }`}
+                  className={`large-pill rounded px-3 py-1.5 text-sm transition ${active ? 'large-pill-active' : 'large-pill-inactive'}`}
                 >
                   <T k={tab.key} /> ({tab.count})
                 </Link>
@@ -500,7 +496,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       </div>
                       {pieData.length > 0 && (
                         <div className="flex w-full flex-col items-center justify-center gap-1.5 sm:w-1/3">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          <span className="text-xs eyebrow text-gray-400">
                             {site.site_code}
                           </span>
                           <CoinTypePieChart data={pieData} size={140} showLegend={false} />

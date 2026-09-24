@@ -18,9 +18,9 @@ export function MapLoadingOverlay() {
   const [coin] = useState(pickRandomLoadingCoinType)
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm">
-      <div className="panel flex flex-col items-center gap-4 rounded-lg px-8 py-7 shadow-lg">
-        <div className="relative h-32 w-32 overflow-hidden rounded border border-gray-200 bg-white">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+      <div className="panel map-loading-card">
+        <div className="map-loading-coin-frame">
           <Image
             src={coin.src}
             alt={`${coin.label_zh} (${coin.label_en})`}

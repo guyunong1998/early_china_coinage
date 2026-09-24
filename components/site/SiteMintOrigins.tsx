@@ -100,7 +100,7 @@ export function SiteMintOrigins({ site, mints, mintTypeKeys, typeOptions }: Site
           id="site-mint-type-filter"
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
-          className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+          className="rounded form-input px-2 py-1.5"
         >
           <option value="all">{t('siteMintOrigins.allTypes', { count: mints.length })}</option>
           {typeOptions.map((option) => (

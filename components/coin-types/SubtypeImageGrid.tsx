@@ -37,7 +37,7 @@ export function SubtypeImageGrid({ subtypes }: { subtypes: CoinTypeNode[] }) {
               )}
             </div>
             <span className="mt-2 text-center text-xs font-semibold text-gray-700 group-hover:text-brand">
-              {subtype.label_zh} <span className="italic text-gray-400">({subtype.label_en})</span>
+              {subtype.label_zh} <span className="muted-italic">({subtype.label_en})</span>
             </span>
           </Link>
         )

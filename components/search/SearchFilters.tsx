@@ -138,14 +138,14 @@ export function SearchFilters({
 }
 
 const inputClass =
-  'w-full rounded border border-brand/30 px-2 py-1.5 text-sm outline-none focus:border-brand'
+  'w-full rounded form-input px-2 py-1.5'
 const labelClass =
   'flex cursor-pointer items-center gap-2 px-1 py-1 text-sm text-gray-700 hover:bg-brand-light'
 
 function FacetGroup({ titleKey, children }: { titleKey: DictionaryKey; children: ReactNode }) {
   return (
     <details className="border-t border-brand/10 p-4">
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <summary className="cursor-pointer text-xs eyebrow text-gray-500">
         <T k={titleKey} />
       </summary>
       <div className="mt-3">{children}</div>
@@ -158,7 +158,7 @@ function OptionLabel({ option }: { option: FacetOption }) {
     <span className="flex-1">
       {option.value}
       {option.en && option.en !== option.value && (
-        <span className="ml-1.5 text-xs italic text-gray-400">({option.en})</span>
+        <span className="ml-1.5 text-xs muted-italic">({option.en})</span>
       )}
     </span>
   )
@@ -183,13 +183,13 @@ function CheckboxFacetGroup({
 
   return (
     <details className="border-t border-brand/10 p-4">
-      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <summary className="cursor-pointer text-xs eyebrow text-gray-500">
         <T k={titleKey} /> ({options.length})
       </summary>
       <div className="mt-3">
         {mode && modeName && (
           <div className="mb-2 flex items-center gap-3 text-[11px] text-gray-500">
-            <span className="font-semibold uppercase tracking-wide">
+            <span className="eyebrow">
               <T k="filters.matchMode" />
             </span>
             <label className="flex items-center gap-1 normal-case">

@@ -15,7 +15,7 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 export function LabelHint({ labelKey, hintKey }: { labelKey: DictionaryKey; hintKey: DictionaryKey }) {
   const { t } = useLanguage()
   return (
-    <ClickHint hint={t(hintKey)} className="cursor-help underline decoration-dotted decoration-gray-400 underline-offset-2">
+    <ClickHint hint={t(hintKey)} className="hint-underline">
       {t(labelKey)}
     </ClickHint>
   )

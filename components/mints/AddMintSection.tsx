@@ -61,7 +61,7 @@ export function AddMintSection({ isDevMode }: { isDevMode: boolean }) {
       <button
         type="button"
         onClick={() => setAdding(true)}
-        className="rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-light"
+        className="btn-outline"
       >
         + Add mint
       </button>

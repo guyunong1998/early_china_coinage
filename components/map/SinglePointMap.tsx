@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { Map as LeafletMap, Layer } from 'leaflet'
+import type { Map as LeafletMap } from 'leaflet'
 import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
 import {
   cityBoundaryStyle,
@@ -23,7 +23,6 @@ import {
   shouldShowCityBoundary,
   shouldShowCountyBoundary,
 } from '@/lib/city-boundaries'
-import { useLanguage } from '@/lib/i18n/LanguageContext'
 import type { MapSite } from '@/lib/types'
 
 // --map-pin-accent (app/maps.css) — the same hue .map-dot-single-point uses
@@ -52,10 +51,8 @@ export default function SinglePointMap({
   zoom = 12,
   boundarySite,
 }: SinglePointMapProps) {
-  const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
-  const labelLayersRef = useRef<{ labelsEn: Layer; labelsZh: Layer } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -64,18 +61,16 @@ export default function SinglePointMap({
       const { default: L } = await import('leaflet')
       if (cancelled || !containerRef.current || mapInstanceRef.current) return
 
-      const { buildBaseLayers, addStaticMajorRivers, setLabelLayerForLang } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
 
       const map = L.map(containerRef.current, { zoomControl: true }).setView([lat, lng], zoom)
       mapInstanceRef.current = map
 
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
-      // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      // street tiles and major rivers as a fixed layer.
+      const { cyclosm } = buildBaseLayers(L)
       cyclosm.addTo(map)
-      labelLayersRef.current = { labelsEn, labelsZh }
-      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
       L.marker([lat, lng], {
@@ -119,21 +114,7 @@ export default function SinglePointMap({
       mapInstanceRef.current?.remove()
       mapInstanceRef.current = null
     }
-    // `lang` is deliberately omitted: the separate [lang] effect below swaps
-    // the label layer without rebuilding the whole map on toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, label, zoom, boundarySite])
-
-  // Swap the place-name label layer whenever the language toggle changes,
-  // without rebuilding the whole map.
-  useEffect(() => {
-    const map = mapInstanceRef.current
-    const layers = labelLayersRef.current
-    if (!map || !layers) return
-    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
-      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
-    })
-  }, [lang])
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />
 }

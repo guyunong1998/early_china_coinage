@@ -231,14 +231,14 @@ export function CitationsSection({
             <T k="siteTabs.citation.type" />
           </span>
           {': '}
-          {typeLabel || <span className="italic text-gray-400"><T k="siteTabs.citation.noType" /></span>}
+          {typeLabel || <span className="muted-italic"><T k="siteTabs.citation.noType" /></span>}
         </p>
         {source ? (
           <p className="mt-1 leading-6 text-gray-800">
             <CitationText text={formatSourceCitation(source, link.page)} />
           </p>
         ) : (
-          <p className="mt-1 italic text-gray-400">
+          <p className="mt-1 muted-italic">
             <T k="sources.notFound" />
           </p>
         )}
@@ -262,7 +262,7 @@ export function CitationsSection({
               <T k="siteTabs.citation.context" />
             </span>
             {': '}
-            {name || <span className="italic text-gray-400">—</span>}
+            {name || <span className="muted-italic">—</span>}
           </p>
           <p className="mt-0.5">
             <span className="font-semibold">
@@ -321,7 +321,7 @@ export function CitationsSection({
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-light"
+              className="btn-outline"
             >
               + Add citation
             </button>
@@ -344,7 +344,7 @@ export function CitationsSection({
 
       {legacy != null && (
         <div className="border-t border-gray-100 pt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <p className="mb-2 text-xs eyebrow text-gray-400">
             <T k="sources.legacyReferences" />
           </p>
           {legacy}

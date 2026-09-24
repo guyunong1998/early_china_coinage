@@ -21,7 +21,7 @@ export function CoinTypeDescriptionSection({
   // No row of its own to attach a description to (a pure grouping bucket —
   // every row under this node subdivides further) — nothing to edit.
   if (!ownHierarchyId) {
-    return <p className="text-sm italic text-gray-400">{noDescriptionLabel}</p>
+    return <p className="text-sm muted-italic">{noDescriptionLabel}</p>
   }
 
   // EditableSection's T must match updateCoinTypeHierarchyDescription's real
@@ -56,7 +56,7 @@ export function CoinTypeDescriptionSection({
             {d.description_en && <p className="leading-7 italic text-gray-600">{d.description_en}</p>}
           </div>
         ) : (
-          <p className="text-sm italic text-gray-400">{noDescriptionLabel}</p>
+          <p className="text-sm muted-italic">{noDescriptionLabel}</p>
         )
       }
       renderForm={(d) => (

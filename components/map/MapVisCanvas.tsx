@@ -658,6 +658,13 @@ type SitesCanvasProps = {
    * should pass `false` to get the same controls-off, static-major-rivers
    * treatment every other single-page map uses. */
   fullControls?: boolean
+  /** Minor-river / route-network overlay visibility — only meaningful when
+   * `fullControls` is on (they're built by addLayerControl). Default false,
+   * matching the unchecked-by-default state these had as native Leaflet
+   * layer-control checkboxes before the caller's own toggle buttons took
+   * over driving them. */
+  showMinorRivers?: boolean
+  showRoutes?: boolean
   height?: string
 }
 
@@ -683,6 +690,9 @@ type MintsCanvasProps = {
   sizeBy?: MintSizeBy
   /** See SitesCanvasProps.fullControls. */
   fullControls?: boolean
+  /** See SitesCanvasProps.showMinorRivers / showRoutes. */
+  showMinorRivers?: boolean
+  showRoutes?: boolean
   height?: string
 }
 
@@ -690,18 +700,18 @@ export type MapVisCanvasProps = SitesCanvasProps | MintsCanvasProps
 
 export function MapVisCanvas(props: MapVisCanvasProps) {
   const { viewMode, densityLatLngs, height = '100%' } = props
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
-  const labelLayersRef = useRef<{
-    labelsEn: import('leaflet').Layer
-    labelsZh: import('leaflet').Layer
-  } | null>(null)
   const pointMarkersRef = useRef<Map<string, Marker>>(new Map())
   const pinMarkersRef = useRef<Map<string, Marker>>(new Map())
   const compareMarkersRef = useRef<Map<string, Marker>>(new Map())
   const heatLayerRef = useRef<HeatLayer | null>(null)
   const clusterGroupRef = useRef<import('leaflet').LayerGroup | null>(null)
+  // Only populated when fullControls !== false — see the init effect's
+  // addLayerControl call.
+  const minorRiversLayerRef = useRef<import('leaflet').Layer | null>(null)
+  const routesLayerRef = useRef<import('leaflet').Layer | null>(null)
   // Flips true once the init effect's async `import('leaflet')` has actually
   // created `mapRef.current` — the restyle effect below bails out if the map
   // doesn't exist yet, which it never does on the very first run (init's map
@@ -724,6 +734,8 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
   const comparePoints = props.comparePoints ?? []
   const mintSizeBy: MintSizeBy = props.kind === 'mints' ? (props.sizeBy ?? 'combined') : 'combined'
   const showNoData = props.showNoData ?? true
+  const showMinorRivers = props.showMinorRivers ?? false
+  const showRoutes = props.showRoutes ?? false
 
   // Restyle existing markers + toggle the density heat layer. Runs on every
   // filter/view-mode change but never rebuilds the map itself.
@@ -738,9 +750,12 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
       const inDensity = viewMode === 'density'
       const inCompare = viewMode === 'compare'
-      // Unfiltered overview clusters; once a filter is on, Points view shows
-      // individual ratio-colored dots so matches aren't buried in count bubbles.
-      const wantCluster = viewMode === 'points' && !filterActive
+      // Unfiltered overview clusters on Find Site; once a filter is on,
+      // Points view shows individual ratio-colored dots so matches aren't
+      // buried in count bubbles. Mint Town / Museum Collections never
+      // cluster — mint towns are few enough that a cluster bubble hides
+      // more than it clarifies.
+      const wantCluster = props.kind === 'sites' && viewMode === 'points' && !filterActive
       const markerHost: 'cluster' | 'map' | 'none' = wantCluster
         ? 'cluster'
         : viewMode === 'points'
@@ -967,12 +982,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
 
     async function init() {
       const L = await loadLeaflet()
-      const {
-        buildBaseLayers,
-        addLayerControl,
-        addStaticMajorRivers,
-        setLabelLayerForLang,
-      } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addLayerControl, addStaticMajorRivers, addAttributionToggle } = await import(
+        '@/lib/map-layers'
+      )
       if (cancelled || !containerRef.current || mapRef.current) return
 
       const center: [number, number] = props.kind === 'sites' ? [35.8, 105.4] : [37.5, 112]
@@ -982,23 +994,29 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       L.control.zoom({ position: 'topright' }).addTo(map)
 
       const baseLayers = buildBaseLayers(L)
-      const { cyclosm, labelsEn, labelsZh } = baseLayers
+      const { cyclosm } = baseLayers
       cyclosm.addTo(map)
-      labelLayersRef.current = { labelsEn, labelsZh }
-      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
 
       // The layer control is reserved for the dedicated Map Visualizations
       // pages (fullControls, default true). Embedded maps (e.g. /mints)
-      // drop back to bilingual labels + static major rivers. Routes are an
-      // overlay in that control and start unchecked — they only appear after
-      // the user ticks "Routes".
+      // drop back to static major rivers. Minor rivers and routes are built
+      // by addLayerControl but start hidden — the caller's own toggle
+      // buttons (showMinorRivers/showRoutes props) turn them on, via the
+      // sync effect below.
       if (props.fullControls === false) {
         addStaticMajorRivers(L, map)
       } else {
-        addLayerControl(L, map, baseLayers, {
+        const { minorRivers, routes } = addLayerControl(L, map, baseLayers, {
           collapsed: true,
           position: 'bottomright',
         })
+        minorRiversLayerRef.current = minorRivers
+        routesLayerRef.current = routes
+        // Added after the layer control so it stacks directly above the
+        // layer icon (Leaflet inserts each new bottom-corner control before
+        // the previous one's DOM node) — see addAttributionToggle's doc
+        // comment.
+        addAttributionToggle(L, map, containerRef.current, 'bottomright')
       }
 
       const bounds: [number, number][] = []
@@ -1006,28 +1024,30 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
       const initialColor = hexToRgba(ratioToColor(1), readHeatmapOpacity() * 0.75)
       const sizeRange = dotSizeRange()
 
-      // Cluster nearby points so the China-wide Find Site / Mint Town views
-      // aren't a solid carpet of dots at national zoom. Individuals still
-      // appear once the user zooms in (disableClusteringAtZoom).
-      type ClusterFactory = {
-        markerClusterGroup: (options?: {
-          showCoverageOnHover?: boolean
-          maxClusterRadius?: number
-          disableClusteringAtZoom?: number
-          spiderfyOnMaxZoom?: boolean
-        }) => import('leaflet').LayerGroup & {
-          addLayer: (layer: import('leaflet').Layer) => void
-        }
-      }
-      const clusterGroup = (L as typeof L & ClusterFactory).markerClusterGroup({
-        showCoverageOnHover: false,
-        maxClusterRadius: 56,
-        disableClusteringAtZoom: 10,
-        spiderfyOnMaxZoom: true,
-      })
-      clusterGroupRef.current = clusterGroup
-
       if (props.kind === 'sites') {
+        // Cluster nearby points so the China-wide Find Site view isn't a
+        // solid carpet of dots at national zoom. Individuals still appear
+        // once the user zooms in (disableClusteringAtZoom). Mint Town /
+        // Museum Collections skip clustering entirely — see the `else`
+        // branch below.
+        type ClusterFactory = {
+          markerClusterGroup: (options?: {
+            showCoverageOnHover?: boolean
+            maxClusterRadius?: number
+            disableClusteringAtZoom?: number
+            spiderfyOnMaxZoom?: boolean
+          }) => import('leaflet').LayerGroup & {
+            addLayer: (layer: import('leaflet').Layer) => void
+          }
+        }
+        const clusterGroup = (L as typeof L & ClusterFactory).markerClusterGroup({
+          showCoverageOnHover: false,
+          maxClusterRadius: 56,
+          disableClusteringAtZoom: 10,
+          spiderfyOnMaxZoom: true,
+        })
+        clusterGroupRef.current = clusterGroup
+
         const { sites } = props
         const maxQty = Math.max(...sites.map((s) => s.total_quantity_for_map ?? 0), 1)
         sites.forEach((site) => {
@@ -1117,10 +1137,9 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
             }),
           }).bindPopup(buildMintPopupHtml(mint, { kind: 'no-filter' }, t))
 
-          clusterGroup.addLayer(marker)
+          marker.addTo(map)
           pointMarkersRef.current.set(mint.mint_zh, marker)
         })
-        map.addLayer(clusterGroup)
       }
 
       if (cancelled) return
@@ -1150,17 +1169,25 @@ export function MapVisCanvas(props: MapVisCanvasProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sitesForInit])
 
-  // Swap the place-name label layer whenever the language toggle changes —
-  // independent of the (heavier) init effect above so switching languages
-  // never rebuilds the whole map.
+  // Sync the minor-river/route overlays to their toggle-button props. Refs
+  // only get populated when fullControls !== false (see the init effect),
+  // so this is a no-op on embedded maps that never built these layers.
   useEffect(() => {
     const map = mapRef.current
-    const layers = labelLayersRef.current
-    if (!map || !layers) return
-    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
-      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
-    })
-  }, [lang])
+    if (!map || !mapReady) return
+    const minorRivers = minorRiversLayerRef.current
+    if (minorRivers) {
+      const has = map.hasLayer(minorRivers)
+      if (showMinorRivers && !has) minorRivers.addTo(map)
+      else if (!showMinorRivers && has) map.removeLayer(minorRivers)
+    }
+    const routes = routesLayerRef.current
+    if (routes) {
+      const has = map.hasLayer(routes)
+      if (showRoutes && !has) routes.addTo(map)
+      else if (!showRoutes && has) map.removeLayer(routes)
+    }
+  }, [mapReady, showMinorRivers, showRoutes])
 
   // Keep Leaflet sized correctly when the sidebar/map split changes.
   useEffect(() => {

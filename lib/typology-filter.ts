@@ -341,10 +341,10 @@ export function getInscriptionOptions(
  * up to `depth` with `value` at `depth` itself (deeper levels and
  * inscription ignored); `inscription(id)` counts matches for the current
  * full level selection plus that inscription. What "count" means (distinct
- * sites, total specimens, ...) is up to whichever builder produced it — see
- * buildTypologySiteCounts and buildTypologySpecimenCounts below, and
- * buildAnsTypologySpecimenCounts in lib/mint-stats.ts for Museum
- * Collections' specimen-based equivalent. */
+ * sites, distinct mint towns, ...) is up to whichever builder produced it —
+ * see buildTypologySiteCounts and buildTypologyMintCounts below, and
+ * buildAnsTypologyMintCounts in lib/mint-stats.ts for Museum Collections'
+ * ans_data equivalent. */
 export type TypologyOptionCounts = {
   level: (depth: 1 | 2 | 3 | 4 | 5, value: string) => number
   inscription: (inscriptionId: string) => number
@@ -360,54 +360,44 @@ function buildTypologyCountsFromFinds(
   coinIssues: CoinIssueDisplay[],
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection,
-  mode: 'sites' | 'specimens'
+  mode: 'sites' | 'mints'
 ): TypologyOptionCounts {
   const coinIssueById = new Map(coinIssues.map((c) => [c.id, c]))
   const hierarchyById = new Map(hierarchyRows.map((r) => [r.id, r]))
   const levelPrefix = selectionPath(sel)
 
-  const levelMaps = new Map<number, Map<string, number | Set<string>>>()
+  const levelMaps = new Map<number, Map<string, Set<string>>>()
   for (let depth = 1; depth <= 5; depth++) levelMaps.set(depth, new Map())
-  const inscriptionMap = new Map<string, number | Set<string>>()
+  const inscriptionMap = new Map<string, Set<string>>()
 
-  const addLevel = (depth: number, value: string, siteCode: string | null, qty: number) => {
+  const addLevel = (depth: number, value: string, groupKey: string | null) => {
+    if (!groupKey) return
     const m = levelMaps.get(depth)!
-    if (mode === 'sites') {
-      if (!siteCode) return
-      let set = m.get(value) as Set<string> | undefined
-      if (!set) {
-        set = new Set()
-        m.set(value, set)
-      }
-      set.add(siteCode)
-    } else {
-      m.set(value, ((m.get(value) as number | undefined) ?? 0) + qty)
+    let set = m.get(value)
+    if (!set) {
+      set = new Set()
+      m.set(value, set)
     }
+    set.add(groupKey)
   }
 
-  const addInscription = (inscriptionId: string, siteCode: string | null, qty: number) => {
-    if (mode === 'sites') {
-      if (!siteCode) return
-      let set = inscriptionMap.get(inscriptionId) as Set<string> | undefined
-      if (!set) {
-        set = new Set()
-        inscriptionMap.set(inscriptionId, set)
-      }
-      set.add(siteCode)
-    } else {
-      inscriptionMap.set(inscriptionId, ((inscriptionMap.get(inscriptionId) as number | undefined) ?? 0) + qty)
+  const addInscription = (inscriptionId: string, groupKey: string | null) => {
+    if (!groupKey) return
+    let set = inscriptionMap.get(inscriptionId)
+    if (!set) {
+      set = new Set()
+      inscriptionMap.set(inscriptionId, set)
     }
+    set.add(groupKey)
   }
 
   finds.forEach((find) => {
     if (!find.coin_issues_id) return
-    const qty = mode === 'specimens' ? findQuantity(find, { includePresence: true }) : 0
-    if (mode === 'specimens' && qty <= 0) return
     const coin = coinIssueById.get(find.coin_issues_id)
     if (!coin) return
     const row = coin.coin_type_hierarchy_id ? hierarchyById.get(coin.coin_type_hierarchy_id) : undefined
     const path = row ? rowPath(row) : []
-    const siteCode = find.site_code
+    const groupKey = mode === 'sites' ? find.site_code : coin.mint_zh
 
     for (let depth = 1; depth <= 5; depth++) {
       // Same prefix rules as buildTypologyOptionCounts' levelSel: depth-1
@@ -424,30 +414,22 @@ function buildTypologyCountsFromFinds(
       if (!prefixOk) continue
       const value = path[depth - 1]
       if (!value) continue
-      addLevel(depth, value, siteCode, qty)
+      addLevel(depth, value, groupKey)
     }
 
     if (!coin.inscription_id) return
     if (levelPrefix.length === 0) {
-      addInscription(coin.inscription_id, siteCode, qty)
+      addInscription(coin.inscription_id, groupKey)
       return
     }
     if (pathStartsWith(path, levelPrefix)) {
-      addInscription(coin.inscription_id, siteCode, qty)
+      addInscription(coin.inscription_id, groupKey)
     }
   })
 
   return {
-    level: (depth, value) => {
-      const entry = levelMaps.get(depth)?.get(value)
-      if (!entry) return 0
-      return mode === 'sites' ? (entry as Set<string>).size : (entry as number)
-    },
-    inscription: (inscriptionId) => {
-      const entry = inscriptionMap.get(inscriptionId)
-      if (!entry) return 0
-      return mode === 'sites' ? (entry as Set<string>).size : (entry as number)
-    },
+    level: (depth, value) => levelMaps.get(depth)?.get(value)?.size ?? 0,
+    inscription: (inscriptionId) => inscriptionMap.get(inscriptionId)?.size ?? 0,
   }
 }
 
@@ -462,18 +444,16 @@ export function buildTypologySiteCounts(
   return buildTypologyCountsFromFinds(finds, coinIssues, hierarchyRows, sel, 'sites')
 }
 
-/** Total recorded specimen quantity (summed across matching finds, via the
- * same findQuantity fallback chain used everywhere else in this file) —
- * used on the database Mint Town tab, where "how many coins/moulds of this
- * type have been recorded" is more relevant than how many find sites they
- * came from. */
-export function buildTypologySpecimenCounts(
+/** Distinct mint-town counts (via each matching find's coin_issues.mint_zh)
+ * — used on the database Mint Town tab, where "how many mint towns produced
+ * this type" is more relevant than raw specimen quantity. */
+export function buildTypologyMintCounts(
   finds: HeatmapFind[],
   coinIssues: CoinIssueDisplay[],
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
-  return buildTypologyCountsFromFinds(finds, coinIssues, hierarchyRows, sel, 'specimens')
+  return buildTypologyCountsFromFinds(finds, coinIssues, hierarchyRows, sel, 'mints')
 }
 
 /** Coin_issues.id values matching ANY entry (OR logic, for Points/Density

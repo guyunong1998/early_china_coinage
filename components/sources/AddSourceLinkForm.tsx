@@ -123,7 +123,7 @@ export function AddSourceLinkForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
+          className="btn-save"
         >
           {pending ? 'Adding…' : 'Add citation'}
         </button>
@@ -131,7 +131,7 @@ export function AddSourceLinkForm({
           type="button"
           disabled={pending}
           onClick={onCancel}
-          className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="btn-cancel"
         >
           Cancel
         </button>

@@ -346,7 +346,7 @@ export function CoinTypePieChart({
                         <span>
                           {c.label}
                           {c.labelEn && c.labelEn !== c.label && (
-                            <span className="ml-1 italic text-gray-400">{c.labelEn}</span>
+                            <span className="ml-1 muted-italic">{c.labelEn}</span>
                           )}
                         </span>
                       </span>
@@ -367,14 +367,14 @@ export function CoinTypePieChart({
                           <>
                             {u.subtypeLabel}
                             {u.subtypeLabelEn && u.subtypeLabelEn !== u.subtypeLabel && (
-                              <span className="ml-1 italic text-gray-400">{u.subtypeLabelEn}</span>
+                              <span className="ml-1 muted-italic">{u.subtypeLabelEn}</span>
                             )}
                             <span className="text-gray-400"> · </span>
                           </>
                         )}
                         {u.inscriptionLabel}
                         {u.inscriptionLabelEn && u.inscriptionLabelEn !== u.inscriptionLabel && (
-                          <span className="ml-1 italic text-gray-400">{u.inscriptionLabelEn}</span>
+                          <span className="ml-1 muted-italic">{u.inscriptionLabelEn}</span>
                         )}
                       </span>
                     </span>
@@ -425,14 +425,14 @@ export function CoinTypePieChart({
                     <span>
                       {u.label}
                       {u.labelEn && u.labelEn !== u.label && (
-                        <span className="ml-1 italic text-gray-400">{u.labelEn}</span>
+                        <span className="ml-1 muted-italic">{u.labelEn}</span>
                       )}
                     </span>
                     <span className="text-gray-400"> · </span>
                     <span>
                       {u.inscriptionLabel}
                       {u.inscriptionLabelEn && u.inscriptionLabelEn !== u.inscriptionLabel && (
-                        <span className="ml-1 italic text-gray-400">{u.inscriptionLabelEn}</span>
+                        <span className="ml-1 muted-italic">{u.inscriptionLabelEn}</span>
                       )}
                     </span>
                     {u.count > 1 && <span className="ml-1 text-gray-400">×{u.count}</span>}

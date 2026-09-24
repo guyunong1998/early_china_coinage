@@ -12,7 +12,7 @@ export function LoginForm() {
   return (
     <div className="mx-auto mt-16 max-w-sm px-4">
       <div className="panel p-6">
-        <h1 className="font-serif text-xl font-semibold text-brand">Sign in</h1>
+        <h1 className="section-heading">Sign in</h1>
         <p className="mt-1 text-sm text-gray-600">Sign in to edit this database.</p>
 
         <form action={signInWithGoogle} className="mt-6">

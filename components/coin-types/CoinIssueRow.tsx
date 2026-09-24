@@ -46,28 +46,28 @@ export function CoinIssueRow({
         <td className="py-2 pr-4 font-mono text-xs">{current.coin_type_code}</td>
         <td className="py-2 pr-4 text-gray-600">
           {typeZh ?? '—'}
-          {typeEn && <span className="ml-1 text-xs italic text-gray-400">({typeEn})</span>}
+          {typeEn && <span className="ml-1 text-xs muted-italic">({typeEn})</span>}
         </td>
         <td className="py-2 pr-4">
           {current.inscription ?? '—'}
           {current.inscription_en && current.inscription_en !== current.inscription && (
-            <span className="ml-1 text-xs italic text-gray-400">({current.inscription_en})</span>
+            <span className="ml-1 text-xs muted-italic">({current.inscription_en})</span>
           )}
         </td>
         <td className="py-2 pr-4 text-gray-600">
           {current.state_zh ?? '—'}
-          {current.state_en && <span className="ml-1 text-xs italic text-gray-400">({current.state_en})</span>}
+          {current.state_en && <span className="ml-1 text-xs muted-italic">({current.state_en})</span>}
         </td>
         <td className="py-2 pr-4 text-gray-600">
           {current.mint_zh ?? '—'}
-          {current.mint_en && <span className="ml-1 text-xs italic text-gray-400">({current.mint_en})</span>}
+          {current.mint_en && <span className="ml-1 text-xs muted-italic">({current.mint_en})</span>}
         </td>
         <td className="py-2 text-gray-600">
           <div className="flex items-start justify-between gap-2">
             <span>
               {current.description_zh && <div>{current.description_zh}</div>}
               {current.description_en && (
-                <div className={current.description_zh ? 'italic text-gray-400' : undefined}>
+                <div className={current.description_zh ? 'muted-italic' : undefined}>
                   {current.description_en}
                 </div>
               )}
@@ -77,7 +77,7 @@ export function CoinIssueRow({
               <button
                 type="button"
                 onClick={startEdit}
-                className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                className="shrink-0 text-link-sm"
               >
                 Edit
               </button>
@@ -182,7 +182,7 @@ export function CoinIssueRow({
             <button
               type="submit"
               disabled={locked}
-              className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
+              className="btn-save"
             >
               {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
             </button>
@@ -190,7 +190,7 @@ export function CoinIssueRow({
               type="button"
               disabled={locked}
               onClick={cancelEdit}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              className="btn-cancel"
             >
               Cancel
             </button>

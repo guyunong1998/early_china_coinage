@@ -32,11 +32,7 @@ export function Pagination({ currentPage, totalPages, buildHref }: PaginationPro
             {showEllipsis && <span className="text-gray-400">…</span>}
             <Link
               href={buildHref(page)}
-              className={`rounded border px-3 py-1.5 transition ${
-                page === currentPage
-                  ? 'border-brand bg-brand text-white'
-                  : 'border-brand/30 bg-white text-brand hover:bg-brand-light'
-              }`}
+              className={`large-pill rounded px-3 py-1.5 transition ${page === currentPage ? 'large-pill-active' : 'large-pill-inactive'}`}
             >
               {page}
             </Link>

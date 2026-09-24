@@ -148,7 +148,7 @@ export function SourcesListClient({
             setCurrentPage(1)
           }}
           placeholder={t('sources.searchPlaceholder')}
-          className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand"
+          className="w-full rounded form-input px-2.5 py-1.5"
         />
         <p className="text-xs text-gray-500">
           {query.trim()
@@ -164,7 +164,7 @@ export function SourcesListClient({
             <button
               type="button"
               onClick={() => setAddingSource(true)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-light"
+              className="btn-outline"
             >
               + Add source
             </button>

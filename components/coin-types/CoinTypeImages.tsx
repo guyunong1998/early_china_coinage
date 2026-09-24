@@ -44,7 +44,7 @@ export function CoinTypeImages({
                 className="h-full w-full object-contain transition group-hover:opacity-90"
               />
             </div>
-            <figcaption className="border-t border-gray-200 bg-white px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <figcaption className="border-t border-gray-200 bg-white px-2 py-1 text-center text-xs eyebrow text-gray-500">
               {accNum && <span className="text-gray-400">ANS {accNum} · </span>}
               <T k={pane.labelKey} />
             </figcaption>

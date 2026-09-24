@@ -162,7 +162,7 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
   return (
     <span>
       {a ?? '—'}
-      <span className="ml-2 text-sm italic text-gray-400">{b}</span>
+      <span className="ml-2 text-sm muted-italic">{b}</span>
     </span>
   )
 }
@@ -209,7 +209,7 @@ function bilingualList(pairs: BilingualPair[]) {
         <span key={zh}>
           {i > 0 && '、'}
           <span className="text-gray-800">{zh}</span>
-          {en && en !== zh && <span className="ml-1 text-xs italic text-gray-400">({en})</span>}
+          {en && en !== zh && <span className="ml-1 text-xs muted-italic">({en})</span>}
         </span>
       ))}
     </>
@@ -387,7 +387,7 @@ export default async function SitePage({ params }: PageProps) {
         <p className="mt-1 text-sm text-gray-500">
           {[site.province_zh, site.city_zh, site.county_zh].filter(Boolean).join(' · ')}
           {site.province_en && (
-            <span className="ml-2 italic text-gray-400">
+            <span className="ml-2 muted-italic">
               {[site.province_en, site.city_en, site.county_en].filter(Boolean).join(', ')}
             </span>
           )}
@@ -444,7 +444,7 @@ export default async function SitePage({ params }: PageProps) {
 
           {/* Keep description area visible: prefer remark, fallback to description */}
           <div className="mt-4 border-t border-gray-100 pt-3 text-sm">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-700">
+            <p className="mb-1 text-xs eyebrow text-gray-700">
               <T k="site.descriptionLabel" />
             </p>
             {biBlock(infoTextZh, infoTextEn)}
@@ -491,7 +491,7 @@ export default async function SitePage({ params }: PageProps) {
                   hint={mintOrigins.unmatched
                     .map((m) => (m.mint_en ? `${m.mint_zh} (${m.mint_en})` : m.mint_zh))
                     .join('、')}
-                  className="cursor-help underline decoration-dotted decoration-gray-400 underline-offset-2"
+                  className="hint-underline"
                 >
                   <T k="site.mintOrigins.unmapped" vars={{ count: mintOrigins.unmatched.length }} /> ⓘ
                 </ClickHint>

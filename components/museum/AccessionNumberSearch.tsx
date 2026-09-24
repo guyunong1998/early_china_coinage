@@ -77,16 +77,16 @@ export function AccessionNumberSearch({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholderKey="museum.search.placeholder"
-        className="w-full rounded border border-brand/30 px-2.5 py-1.5 text-sm text-gray-800 focus:border-brand focus:outline-none"
+        className="w-full rounded form-input px-2.5 py-1.5 text-gray-800"
       />
 
       {selectedSpecimens.length > 0 && (
         <div className="space-y-1.5 rounded border border-brand/15 bg-brand-light/40 p-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <span className="text-xs eyebrow text-gray-500">
               <T k="ui.selectedCount" vars={{ count: selectedSpecimens.length }} />
             </span>
-            <button type="button" onClick={onClear} className="text-xs font-semibold text-brand hover:underline">
+            <button type="button" onClick={onClear} className="text-link-sm">
               <T k="ui.clear" />
             </button>
           </div>
@@ -157,7 +157,7 @@ export function AccessionNumberSearch({
                         <span className={isMapped ? 'text-gray-800' : 'text-gray-400'}>{s.inscription_raw}</span>
                       )}
                       {!isMapped && (
-                        <span className="text-xs italic text-gray-400">
+                        <span className="text-xs muted-italic">
                           <T k="museum.search.unmapped" />
                         </span>
                       )}
@@ -178,13 +178,13 @@ export function AccessionNumberSearch({
                           ) : (
                             s.mint_zh
                           )}
-                          {s.mint_en && <span className="italic text-gray-400"> ({s.mint_en})</span>}
+                          {s.mint_en && <span className="muted-italic"> ({s.mint_en})</span>}
                         </span>
                       )}
                       {s.state_zh && (
                         <span>
                           <T k="museum.search.stateLabel" /> {s.state_zh}
-                          {s.state_en && <span className="italic text-gray-400"> ({s.state_en})</span>}
+                          {s.state_en && <span className="muted-italic"> ({s.state_en})</span>}
                         </span>
                       )}
                     </div>

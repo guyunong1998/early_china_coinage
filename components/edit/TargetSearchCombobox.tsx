@@ -89,7 +89,7 @@ export function TargetSearchCombobox({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-left text-sm outline-none focus:border-brand"
+        className="w-full rounded form-input px-2.5 py-1.5 text-left"
       >
         {selected ? selected.label : <span className="text-gray-400">{placeholder}</span>}
       </button>

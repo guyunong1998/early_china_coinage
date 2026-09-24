@@ -111,8 +111,8 @@ export default async function MintDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
-      <h1 className="mb-6 font-serif text-3xl font-semibold text-brand">
-        {mint.name_zh} <span className="text-xl font-normal italic text-gray-400">({mint.name_en})</span>
+      <h1 className="mb-6 page-heading">
+        {mint.name_zh} <span className="text-xl font-normal muted-italic">({mint.name_en})</span>
       </h1>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -162,7 +162,7 @@ export default async function MintDetailPage({ params }: PageProps) {
               value={
                 <>
                   {mint.name_zh}
-                  <span className="ml-2 text-sm italic text-gray-400">{mint.name_en}</span>
+                  <span className="ml-2 text-sm muted-italic">{mint.name_en}</span>
                 </>
               }
             />
@@ -197,7 +197,7 @@ export default async function MintDetailPage({ params }: PageProps) {
                       <span key={i.zh}>
                         {idx > 0 && '、'}
                         {i.zh}
-                        {i.en && <span className="ml-1 text-xs italic text-gray-400">({i.en})</span>}
+                        {i.en && <span className="ml-1 text-xs muted-italic">({i.en})</span>}
                       </span>
                     ))}
                   </>
@@ -216,12 +216,12 @@ export default async function MintDetailPage({ params }: PageProps) {
         {descriptionEn ? (
           <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
         ) : (
-          <p className="text-sm italic text-gray-400">
+          <p className="text-sm muted-italic">
             <T k="mintDetail.noEnglishDescription" />
           </p>
         )}
         {!descriptionZh && !descriptionEn && (
-          <p className="text-sm italic text-gray-400">
+          <p className="text-sm muted-italic">
             <T k="mintDetail.noDescription" />
           </p>
         )}

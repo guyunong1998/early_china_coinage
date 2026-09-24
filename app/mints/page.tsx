@@ -63,7 +63,7 @@ export default async function MintsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-2">
-        <h1 className="font-serif text-3xl font-semibold text-brand">
+        <h1 className="page-heading">
           <T k="mints.title" />
         </h1>
         <p className="mt-1 text-sm text-gray-600">

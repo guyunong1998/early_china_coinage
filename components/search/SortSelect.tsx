@@ -35,7 +35,7 @@ export function SortSelect({ value }: { value: SortOption }) {
           </dl>
         }
         panelClassName="w-72"
-        className="cursor-help font-semibold uppercase tracking-wide text-gray-500 underline decoration-dotted decoration-gray-400 underline-offset-2"
+        className="hint-underline eyebrow text-gray-500"
       >
         {t('search.sortBy')}
       </ClickHint>
@@ -43,7 +43,7 @@ export function SortSelect({ value }: { value: SortOption }) {
         name="sort"
         defaultValue={value}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+        className="rounded form-input px-2 py-1.5"
       >
         {OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>

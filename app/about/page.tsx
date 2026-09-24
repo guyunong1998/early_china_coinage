@@ -53,7 +53,7 @@ const TEAM_MEMBERS: TeamMember[] = [
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="font-serif text-3xl font-semibold text-brand">
+      <h1 className="page-heading">
         <T k="about.title" />
       </h1>
       <p className="mt-4 text-gray-700 leading-7">
@@ -155,7 +155,7 @@ export default function AboutPage() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/sources"
-              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+              className="inline-block w-fit btn-outline transition"
             >
               <T k="about.resources.sources" /> →
             </Link>
@@ -163,7 +163,7 @@ export default function AboutPage() {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+              className="inline-block w-fit btn-outline transition"
             >
               <T k="about.resources.github" /> →
             </a>
@@ -171,7 +171,7 @@ export default function AboutPage() {
               href={ARCHITECTURE_DOC_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+              className="inline-block w-fit btn-outline transition"
             >
               <T k="about.resources.architecture" /> →
             </a>
@@ -179,7 +179,7 @@ export default function AboutPage() {
               href={SITEMAP_DOC_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+              className="inline-block w-fit btn-outline transition"
             >
               <T k="about.resources.sitemap" /> →
             </a>

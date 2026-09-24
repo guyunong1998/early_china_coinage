@@ -54,7 +54,7 @@ export function EditableSection<T>({
           <button
             type="button"
             onClick={startEdit}
-            className="text-xs font-semibold text-brand hover:underline"
+            className="text-link-sm"
           >
             Edit
           </button>
@@ -78,7 +78,7 @@ export function EditableSection<T>({
           <button
             type="submit"
             disabled={locked}
-            className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
+            className="btn-save"
           >
             {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
           </button>
@@ -89,7 +89,7 @@ export function EditableSection<T>({
               cancelEdit()
               onCancelCreate?.()
             }}
-            className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="btn-cancel"
           >
             Cancel
           </button>

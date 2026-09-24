@@ -16,7 +16,7 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
   return (
     <span>
       {a}
-      <span className="ml-2 text-sm italic text-gray-400">{b}</span>
+      <span className="ml-2 text-sm muted-italic">{b}</span>
     </span>
   )
 }

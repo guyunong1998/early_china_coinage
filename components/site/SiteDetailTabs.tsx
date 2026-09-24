@@ -265,7 +265,7 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
   return (
     <span>
       {a}
-      <span className="ml-2 text-sm italic text-gray-400">{b}</span>
+      <span className="ml-2 text-sm muted-italic">{b}</span>
     </span>
   )
 }
@@ -281,7 +281,7 @@ function coinIssueOptionLabel(c: CoinIssueDisplay): string {
 function tabLabel(label: string, count: number, hint: string) {
   return (
     <span className="inline-flex items-center gap-1">
-      <ClickHint hint={hint} className="cursor-help underline decoration-dotted underline-offset-2">
+      <ClickHint hint={hint} className="hint-underline">
         {label}
       </ClickHint>
       {` (${count})`}
@@ -366,7 +366,7 @@ export function SiteDetailTabs({
             <button
               type="button"
               onClick={() => setAddingContext(true)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-light"
+              className="btn-outline"
             >
               + Add context
             </button>
@@ -406,7 +406,7 @@ export function SiteDetailTabs({
               breakdownSlot={
                 (breakdown || unquantifiedTypes.length > 0) && (
                   <div className="border-t border-gray-100 pt-3 md:border-t-0 md:border-l md:pl-4 md:pt-0">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    <p className="mb-2 text-xs eyebrow text-gray-400">
                       币种构成 / Coin types
                     </p>
                     <CoinTypePieChart
@@ -438,7 +438,7 @@ export function SiteDetailTabs({
             <button
               type="button"
               onClick={() => setAddingFind(true)}
-              className="rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-light"
+              className="btn-outline"
             >
               + Add find
             </button>
@@ -470,7 +470,7 @@ export function SiteDetailTabs({
             <col className="w-[20%]" />
             <col className="w-[18%]" />
           </colgroup>
-          <thead className="border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <thead className="border-b border-gray-200 text-xs eyebrow text-gray-500">
             <tr>
               <th className="py-2 pr-4">{t('siteTabs.table.find')}</th>
               <th className="py-2 pr-4">{t('siteTabs.table.context')}</th>
@@ -484,7 +484,7 @@ export function SiteDetailTabs({
           <tbody className="divide-y divide-gray-100">
             {filteredFinds.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-4 text-center text-sm italic text-gray-400">
+                <td colSpan={7} className="py-4 text-center text-sm muted-italic">
                   {t('siteTabs.noFinds')}
                 </td>
               </tr>
@@ -520,7 +520,7 @@ export function SiteDetailTabs({
         id="context-filter"
         value={selectedContext}
         onChange={(e) => setSelectedContext(e.target.value)}
-        className="rounded border border-brand/30 bg-white px-2 py-1 text-sm outline-none focus:border-brand"
+        className="rounded form-input px-2 py-1"
       >
         <option value="all">{t('siteTabs.context.all')}</option>
         {contexts.map((ctx) => (

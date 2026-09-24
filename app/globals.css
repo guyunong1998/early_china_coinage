@@ -63,8 +63,9 @@
    ============================================================================ */
 :root {
   /* --- Surfaces & text --- */
-  --background: #ffffff;   /* page background — flat white */
-  --paper: #ffffff;         /* card/item surface — a slightly cream tone against the white page */
+  --background: #f8f8f2;   /* page background — flat white */
+  --paper: white;         /* card/item surface — a slightly cream tone against the white page */
+  /* --paper: #f1f0e4; */
   --foreground: #232220;   /* near-black body text (a hair warm, not stark) */
   --muted: #75705f;        /* secondary/muted text (dates, captions, meta) */
 
@@ -73,7 +74,8 @@
   --brand-dark: #213509;
   --brand: #304912;
   --brand-rgb: 48, 73, 18;
-  --brand-light: #e3ece7;  /* pale tint for subtle backgrounds, badges, focus rings */
+  --brand-light: #e7ece3;  /* pale tint for subtle backgrounds, badges, focus rings */
+  --light-brand: #afbca0;
 
   /* --brand-bright: #c9d5ba;
   --brand-dark: #97a487;
@@ -92,13 +94,6 @@
   /* Card border color, split so hover can swap it (see section 4) */
   --card-border: var(--brand);
   --card-border-hover: var(--brand-light);
-
-  /* Homepage hero banner's left-to-right sweep — separate from --brand /
-     --brand-dark above so you can retint just the hero without touching the
-     rest of the site's palette. The coins SVG overlay reuses these same two
-     colors in reverse (see .hero-banner__overlay below). */
-  --hero-gradient-start: var(--brand);
-  --hero-gradient-end: var(--brand-dark);
 }
 
 /* Hand this palette to Tailwind so `bg-brand`, `text-accent`, `border-paper`,
@@ -152,7 +147,7 @@ a {
    ============================================================================ */
 .panel {
   background: var(--paper);
-  border: 1px solid var(--brand);
+  /* border: 1px solid var(--brand); */
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
@@ -236,14 +231,13 @@ button:not(:disabled):hover {
    components/ui/SearchForm.tsx to retheme either one.
    ============================================================================ */
 .site-header {
-  background: var(--background);
-  border-bottom: 1px solid var(--background);
-  box-shadow: 0px 4px 10px 1px rgba(0, 0, 0, 0.1);
+  background: var(--light-brand);
+  border-bottom: 1px solid var(--light-brand);
+  /* box-shadow: 0px 4px 10px 1px rgba(0, 0, 0, 0.1); */
 }
 
 .search-input {
   background: var(--paper);
-  border: 1px solid var(--card-border);
   border-radius: var(--radius) 0 0 var(--radius);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -367,26 +361,26 @@ button:not(:disabled):hover {
   background-color: color-mix(in srgb, #a01515 85%, transparent);
 }
 
-/* Hero banner: a left-to-right sweep from --hero-gradient-start to
-   --hero-gradient-end (edit those two variables above to retint). The
-   coins SVG itself is rendered as a plain <img> in HeroBanner.tsx, not here —
-   .hero-banner__overlay below is just the tint layer on top of it. */
+/* Hero banner: flat --light-brand, matching .site-header above (edit that
+   variable to retint both). The coins SVG itself is rendered as a plain
+   <img> in HeroBanner.tsx, not here — .hero-banner__overlay below is just
+   the tint layer on top of it. */
 .hero-banner {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(to right, var(--brand), var(--brand-dark));
+  background: var(--light-brand);
 }
 
-/* Tints the coins <img> with the same two colors, reversed (right to left),
-   so the illustration reads as part of the gradient sweep instead of sitting
-   on top of it in its own native colors. `multiply` is what lets the
-   underlying artwork still show through instead of being fully hidden by an
-   opaque color — swap to `overlay` or `color` for a stronger/different tint,
-   or remove mix-blend-mode entirely to show the gradient as a flat layer. */
+/* Tints the coins <img> with the same color, so the illustration reads as
+   part of the banner instead of sitting on top of it in its own native
+   colors. `multiply` is what lets the underlying artwork still show through
+   instead of being fully hidden by an opaque color — swap to `overlay` or
+   `color` for a stronger/different tint, or remove mix-blend-mode entirely
+   to show it as a flat layer. */
 .hero-banner__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to left, var(--brand), var(--brand-dark));
+  background: var(--light-brand);
   mix-blend-mode: multiply;
   pointer-events: none;
 }
@@ -428,7 +422,7 @@ button:not(:disabled):hover {
 }
 
 .search-result-card{
-  border: 1px solid var(--brand);
+  border: 2px solid var(--light-brand);
   border-radius: var(--radius) var(--radius) 0 0;
 
 }
@@ -485,4 +479,196 @@ button:not(:disabled):hover {
 }
 .scrollbar-hidden::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
+}
+
+/* The dotted-underline "click/hover for more info" trigger behind every
+   ClickHint/LabelHint label site-wide (map filter labels, site detail
+   fields, the sort dropdown, coin-type hints) — was getting retyped as the
+   same five Tailwind utilities at every call site. Callers still add their
+   own typography (size, weight, color, case) alongside this class; it only
+   owns the cursor + underline treatment. */
+.hint-underline {
+  cursor: help;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: #9ca3af; /* Tailwind gray-400 */
+  text-underline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   More shared looks pulled out of repeated inline Tailwind strings — same
+   reasoning as .hint-underline above (and .scrollbar-hidden before it): each
+   was being retyped verbatim at many call sites instead of named once. Every
+   class here only owns the properties that were truly identical everywhere
+   it applied; callers keep their own layout/spacing/width utilities inline.
+   ---------------------------------------------------------------------------- */
+
+/* Plain muted/italic aside text — inline transliterations, "no description"
+   placeholders, credits, etc. Distinct from --muted (a warmer, darker tone
+   used for dates/captions/meta elsewhere) — this is the much more common
+   plain Tailwind gray-400 used for de-emphasized inline text specifically. */
+.muted-italic {
+  font-style: italic;
+  color: #9ca3af; /* Tailwind gray-400 */
+}
+
+/* A text field/select's own border + focus treatment (search boxes, combo
+   boxes, facet dropdowns, inline edit forms). Callers add their own
+   rounded/rounded-l, padding, and width — those vary by context (a small
+   inline filter vs. a big page-search box) so aren't part of the shared
+   look. */
+.form-input {
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
+  background: #fff;
+  font-size: 0.875rem;
+  outline: none;
+}
+.form-input:focus {
+  border-color: var(--brand);
+}
+
+/* The two sizes of every "toggle pill" across the site (view-mode/filter-
+   mode buttons, pagination, precision tabs, map-vis tab links, toggle chips,
+   Add/Clear filter), each with its own active/inactive fill. Callers still
+   add their own rounded/padding/text-size/font-weight, since those vary by
+   call site — these classes only carry border/background/text color. */
+
+/* Large pill (pagination, precision tabs, map-vis tab links, the
+   non-compact ToggleButtons group) — solid brand fill when selected, a
+   quiet --light-brand outline on --paper otherwise. Border color differs
+   between the two states (unlike .small-pill's fixed border below), so it
+   lives on -active/-inactive rather than this shared base. */
+.large-pill {
+  border-width: 1px;
+  border-style: solid;
+}
+.large-pill-inactive {
+  border-color: var(--light-brand);
+  background: var(--paper);
+  color: var(--brand);
+}
+.large-pill-inactive:hover {
+  background: var(--brand-light);
+}
+.large-pill-active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
+/* Small pill (map-vis overlay toggle chips, Size by, location specificity,
+   Add/Clear filter) — reads as lower-priority than the large pill above:
+   the border stays --light-brand in both states, and the fill is a lighter
+   sage (--light-brand) instead of the full dark brand when selected, with
+   dark text for contrast (white text on this lighter fill would be too
+   low-contrast). */
+.small-pill {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--light-brand);
+}
+.small-pill-inactive {
+  background: var(--background);
+  color: var(--brand);
+}
+.small-pill-inactive:hover {
+  background: var(--brand-light);
+}
+.small-pill-active {
+  background: var(--light-brand);
+  color: var(--brand-dark);
+}
+
+/* Small solid/outline form-action button pair (every inline edit form's
+   Save/Cancel). */
+.btn-save {
+  border-radius: 0.25rem;
+  background: var(--brand);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+.btn-save:hover {
+  background: rgba(var(--brand-rgb), 0.9);
+}
+.btn-save:disabled {
+  opacity: 0.5;
+}
+.btn-cancel {
+  border-radius: 0.25rem;
+  border: 1px solid #d1d5db; /* gray-300 */
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b5563; /* gray-600 */
+}
+.btn-cancel:hover {
+  background: #f9fafb; /* gray-50 */
+}
+.btn-cancel:disabled {
+  opacity: 0.5;
+}
+
+/* Outlined secondary button/link ("+ Add citation", "+ Add source", etc.).
+   Link-based callers add `inline-block w-fit transition` alongside this,
+   since an <a> needs those to size/animate like a <button> does natively. */
+.btn-outline {
+  border-radius: 0.25rem;
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+.btn-outline:hover {
+  background: var(--brand-light);
+}
+
+/* Page (h1) and section (h2/h3) heading type — the site's serif display
+   face at the two sizes used for "top of page" vs. "top of card" titles. */
+.page-heading {
+  font-family: var(--font-serif);
+  font-size: 1.875rem; /* text-3xl */
+  line-height: 2.25rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+.section-heading {
+  font-family: var(--font-serif);
+  font-size: 1.25rem; /* text-xl */
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+
+/* Small uppercase "eyebrow" label (SORT BY, filter group headers, table
+   header rows). Callers keep their own text-size and gray shade — both vary
+   by context — layered on top of this. */
+.eyebrow {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Small brand-colored text action (Clear, Edit, Remove…) that only
+   underlines on hover. */
+.text-link-sm {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+.text-link-sm:hover {
+  text-decoration: underline;
+}
+
+/* Header nav item. */
+.nav-link {
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nav-link:hover {
+  background: var(--brand-light);
+  color: var(--brand);
 }

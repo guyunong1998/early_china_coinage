@@ -219,32 +219,6 @@
   background: linear-gradient(90deg, #d9a406, #a01515);
 }
 
-.loc_precision_map {
-  pointer-events: none;
-  position: absolute;
-  right: 3rem;
-  top: 0.75rem;
-  z-index: 600;
-  /* max-width: min(60%, 450px); */
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.375rem;
-}
-
-/* Mobile/tablet variant of the precision buttons row, rendered inline in
-   the filter panel (below `lg`) instead of floating top-right — scrolls
-   horizontally on narrow screens instead of wrapping, with the scrollbar
-   itself hidden across browsers. */
-.loc_precision_map-m {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* old Edge/IE */
-}
-.loc_precision_map-m::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
-}
-
 .heatmap_legend{
   /* pointer-events:none; */
   position:absolute;
@@ -266,39 +240,208 @@
   color:rgb(107,114,128);
   box-shadow:0 1px 2px rgba(0,0,0, 0.05);
 }
- 
+
+/* >=lg: .map-vis-overlay now spans the full height of the map box (see
+   below), so its left-anchored panel would otherwise sit directly on top
+   of this bottom-left legend. Push the legend clear of the panel's own
+   max-width (420px) plus a gap. Left alone below `lg`, where the panel
+   stays short/collapsed and never reaches the legend. */
+@media (min-width: 1024px) {
+  .heatmap_legend {
+    left: 28rem;
+  }
+}
+
 .map-vis-overlay {
   /* pointer-events: none; */
   position: absolute;
   left: 0.75rem;
   top: 0.75rem;
   z-index: 700;
-  max-width: min(80vw, 420px);
+  /* A definite width (not max-width) so descendants — the coin-type
+     dropdowns in TypologyFilterBar.tsx in particular — have a real
+     containing width to shrink against. With only max-width, this
+     absolutely-positioned box's auto-width shrink-to-fit calculation pulls
+     in each <select>'s intrinsic width (sized to its widest <option>, not
+     its current value), inflating the whole panel up toward the cap
+     whenever a long option is in the list. A fixed width forces the
+     select's own min-w-0/overflow-hidden/text-ellipsis classes to actually
+     truncate instead. */
+  width: min(80vw, 380px);
 }
 
-/* Chinese place-name labels (lib/map-layers.ts's buildPlaceLabelsLayer) —
-   strips Leaflet's default tooltip chrome (bubble background, border, arrow)
-   down to plain text with a white halo, so it reads the same as the English
-   (Esri tile) label layer's plain basemap text rather than a popup bubble. */
-.leaflet-tooltip.place-label-tooltip {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  font-family: sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  color: #262626;
-  text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 3px #fff;
-  white-space: nowrap;
-  pointer-events: none;
+/* Desktop/tablet (>=lg): when the panel is open, pin the bottom edge too,
+   so it stretches to the full height of the map box (via its flex
+   children, see .map-vis-panel below) instead of only being as tall as
+   its content. Collapsed (.map-vis-overlay-collapsed, toggled by the same
+   button/state as the mobile/narrow-tablet layout — see
+   MapVisualizationOverlay.tsx / MuseumMapOverlay) keeps the intrinsic,
+   header-only sizing at every breakpoint instead of stretching to the
+   bottom and leaving an empty box over the map. */
+@media (min-width: 1024px) {
+  .map-vis-overlay:not(.map-vis-overlay-collapsed) {
+    bottom: 0.75rem;
+    display: flex;
+  }
 }
-.leaflet-tooltip.place-label-tooltip::before {
+
+/* .map-vis-overlay's floating card shell — the white/backdrop-blur panel
+   itself. Shared by MapVisualizationOverlay.tsx (Find Site / Mint Town tabs)
+   and MuseumMapOverlay in MapVisualization.tsx (Museum Collections' own tab
+   row), which otherwise duplicate this whole panel structure. */
+.map-vis-panel {
+  /* Without this, this flex item (child of .map-vis-overlay, which is a
+     flex container at >=1024px) defaults to min-width: auto — refusing to
+     shrink below its content's intrinsic minimum width, which a <select>
+     with long options inflates well past .map-vis-overlay's own fixed
+     width. That overflow paints outside the overlay's box (overflow-x is
+     visible) instead of being clipped/truncated. */
+  min-width: 0;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--background);
+  /* box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); */
+  /* backdrop-filter: blur(4px); */
+  /* Own compositing layer, separate from the Leaflet map underneath (which
+     repaints itself via CSS transforms on pan/zoom/tile load). Without this,
+     toggling a pill inside this panel can fail to repaint until some other
+     interaction forces the browser to repaint the layer, showing the pill's
+     background as transparent in the meantime. */
+  transform: translateZ(0);
+}
+@media (min-width: 1024px) {
+  .map-vis-overlay:not(.map-vis-overlay-collapsed) .map-vis-panel {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+}
+
+/* Panel's top row: tab/title row plus the mobile collapse toggle. */
+.map-vis-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.625rem;
+}
+@media (min-width: 640px) {
+  .map-vis-panel-header {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+@media (min-width: 1024px) {
+  .map-vis-panel-header {
+    flex-shrink: 0;
+  }
+}
+
+/* Collapse/expand button in the panel header, shown at every breakpoint. */
+.map-vis-panel-toggle {
+  margin-left: auto;
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
+  color: var(--brand);
+}
+
+/* Panel's scrollable body — collapses behind .map-vis-panel-toggle at every
+   breakpoint (the open/closed `block`/`hidden` toggle itself stays a plain
+   Tailwind utility on the caller's className, since it's driven by React
+   state, not CSS); at `lg` and up it also flex-grows to fill the panel
+   while open. */
+.map-vis-panel-body {
+  /* Same min-width: auto flex-item issue as .map-vis-panel above — this is
+     also a flex item (of .map-vis-panel's column flex layout) at
+     >=1024px. */
+  min-width: 0;
+  max-height: min(60dvh, 28rem);
+  overflow-y: auto;
+  border-top: 1px solid rgba(var(--brand-rgb), 0.1);
+  padding: 0.625rem;
+}
+@media (min-width: 640px) {
+  .map-vis-panel-body {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+@media (min-width: 1024px) {
+  .map-vis-panel-body {
+    max-height: none;
+    min-height: 0;
+    flex: 1 1 0%;
+  }
+}
+
+/* MuseumMapOverlay's in-panel-body header row (title + its Mint Town/Search
+   tab toggle) — the Museum Collections equivalent of the tab row that lives
+   in .map-vis-panel-header for the other two panels, but rendered inside the
+   scrollable body instead since Museum Collections uses in-panel tabs. */
+.map-vis-panel-body-header {
+  margin-bottom: 0.625rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* MapVisualizationOverlay's Mint Town / Find Site tab links — collapses
+   behind .map-vis-panel-toggle at every breakpoint, same as
+   .map-vis-panel-body. The open/closed `flex`/`hidden` toggle stays a
+   plain Tailwind utility on the caller's className. */
+.map-vis-tabs {
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* MapVisualizationOverlay's one-line tab description, below the tab row. */
+.map-vis-brief {
+  padding: 0 0.625rem 0.5rem;
+  font-size: 0.875rem;
+  color: rgb(55, 65, 81);
+}
+@media (min-width: 640px) {
+  .map-vis-brief {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+@media (min-width: 1024px) {
+  .map-vis-brief {
+    flex-shrink: 0;
+  }
+}
+
+/* Credits toggle (lib/map-layers.ts's addAttributionToggle) — Leaflet's
+   default attribution control stays the source of truth for the actual
+   credit text (it already auto-updates per active base layer), only its
+   visibility is driven by the "i" button's `show-attribution` class on the
+   map container. Hidden by default so it doesn't compete with the layer
+   control button it's stacked above. */
+.map-vis-canvas .leaflet-control-attribution {
   display: none;
+}
+.map-vis-canvas.show-attribution .leaflet-control-attribution {
+  display: block;
+}
+.map-attribution-toggle a {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  font-size: 15px;
+  color: #333;
+  background: #fff;
+}
+.map-attribution-toggle a:hover {
+  background: #f4f4f4;
 }
 
 /* Leaflet's SVG renderer makes every interactive path (river/route lines,
@@ -310,4 +453,72 @@
    suppress this, so it's done here. */
 .leaflet-interactive:focus {
   outline: none;
+}
+
+/* MapVisualization.tsx's tinted "Display" cluster (Display/Size-by/toggle
+   rows grouped under one light gray-green background) — repeated across the
+   Find Site, Mint Town, and Museum Collections panels. */
+.map-display-section {
+  border-radius: 0.375rem;
+  background: var(--brand-light);
+  padding: 0.5rem;
+}
+
+/* MapVisualization.tsx's "Filter by" cluster (mode toggle, current-view
+   sentence, and the type/mint selector) — same tinted background as
+   .map-display-section, in its own box lower in the panel. */
+.map-filter-section {
+  border-radius: 0.375rem;
+  background: var(--brand-light);
+  padding: 0.5rem;
+}
+
+/* One row of filter-panel controls (a label plus its buttons/chips),
+   wrapping onto a new line on narrow panels — the same row shape reused
+   throughout MapVisualization.tsx/MapVisualizationOverlay.tsx's filter
+   panel. */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* The filter panel's "Clear filter" button — an already-filled pill that
+   inverts to solid brand on hover, distinct from .btn-outline's plain look. */
+.btn-clear-filters {
+  border-radius: 0.25rem;
+  border: 1px solid rgba(var(--brand-rgb), 0.3);
+  background: var(--background);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+}
+.btn-clear-filters:hover {
+  background: var(--brand);
+  color: #fff;
+}
+
+/* MapLoadingOverlay's card (stacked on top of the shared .panel look) and
+   the coin thumbnail's frame — the fallback shown over a map page while its
+   server-side data fetch is in flight. */
+.map-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 1rem;
+  border: 2px solid var(--light-brand);
+  padding: 1.75rem 2rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+.map-loading-coin-frame {
+  position: relative;
+  height: 8rem;
+  width: 8rem;
+  overflow: hidden;
+  /* border-radius: 0.25rem; */
+  /* border: 1px solid var(--light-brand); */
+  background: #fff;
 }
