@@ -147,7 +147,7 @@ a {
    ============================================================================ */
 .panel {
   background: var(--paper);
-  /* border: 1px solid var(--brand); */
+  border: 2px solid var(--light-brand);
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
@@ -239,6 +239,7 @@ button:not(:disabled):hover {
 .search-input {
   background: var(--paper);
   border-radius: var(--radius) 0 0 var(--radius);
+  border: 2px solid var(--light-brand);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -407,11 +408,6 @@ button:not(:disabled):hover {
   color: #6b7280;      /* gray-500 */
 }
 
-.search-filter{
-  border-radius: var(--radius) var(--radius) 0 0;
-  border: 1px solid var(--brand);
-}
-
 .filter-button{
   background: var(--brand-light);
   color: var(--brand);
@@ -445,10 +441,10 @@ button:not(:disabled):hover {
    radius rule on specificity alone — same-specificity + source-order was
    fragile here since Tailwind's build can reorder/merge plain CSS blocks
    relative to its own generated utilities. */
-.panel.panel-collapsible,
+/* .panel.panel-collapsible,
 .search-filter.panel-collapsible {
   border-radius: var(--radius);
-}
+} */
 .panel.panel-collapsible[open],
 .panel.panel-collapsible.is-open,
 .search-filter.panel-collapsible[open],

@@ -393,7 +393,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           </div>
 
           <div>
-            <div className="mb-6 search-filter">
+            <div className="mb-6 search-filter panel">
               <div className="panel-header px-4 py-2 text-sm font-bold uppercase tracking-wide">
                 <T k="map.title" />
               </div>
