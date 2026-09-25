@@ -55,7 +55,7 @@ export function DemoVisualizationsCarousel() {
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="panel-nav-card flex flex-col p-3 lg:col-span-1">
         <div className="panel-nav-card-inner flex flex-1 flex-col justify-center gap-0 p-4">
-          <h2 className="font-serif text-xl font-semibold text-brand">
+          <h2 className="section-heading">
             <T k="navcards.map.label" />
           </h2>
           <p className="text-sm leading-6 text-gray-600">
@@ -63,7 +63,7 @@ export function DemoVisualizationsCarousel() {
           </p>
           <Link
             href="/visualizations"
-            className="mt-4 block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+            className="mt-4 block w-fit btn-outline transition"
           >
             <T k="home.mapSection.title" /> →
           </Link>

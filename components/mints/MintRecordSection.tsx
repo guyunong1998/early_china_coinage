@@ -127,7 +127,7 @@ export function MintRecordSection({ mint, isDevMode }: { mint: Mint; isDevMode: 
             value={
               <>
                 {m.name_zh}
-                {m.name_en && <span className="ml-2 text-xs italic text-gray-400">({m.name_en})</span>}
+                {m.name_en && <span className="ml-2 text-xs muted-italic">({m.name_en})</span>}
               </>
             }
           />

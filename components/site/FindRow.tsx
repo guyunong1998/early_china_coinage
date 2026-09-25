@@ -19,7 +19,7 @@ function bi(zh: string | null | undefined, en: string | null | undefined) {
   return (
     <span>
       {a}
-      <span className="ml-2 text-sm italic text-gray-400">{b}</span>
+      <span className="ml-2 text-sm muted-italic">{b}</span>
     </span>
   )
 }
@@ -158,7 +158,7 @@ export function FindRow({
         <td className="py-2 text-right tabular-nums">
           <div className="flex items-center justify-end gap-2">
             {formatNumber(current.quantity_total ?? current.quantity_min ?? current.quantity_estimated)}
-            <button type="button" onClick={startEdit} className="text-xs font-semibold text-brand hover:underline">
+            <button type="button" onClick={startEdit} className="text-link-sm">
               Edit
             </button>
             {handleDelete && <ConfirmDeleteButton pending={deletePending} onConfirm={handleDelete} />}
@@ -293,7 +293,7 @@ export function FindRow({
             <button
               type="submit"
               disabled={locked}
-              className="rounded bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-brand/90 disabled:opacity-50"
+              className="btn-save"
             >
               {pending ? 'Saving…' : locked ? 'Saved ✓' : 'Save'}
             </button>
@@ -304,7 +304,7 @@ export function FindRow({
                 cancelEdit()
                 onCancelCreate?.()
               }}
-              className="rounded border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              className="btn-cancel"
             >
               Cancel
             </button>

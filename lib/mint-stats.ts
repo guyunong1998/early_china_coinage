@@ -295,17 +295,19 @@ export function getMatchingAnsSpecimensMulti(
   )
 }
 
-/** Per-option specimen counts for Museum Collections' type filter dropdowns
- * — the "(N)" hint beside each level1..level5 and inscription option, the
- * ans_data equivalent of buildTypologySpecimenCounts in typology-filter.ts.
- * Counts matching specimen rows directly (each row is already one physical
- * specimen) rather than summing a quantity field, since ans_data has none. */
-export function buildAnsTypologySpecimenCounts(
+/** Per-option distinct-mint-town counts for Museum Collections' type filter
+ * dropdowns — the "(N)" hint beside each level1..level5 and inscription
+ * option, the ans_data equivalent of buildTypologyMintCounts in
+ * typology-filter.ts. Counts distinct specimen.mint_zh values rather than
+ * specimen rows, since Museum Collections' Mint Town tab cares about "how
+ * many mint towns produced this type", not raw specimen count. Specimens
+ * with no resolved mint_zh can't contribute to that count and are skipped. */
+export function buildAnsTypologyMintCounts(
   specimens: AnsSpecimen[],
   hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
-  // One pass over specimens (same idea as buildTypologySpecimenCounts) —
+  // One pass over specimens (same idea as buildTypologyMintCounts) —
   // per-option filter scans were O(options × specimens × hierarchy).
   const hierarchyById = new Map(hierarchyRows.map((r) => [r.id, r]))
   const levelPrefix: string[] = []
@@ -315,11 +317,12 @@ export function buildAnsTypologySpecimenCounts(
     levelPrefix.push(v)
   }
 
-  const levelMaps = new Map<number, Map<string, number>>()
+  const levelMaps = new Map<number, Map<string, Set<string>>>()
   for (let depth = 1; depth <= 5; depth++) levelMaps.set(depth, new Map())
-  const inscriptionMap = new Map<string, number>()
+  const inscriptionMap = new Map<string, Set<string>>()
 
   for (const s of specimens) {
+    if (!s.mint_zh) continue
     const row = s.hierarchy_id ? hierarchyById.get(s.hierarchy_id) : undefined
     const path: string[] = []
     if (row) {
@@ -342,22 +345,29 @@ export function buildAnsTypologySpecimenCounts(
       const value = path[depth - 1]
       if (!value) continue
       const m = levelMaps.get(depth)!
-      m.set(value, (m.get(value) ?? 0) + 1)
+      let set = m.get(value)
+      if (!set) {
+        set = new Set()
+        m.set(value, set)
+      }
+      set.add(s.mint_zh)
     }
 
     if (!s.inscription_id) continue
-    if (levelPrefix.length === 0) {
-      inscriptionMap.set(s.inscription_id, (inscriptionMap.get(s.inscription_id) ?? 0) + 1)
-      continue
-    }
-    if (levelPrefix.every((v, i) => path[i] === v)) {
-      inscriptionMap.set(s.inscription_id, (inscriptionMap.get(s.inscription_id) ?? 0) + 1)
+    const matchesPrefix = levelPrefix.length === 0 || levelPrefix.every((v, i) => path[i] === v)
+    if (matchesPrefix) {
+      let set = inscriptionMap.get(s.inscription_id)
+      if (!set) {
+        set = new Set()
+        inscriptionMap.set(s.inscription_id, set)
+      }
+      set.add(s.mint_zh)
     }
   }
 
   return {
-    level: (depth, value) => levelMaps.get(depth)?.get(value) ?? 0,
-    inscription: (inscriptionId) => inscriptionMap.get(inscriptionId) ?? 0,
+    level: (depth, value) => levelMaps.get(depth)?.get(value)?.size ?? 0,
+    inscription: (inscriptionId) => inscriptionMap.get(inscriptionId)?.size ?? 0,
   }
 }
 

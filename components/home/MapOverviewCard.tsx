@@ -17,7 +17,7 @@ export function MapOverviewCard({ href, children }: MapOverviewCardProps) {
   return (
     <div className="mt-6 panel-nav-card overflow-hidden lg:grid lg:grid-cols-3">
       <div className="panel-nav-card-inner m-4 flex flex-col justify-center gap-0 p-4 lg:col-span-1">
-        <h2 className="font-serif text-xl font-semibold text-brand">
+        <h2 className="section-heading">
           <T k="navcards.map.label" />
         </h2>
         <p className="text-sm leading-6 text-gray-600">
@@ -25,7 +25,7 @@ export function MapOverviewCard({ href, children }: MapOverviewCardProps) {
         </p>
         <Link
           href={href}
-          className="inline-block w-fit rounded border border-brand/30 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-light"
+          className="inline-block w-fit btn-outline transition"
         >
           <T k="home.mapSection.title" /> →
         </Link>

@@ -30,7 +30,7 @@ export function SearchableCheckboxList({
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.preventDefault()
         }}
-        className="mb-2 w-full rounded border border-brand/30 px-2 py-1.5 text-sm outline-none focus:border-brand"
+        className="mb-2 w-full rounded form-input px-2 py-1.5"
       />
       <div className="max-h-52 space-y-1 overflow-y-auto">
         {options.map((opt) => {
@@ -57,7 +57,7 @@ export function SearchableCheckboxList({
               <span className="flex-1">
                 {opt.value}
                 {opt.en && opt.en !== opt.value && (
-                  <span className="ml-1.5 text-xs italic text-gray-400">({opt.en})</span>
+                  <span className="ml-1.5 text-xs muted-italic">({opt.en})</span>
                 )}
               </span>
               <span className="text-xs text-gray-400">({opt.count})</span>

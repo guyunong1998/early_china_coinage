@@ -16,9 +16,8 @@
  */
 
 import { useEffect, useRef } from 'react'
-import type { Map as LeafletMap, Layer } from 'leaflet'
+import type { Map as LeafletMap } from 'leaflet'
 import { dropPinHtml, PIN_HEIGHT, PIN_WIDTH } from '@/components/map/MapVisCanvas'
-import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export type OriginDistributionPoint = {
   key: string
@@ -62,17 +61,15 @@ export function OriginDistributionMap({
   destinations,
   dotSize = 12,
 }: OriginDistributionMapProps) {
-  const { lang } = useLanguage()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletMap | null>(null)
-  const labelLayersRef = useRef<{ labelsEn: Layer; labelsZh: Layer } | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function init() {
       const { default: L } = await import('leaflet')
-      const { buildBaseLayers, addStaticMajorRivers, setLabelLayerForLang } = await import('@/lib/map-layers')
+      const { buildBaseLayers, addStaticMajorRivers } = await import('@/lib/map-layers')
       if (cancelled || !containerRef.current) return
 
       mapRef.current?.remove()
@@ -87,11 +84,9 @@ export function OriginDistributionMap({
 
       // Single-page map: no layer-switcher or river-mode controls (those are
       // reserved for the dedicated Map Visualizations pages) — just the
-      // street tiles, bilingual labels, and major rivers as a fixed layer.
-      const { cyclosm, labelsEn, labelsZh } = buildBaseLayers(L)
+      // street tiles and major rivers as a fixed layer.
+      const { cyclosm } = buildBaseLayers(L)
       cyclosm.addTo(map)
-      labelLayersRef.current = { labelsEn, labelsZh }
-      setLabelLayerForLang(map, labelsEn, labelsZh, lang)
       addStaticMajorRivers(L, map)
 
       const bounds: [number, number][] = origin ? [[origin.lat, origin.lng]] : []
@@ -154,21 +149,7 @@ export function OriginDistributionMap({
       mapRef.current?.remove()
       mapRef.current = null
     }
-    // `lang` is deliberately omitted: the separate [lang] effect below swaps
-    // the label layer without rebuilding the whole map on toggle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [origin, destinations, color, dotSize])
-
-  // Swap the place-name label layer whenever the language toggle changes,
-  // without rebuilding the whole map.
-  useEffect(() => {
-    const map = mapRef.current
-    const layers = labelLayersRef.current
-    if (!map || !layers) return
-    import('@/lib/map-layers').then(({ setLabelLayerForLang }) => {
-      setLabelLayerForLang(map, layers.labelsEn, layers.labelsZh, lang)
-    })
-  }, [lang])
 
   return <div ref={containerRef} className="h-[360px] w-full" />
 }

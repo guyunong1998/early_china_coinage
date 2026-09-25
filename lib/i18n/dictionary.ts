@@ -117,10 +117,7 @@ export const DICTIONARY = {
   },
   'about.collab.ans': { en: 'American Numismatic Society', zh: '美国钱币学会' },
   'about.schema.title': { en: 'Database Schema', zh: '数据库结构' },
-  'about.schema.body': {
-    en: 'A diagram of how sites, finds, coin types, and mints relate to one another.',
-    zh: '下图展示了遗址、出土记录、币种与铸地之间的关系结构。',
-  },
+
   'about.resources.title': { en: 'Additional Resources', zh: '更多资源' },
   'about.resources.sources': { en: 'Bibliographic Sources', zh: '文献来源' },
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
@@ -152,7 +149,7 @@ export const DICTIONARY = {
   'search.field.quantity': { en: 'Quantity:', zh: '数量：' },
   'search.types': { en: 'Types:', zh: '类型：' },
   'search.inscriptions': { en: 'Inscriptions:', zh: '铭文：' },
-  'search.precision.label': { en: 'Location precision', zh: '定位精度' },
+  'search.precision.label': { en: 'Precision', zh: '定位精度' },
   'search.precision.all': { en: 'All', zh: '全部' },
   'search.precision.allHint': {
     en: 'Includes every find site regardless of how precisely its location is known. Many sites are only recorded to the county or city level, not an exact point — "All" shows that real imprecision, rather than hiding those sites.',
@@ -235,8 +232,8 @@ export const DICTIONARY = {
     zh: '在 {total} 个遗址中，{found} 个含有此币种',
   },
   'heatmap.foundInMints': {
-    en: 'Found in {found} mint towns out of {total}',
-    zh: '在 {total} 个铸地中，{found} 个含有此币种',
+    en: 'Found in {found} mint towns out of {total} ({plotted} results plotted)',
+    zh: '在 {total} 个铸地中，{found} 个含有此币种（其中 {plotted} 个已标注在图上）',
   },
   'heatmap.legend.title': { en: 'Share of site total:', zh: '占遗址钱币总数比例：' },
   'heatmap.legend.oneOfOne': { en: '1 of 1', zh: '1 枚中的 1 枚' },
@@ -377,10 +374,13 @@ export const DICTIONARY = {
   // never relabels this tab again.
   'museum.tabs.search': { en: 'Search', zh: '搜索' },
   'museum.search.hint': {
-    en: 'Search ANS museum specimens by accession number. Each result links to its record in the ANS Online Collection.',
-    zh: '按藏品编号搜索 ANS 博物馆标本。每条结果链接至其在 ANS 在线藏品库中的记录。',
+    en: 'Search ANS museum specimens ({count} recorded) by accession number, mint, state, or inscription (either language). Each result links to its record in the ANS Online Collection.',
+    zh: '搜索 ANS 博物馆标本（已收录 {count} 件），可按藏品编号、铸地、诸侯国或铭文（中英文均可）查找。每条结果链接至其在 ANS 在线藏品库中的记录。',
   },
-  'museum.search.placeholder': { en: 'Enter accession number, e.g. 1937.146.16801…', zh: '输入藏品编号，如 1937.146.16801…' },
+  'museum.search.placeholder': {
+    en: 'Search accession number, mint, state, or inscription…',
+    zh: '搜索藏品编号、铸地、诸侯国或铭文…',
+  },
   'museum.search.noResults': { en: 'No specimens found for “{query}”.', zh: '未找到编号包含“{query}”的标本。' },
   'museum.search.empty': { en: 'No specimens available yet.', zh: '暂无标本数据。' },
   'museum.search.truncated': {
@@ -388,12 +388,11 @@ export const DICTIONARY = {
     zh: '显示 {shown} / {total} 条 — 请输入更多关键词以缩小范围。',
   },
   'museum.search.unmapped': { en: 'no mapped mint', zh: '暂无铸地坐标' },
-  'museum.search.reverseLabel': { en: 'Reverse:', zh: '背文：' },
-  'museum.search.mintLabel': { en: 'Mint:', zh: '铸地：' },
+  'museum.search.unmappedHint': { en: 'Mint has no coordinates.', zh: '铸地暂无坐标。' },
+  'museum.search.inscriptionLabel': { en: 'Inscription:', zh: '铭文：' },
   'museum.search.stateLabel': { en: 'State:', zh: '诸侯国：' },
   'visualizations.stats.mints': { en: '{count} mapped mint towns', zh: '{count} 个已定位铸地' },
   'visualizations.stats.coins': { en: '{count} coins', zh: '{count} 枚钱币' },
-  'visualizations.stats.specimens': { en: '{count} specimens', zh: '{count} 件标本' },
 
   // ── map page ──────────────────────────────────────────────────────────
   'map.title': { en: 'Find Sites Map', zh: '出土遗址地图' },
@@ -410,26 +409,32 @@ export const DICTIONARY = {
   'map.filter.noMintMatches': { en: 'No matching mints', zh: '没有匹配的铸地' },
   'map.filter.noMapCoords': { en: 'no coordinates yet', zh: '暂无坐标' },
   'map.filter.addSelection': { en: 'Add', zh: '添加' },
-  'map.filter.quantityLabel': { en: 'Incomplete counts', zh: '数量不全' },
+  'map.filter.quantityLabel': { en: 'Show unquantified points', zh: '数量不全' },
   'map.filter.quantityLabelHint': {
     en: 'Some excavation units only record that a type is present, not how many coins. Include those units and sites, or limit the map and counts to units with a recorded quantity.',
     zh: '部分出土单位只记录某币种存在、没有件数。可选择把这些单位和遗址算入，或只保留有明确数量的出土单位与遗址。',
   },
-  'map.filter.quantityInclude': { en: 'Include', zh: '包含' },
-  'map.filter.quantityExclude': { en: 'Exclude', zh: '不包含' },
+  'map.filter.noDataToggle': { en: 'Show no-data points', zh: '显示所有点' },
+  'map.layers.minorRivers': { en: 'Minor rivers', zh: '次要河流' },
+  'map.layers.routes': { en: 'Routes', zh: '路线' },
+  'map.layers.routesHint': {
+    en: 'Ancient trade-route network, from the Tang dynasty (description may change).',
+    zh: '古代贸易路线网络，源自唐代（说明可能变更）。',
+  },
 
-  // ── map explanation paragraph 2: one per view mode, shared by every map ──
+  // ── map explanation: one per view mode, folded into the Display tooltip
+  // (map.view.labelHint below) rather than a standalone paragraph ──
   'map.explain.points': {
-    en: 'Point color reflects what share of items there match the active filter — gray means none, red means all, with in-between shades scaled proportionally.',
-    zh: '点的颜色反映该处符合当前筛选条件的比例——灰色表示无、红色表示全部，中间按比例过渡。',
+    en: 'Color shows what share of items there match the filter — gray for none, red for all, with shades in between.',
+    zh: '颜色表示该处符合筛选条件的比例——灰色为无、红色为全部，中间按比例过渡。',
   },
   'map.explain.density': {
-    en: 'Color follows each location’s coin count on a log scale across whatever is currently shown, so 10, 100, 1,000, and 10,000 coins stay equally distinct. Yellow is fewest, red is most. With a filter on, only the matched count is used; sites with no usable quantity are omitted. The layer stays the same strength at every zoom.',
-    zh: '颜色按当前视图中各点的钱币数量以对数分级，使 10、100、1,000、10,000 枚每一数量级都同样可辨。黄色最少，红色最多。筛选后按匹配数量计重；无数可计的地点不显示。缩放时色块浓度保持一致。',
+    en: 'Color follows each location’s coin count on a log scale, yellow (fewest) to red (most). A filter narrows this to matched coins only; sites with no usable quantity are omitted.',
+    zh: '颜色按各地点钱币数量以对数分级，黄色最少、红色最多。筛选后仅计入匹配的数量；无可计数量的遗址不显示。',
   },
   'map.explain.compare': {
-    en: 'Compare colors each selection separately — a location matching more than one selection shows as multiple points, one per selection. Point size reflects that selection’s own coin quantity there, independent of color; a match with unrecorded quantity counts as 1.',
-    zh: '「对比」视图按每项所选内容分别着色——若某处同时匹配多项所选内容，将显示为多个点，每项一个点。点的大小反映该项所选内容在该处的钱币数量，与颜色无关；若数量未记录则按 1 计算。',
+    en: 'Each selection gets its own color — a location matching several shows one point per selection. Point size reflects that selection’s coin quantity there (unrecorded counts as 1).',
+    zh: '每项所选内容各自着色——若某处匹配多项，将显示多个点，每项一个。点的大小反映该项在该处的钱币数量（未记录数量按 1 计算）。',
   },
 
   // ── current filter/view paragraph 1: one per map + filter-state combo ───
@@ -470,8 +475,8 @@ export const DICTIONARY = {
     zh: '对比已选币种在数据库各铸地的分布。',
   },
   'map.currentView.mintTownAnsNone': {
-    en: 'Showing all mint towns from the ANS museum specimens — select one or more coin types below to filter.',
-    zh: '显示 ANS 博物馆标本中全部铸地——请在下方选择一个或多个币种进行筛选。',
+    en: 'Showing all mint towns from the ANS museum specimens ({count} recorded) — select one or more coin types below to filter.',
+    zh: '显示 ANS 博物馆标本（已收录 {count} 件）中全部铸地——请在下方选择一个或多个币种进行筛选。',
   },
   'map.currentView.mintTownAnsActiveOr': {
     en: 'Showing mint towns from the ANS museum specimens with coins matching any of the selected types.',
@@ -500,26 +505,25 @@ export const DICTIONARY = {
   'map.sizeBy.finds': { en: 'Sites count', zh: '遗址数量' },
   'map.popup.coins': { en: 'Coins', zh: '钱币数' },
   'map.popup.finds': { en: 'Finds', zh: '发现次数' },
+  'map.popup.foundInFinds': { en: 'Found in {matched} finds', zh: '发现于 {matched} 条记录中' },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
   'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
   'map.legend.byType': { en: 'By type:', zh: '按类型：' },
   'map.compare.mintKindLabel': { en: 'Mint: ', zh: '铸地：' },
   'map.compare.typeKindLabel': { en: 'Type: ', zh: '类型：' },
   'map.legend.densityHint': {
-    en: 'Log-scaled coin count in this view — yellow is fewest, red is most; each order of magnitude is spaced evenly.',
-    zh: '按当前视图钱币数量对数分级——黄色最少，红色最多；每一数量级间隔相同。',
+    en: 'Color by log-scaled coin count.',
+    zh: '按当前视图钱币数量对数分级—。',
   },
-  'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
   'map.filter.l0': { en: 'Coin / Mould', zh: '钱币 / 钱范' },
   'map.filter.l1': { en: 'Category', zh: '类别' },
   'map.filter.l2': { en: 'Type', zh: '类型' },
   'map.filter.l3': { en: 'Subtype', zh: '亚型' },
   'map.filter.l4': { en: 'Variant', zh: '形制' },
-  'map.filter.inscription': { en: 'Inscription ({count})', zh: '铭文（{count}）' },
+  'map.filter.inscription': { en: 'Inscription', zh: '铭文' },
   'map.filter.none': { en: 'None', zh: '无' },
-  'map.legend.title': { en: 'Share within contexts:', zh: '出土单位内占比：' },
-  'map.legend.pure': { en: 'Context all this type', zh: '单位内全为此类' },
+  'map.legend.title': { en: 'Percentage of total coins:', zh: '出土单位内占比：' },
 
   // ── mints page ────────────────────────────────────────────────────────
   'mints.title': { en: 'Mint Town Locations', zh: '铸币城邑位置' },
@@ -603,7 +607,7 @@ export const DICTIONARY = {
   'coinTypeDetail.row.parentTypes': { en: 'Parent types', zh: '上级类型' },
   'coinTypeDetail.row.states': { en: 'States', zh: '诸侯国' },
   'coinTypeDetail.row.mints': { en: 'Mints', zh: '铸地' },
-  'coinTypeDetail.relatedFinds': { en: 'Related Finds', zh: '相关出土记录' },
+  'coinTypeDetail.relatedFinds': { en: 'Related Sites', zh: '相关出土记录' },
   'coinTypeDetail.noSites': {
     en: 'No find sites recorded yet for this coin type.',
     zh: '该币种暂无出土遗址记录。',

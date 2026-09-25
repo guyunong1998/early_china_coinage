@@ -30,7 +30,7 @@ export function Level2TypeShowcase({ items }: { items: Level2TypeShowcaseItem[] 
             />
           </div>
           <span className="mt-2 text-center text-xs font-semibold text-gray-700 group-hover:text-brand">
-            {node.label_zh} <span className="italic text-gray-400">({node.label_en})</span>
+            {node.label_zh} <span className="muted-italic">({node.label_en})</span>
           </span>
         </Link>
       ))}

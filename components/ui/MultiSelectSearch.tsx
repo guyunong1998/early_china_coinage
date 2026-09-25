@@ -66,16 +66,16 @@ export function MultiSelectSearch({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand"
+        className="w-full rounded form-input px-2.5 py-1.5"
       />
 
       {selectedOptions.length > 0 && (
         <div className="space-y-1.5 rounded border border-brand/15 bg-brand-light/40 p-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <span className="text-xs eyebrow text-gray-500">
               {selectedCountLabel(selectedOptions.length)}
             </span>
-            <button type="button" onClick={onClear} className="text-xs font-semibold text-brand hover:underline">
+            <button type="button" onClick={onClear} className="text-link-sm">
               {clearLabel}
             </button>
           </div>

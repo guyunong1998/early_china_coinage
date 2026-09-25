@@ -9,10 +9,10 @@ export function LanguageToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="rounded border border-brand/30 px-2.5 py-1 text-xs font-semibold text-brand transition hover:bg-brand-light"
+      className="flex h-9 items-center justify-center rounded border border-brand/30 px-2.5 text-xs font-semibold text-brand transition hover:bg-brand-light"
       aria-label={t('ui.toggleLanguage')}
     >
-      {lang === 'en' ? '中文' : 'EN'}
+      {lang === 'en' ? '中' : 'EN'}
     </button>
   )
 }

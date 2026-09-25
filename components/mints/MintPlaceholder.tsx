@@ -61,7 +61,7 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
       <div className="grid gap-0 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         {/* Pending */}
         <div className="p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <p className="mb-2 text-xs eyebrow text-gray-400">
             <T k="mintDetail.placeholder.toBeAdded" />
           </p>
           <ul className="space-y-2">
@@ -78,7 +78,7 @@ export function MintPlaceholder({ mint }: { mint: MintDirectoryEntry }) {
 
         {/* Completed */}
         <div className="p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <p className="mb-2 text-xs eyebrow text-gray-400">
             <T k="mintDetail.placeholder.completed" />
           </p>
           <ul className="space-y-2">

@@ -14,7 +14,7 @@ export function FieldRow({ label, value }: { label: string; value: ReactNode }) 
 
 /** Shared text input style used by every admin edit form. */
 export const fieldInputClass =
-  'w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand'
+  'w-full rounded form-input px-2.5 py-1.5'
 
 export function FieldLabel({ children }: { children: ReactNode }) {
   return <label className="mb-0.5 block text-xs font-semibold text-gray-600">{children}</label>

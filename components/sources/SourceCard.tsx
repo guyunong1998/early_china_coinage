@@ -217,11 +217,11 @@ export function SourceCard({
       />
 
       <div className="mt-3 border-t border-gray-100 pt-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        <p className="text-xs eyebrow text-gray-400">
           <T k="sources.citedBy" vars={{ count: links.length }} />
         </p>
         {links.length === 0 ? (
-          <p className="mt-1 text-xs italic text-gray-400">
+          <p className="mt-1 text-xs muted-italic">
             <T k="sources.noLinkedRecords" />
           </p>
         ) : (
@@ -237,7 +237,7 @@ export function SourceCard({
                         {target.label}
                       </Link>
                     ) : (
-                      <span className="italic text-gray-400">
+                      <span className="muted-italic">
                       <T k="sources.missingTarget" vars={{ label: target?.label ?? link.target_code }} />
                     </span>
                     )}
@@ -271,7 +271,7 @@ export function SourceCard({
               <button
                 type="button"
                 onClick={() => setAddingLink(true)}
-                className="text-xs font-semibold text-brand hover:underline"
+                className="text-link-sm"
               >
                 + Add citation
               </button>

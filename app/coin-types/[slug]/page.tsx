@@ -140,7 +140,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
       </div>
 
       <div className="mb-2 flex items-center gap-2">
-        <h1 className="font-serif text-3xl font-semibold text-brand">
+        <h1 className="page-heading">
           {node.label_zh} <span className="text-xl font-normal text-gray-500">({node.label_en})</span>
         </h1>
         <MouldTag isMould={isMouldNode(node)} />
@@ -160,11 +160,18 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
           <DetailRow labelKey="coinTypeDetail.row.level" value={<T k={LEVEL_LABEL_KEY[node.level]} />} />
             <DetailRow
               labelKey="coinTypeDetail.row.parentTypes"
-              value={
-                node.parents.length > 0
-                  ? node.parents.map((p) => `${p.label_zh} (${p.label_en})`).join('、')
-                  : '—'
-              }
+              value={linkedList(
+                node.parents.map((p) => p.label_zh),
+                (labelZh) => {
+                  const index = node.parents.findIndex((p) => p.label_zh === labelZh)
+                  const parent = node.parents[index]
+                  return {
+                    en: parent.label_en,
+                    // Level 1 (the root, always parents[0]) has no page of its own to link to.
+                    href: index > 0 ? `/coin-types/${parent.slug}` : null,
+                  }
+                }
+              )}
             />
             <DetailRow
               labelKey="coinTypeDetail.row.states"
@@ -178,7 +185,12 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
               labelKey="mintDetail.row.coinsAndSites"
               value={
                 counts.coinCount > 0 ? (
-                  <T k="stats.coinsAcrossSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+                  <Link
+                    href={`/search?coinType=${encodeURIComponent(node.label_zh)}`}
+                    className="text-brand hover:underline"
+                  >
+                    <T k="stats.coinsAcrossSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+                  </Link>
                 ) : (
                   '—'
                 )
@@ -200,7 +212,7 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                       <span key={insc.inscription_zh}>
                         {insc.inscription_zh}
                         {insc.inscription_en && insc.inscription_en !== insc.inscription_zh && (
-                          <span className="ml-1 text-xs italic text-gray-400">({insc.inscription_en})</span>
+                          <span className="ml-1 text-xs muted-italic">({insc.inscription_en})</span>
                         )}
                         {insc.mint_zh && <span className="ml-1 text-xs text-gray-400">— {insc.mint_zh}</span>}
                       </span>
@@ -275,12 +287,12 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
                         {site.site_name_zh ?? site.site_code}
                       </Link>
                       {site.site_name_en && (
-                        <span className="ml-1.5 text-xs italic text-gray-400">{site.site_name_en}</span>
+                        <span className="ml-1.5 text-xs muted-italic">{site.site_name_en}</span>
                       )}
                     </td>
                     <td className="py-2 pr-4 text-gray-600">
                       {site.province_zh ?? '—'}
-                      {site.province_en && <span className="ml-1 text-xs italic text-gray-400">({site.province_en})</span>}
+                      {site.province_en && <span className="ml-1 text-xs muted-italic">({site.province_en})</span>}
                     </td>
                     <td className="py-2 tabular-nums">{site.total_quantity_for_map ?? 0}</td>
                   </tr>

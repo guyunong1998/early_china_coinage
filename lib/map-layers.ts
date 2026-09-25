@@ -1,7 +1,6 @@
 /**
  * Shared tile layer definitions for all Leaflet maps.
  */
-import { PLACE_LABELS } from '@/lib/place-labels'
 import { toEnglishName } from '@/lib/name-translation'
 // https://github.com/ghybs/Leaflet.TileLayer.Fallback
 import 'leaflet.tilelayer.fallback'
@@ -429,93 +428,24 @@ export function buildBaseLayers(L: LeafletNS) {
     }
   )
 
-  // Transparent English/romanized place-name overlay (Esri's reference
-  // layer). Neither base layer (the Stamen terrain background nor the
-  // satellite imagery) carries any place labels of its own, so one of these
-  // two label layers is always the only source of text on the map — which
-  // one is active follows the site's language toggle (see
-  // `setLabelLayerForLang` below), not a manual checkbox.
-  const labelsEn = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-    { attribution: '', maxZoom: 19, opacity: 1 }
-  )
-
-  // Chinese-script place-name overlay — the zh counterpart to Esri's English
-  // layer above, but self-authored (see buildPlaceLabelsLayer) rather than a
-  // third-party tile: every public AutoNavi/Amap annotation tile bundles a
-  // full road network with the labels (no way to get just the text), and
-  // Esri/Stadia/CartoDB's own label tiles only ever render English/pinyin
-  // regardless of language. A small hand-picked city list sidesteps that —
-  // same plain "dot + text" look as the English layer, no road clutter.
-  // (When the 高德 basemap is selected it already draws its own zh labels;
-  // this overlay may then sit on top — acceptable for the language toggle.)
-  const labelsZh = buildPlaceLabelsLayer(L)
-
-  return { cawm, satellite, cyclosm, osm, amap, labelsEn, labelsZh }
+  return { cawm, satellite, cyclosm, osm, amap }
 }
 
 export type BaseLayers = ReturnType<typeof buildBaseLayers>
 
 /**
- * Builds the Chinese place-label layer from the static list in
- * lib/place-labels.ts — a small dot plus a permanent text tooltip per city,
- * styled by `.place-label-tooltip` in app/maps.css to read as plain text
- * (no bubble/arrow chrome) rather than a normal Leaflet tooltip popup.
- */
-function buildPlaceLabelsLayer(L: LeafletNS) {
-  const group = L.layerGroup()
-  PLACE_LABELS.forEach(({ lat, lng, zh }) => {
-    L.circleMarker([lat, lng], {
-      radius: 2.5,
-      color: '#333',
-      weight: 1,
-      fillColor: '#333',
-      fillOpacity: 1,
-      interactive: false,
-    })
-      .bindTooltip(zh, {
-        permanent: true,
-        direction: 'right',
-        offset: [4, 0],
-        className: 'place-label-tooltip',
-        interactive: false,
-      })
-      .addTo(group)
-  })
-  return group
-}
-
-/**
- * Shows the label layer matching `lang` and hides the other one — the
- * single place this decision is made, called both right after the base
- * layers are built (initial state) and again whenever the language toggle
- * changes (see each map component's `[lang]`-keyed effect).
- */
-export function setLabelLayerForLang(
-  map: import('leaflet').Map,
-  labelsEn: import('leaflet').Layer,
-  labelsZh: import('leaflet').Layer,
-  lang: 'en' | 'zh'
-) {
-  const show = lang === 'zh' ? labelsZh : labelsEn
-  const hide = lang === 'zh' ? labelsEn : labelsZh
-  if (map.hasLayer(hide)) map.removeLayer(hide)
-  if (!map.hasLayer(show)) show.addTo(map)
-}
-
-/**
- * Full interactive chrome, as a single control: the basemap switcher over
- * the toggleable overlays (the two river tiers and the route network), so
- * everything the user can turn on or off lives in one box. Reserved for the
- * dedicated Map Visualizations pages (desktop only — see
- * `addStaticMajorRivers` below for every other map, and for all maps on
- * mobile screens). The place-name label layer isn't part of this control —
- * it's always on, following the language toggle (`setLabelLayerForLang`),
- * not a manual overlay checkbox.
+ * The basemap switcher, as a single control. Reserved for the dedicated Map
+ * Visualizations pages (desktop only — see `addStaticMajorRivers` below for
+ * every other map, and for all maps on mobile screens). The basemaps
+ * themselves (高德/CyclOSM/OSM) already draw their own place-name labels, so
+ * there's no separate label-layer checkbox here.
  *
- * The river tiers are two independent checkboxes rather than the
- * Off/Major/Minor/All radio group they replaced: unticking both is "off",
- * ticking both is "all", so no combination was lost by folding them in here.
+ * The minor-river and route-network overlays used to live here too, as
+ * checkboxes — they're now built here (so this stays the one place that
+ * owns their construction) but returned instead, so the caller can drive
+ * their visibility from its own React-rendered toggle buttons instead of
+ * Leaflet's own checkbox UI. Major rivers stay a fixed always-on layer, same
+ * as `addStaticMajorRivers`.
  */
 export function addLayerControl(
   L: LeafletNS,
@@ -526,63 +456,66 @@ export function addLayerControl(
   const { cawm, satellite, cyclosm, osm, amap } = layers
   const position = options?.position ?? 'topright'
 
-  const majorRivers = buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
+  buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
+  // Built but not added — starts hidden until the caller's own toggle button
+  // (backed by the `showMinorRivers`/`showRoutes` props below) turns it on.
   const minorRivers = buildRiverLayer(L, map, '/data/rivers-minor.geojson')
-  // Built but not added — the overlay checkbox starts unchecked so the
-  // network only appears after the user turns it on.
   const routes = buildRoutesLayer(L, map)
 
-  // Leaflet's layer control inserts each key as raw innerHTML, so "Routes &
-  // nodes" can carry its own hover-title explanation (a native tooltip, not
-  // the app's usual ClickHint popover — this control is plain Leaflet DOM,
-  // not React) the same dotted-underline look every other in-app hint uses.
-  // Bilingual and not gated by the language toggle (like ROUTE_LEVEL_LABELS
-  // above) — this control is built once and never rebuilt on a lang change.
-  const routesLabel =
-    '<span class="routes-hint-label" title="Ancient trade-route network, from the Tang dynasty (description may change.) / 古代贸易路线网络，源自唐代（说明可能变更）。" ' +
-    'style="cursor:help;border-bottom:1px dotted var(--map-label-muted)">Routes / 路线</span>'
-
-  const control = L.control
+  L.control
     .layers(
       // CyclOSM (already the active base layer when this control is built —
       // see MapVisCanvas's init effect) stays first/checked.
       {
         CyclOSM: cyclosm,
         '高德地图': amap,
-        'Ancient World Map': cawm,
+        // 'Ancient World Map': cawm,
         Satellite: satellite,
-        OpenStreetMap: osm,
+        // OpenStreetMap: osm,
       },
-      {
-        'Major rivers / 主要河流': majorRivers,
-        'Minor rivers / 次要河流': minorRivers,
-        [routesLabel]: routes,
-      },
+      undefined,
       { collapsed: options?.collapsed ?? false, position }
     )
     .addTo(map)
 
-  // Clicking anywhere in a Leaflet overlay row toggles its checkbox, because
-  // the row is a <label> wrapping the input. That swallows clicks meant to
-  // read the "Routes & nodes" hint text as a toggle instead. Calling
-  // preventDefault() on the span cancels the browser's implicit forwarding
-  // of the click to the checkbox, so only the checkbox itself now toggles
-  // the layer — the label text becomes hover-only, like the hint it is.
-  //
-  // This has to be delegated on the control's outer container rather than
-  // bound directly to the `.routes-hint-label` span: Leaflet's layer control
-  // rebuilds its row DOM (`_update()`, recreating every label/span) whenever
-  // *any* layer is added to or removed from the map — which happens
-  // constantly here (heat layer, marker clusters, pins toggling as filters
-  // and view modes change) — so a listener attached straight to the span
-  // gets silently dropped the next time that happens. The outer container
-  // itself is stable across those rebuilds, so checking the click target at
-  // dispatch time survives them.
-  control.getContainer()?.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement | null)?.closest('.routes-hint-label')) {
-      e.preventDefault()
-    }
+  return { minorRivers, routes }
+}
+
+/**
+ * A small "i" button, its own control in the same corner as the layer
+ * switcher above (added after it, so it stacks directly above the layer
+ * icon — Leaflet inserts each new bottom-corner control before the previous
+ * one's DOM node). Replaces the always-visible attribution bar with a
+ * toggle: clicking it flips `containerEl`'s `show-attribution` class, which
+ * app/maps.css uses to show/hide Leaflet's own `.leaflet-control-attribution`
+ * (left as the default, auto-updating-per-active-layer control — only its
+ * visibility is being toggled, not its content).
+ */
+export function addAttributionToggle(
+  L: LeafletNS,
+  map: import('leaflet').Map,
+  containerEl: HTMLElement,
+  position: import('leaflet').ControlPosition = 'bottomright'
+) {
+  const AttributionToggle = L.Control.extend({
+    options: { position },
+    onAdd() {
+      const bar = L.DomUtil.create('div', 'leaflet-bar map-attribution-toggle')
+      const btn = L.DomUtil.create('a', '', bar) as HTMLAnchorElement
+      btn.href = '#'
+      btn.setAttribute('role', 'button')
+      btn.setAttribute('aria-label', 'Toggle map credits / 显示地图版权信息')
+      btn.title = 'Map credits / 地图版权信息'
+      btn.innerHTML = '<em>i</em>'
+      L.DomEvent.disableClickPropagation(bar)
+      L.DomEvent.on(btn, 'click', (e: Event) => {
+        L.DomEvent.preventDefault(e)
+        containerEl.classList.toggle('show-attribution')
+      })
+      return bar
+    },
   })
+  new AttributionToggle().addTo(map)
 }
 
 /**

@@ -16,7 +16,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   MapVisCanvas,
   mintSizeMetrics,
@@ -51,7 +51,7 @@ import {
 import {
   ansCollectionUrl,
   buildAnsInscriptionSource,
-  buildAnsTypologySpecimenCounts,
+  buildAnsTypologyMintCounts,
   computeAnsMintStats,
   computeAnsMintTypeQuantities,
   computeMintStatsFromFinds,
@@ -62,7 +62,7 @@ import {
 } from '@/lib/mint-stats'
 import {
   buildTypologySiteCounts,
-  buildTypologySpecimenCounts,
+  buildTypologyMintCounts,
   computeMintTypeQuantities,
   computeSiteTypeQuantities,
   describeTypologySelection,
@@ -83,22 +83,31 @@ function ToggleButtons<T extends string>({
   value,
   options,
   onChange,
+  compact = false,
 }: {
   value: T
   options: { value: T; label: ReactNode }[]
   onChange: (v: T) => void
+  /** Smaller pill size — same footprint as ToggleChip. Used where a group's
+   * options should read as lower-priority than Display/Filter by (e.g. Size
+   * by), without changing the group's own value-driven selection behavior. */
+  compact?: boolean
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="filter-row">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`rounded border px-2.5 py-1 text-sm font-semibold transition ${
+          className={`rounded font-semibold transition ${compact ? 'small-pill px-2 py-0.5 text-xs' : 'large-pill px-2.5 py-1 text-sm'} ${
             value === opt.value
-              ? 'bg-brand text-white border-brand'
-              : 'bg-white text-brand border-brand/30 hover:bg-brand-light'
+              ? compact
+                ? 'small-pill-active'
+                : 'large-pill-active'
+              : compact
+                ? 'small-pill-inactive'
+                : 'large-pill-inactive'
           }`}
         >
           {opt.label}
@@ -120,9 +129,18 @@ function ViewModeRow({
   showCompare?: boolean
 }) {
   const { t } = useLanguage()
+  const explainKey = viewMode === 'density' ? 'map.explain.density' : viewMode === 'compare' ? 'map.explain.compare' : 'map.explain.points'
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <ClickHint hint={t('map.view.labelHint')} className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
+    <div className="filter-row">
+      <ClickHint
+        hint={
+          <div className="space-y-1.5">
+            <p>{t('map.view.labelHint')}</p>
+            <p>{t(explainKey)}</p>
+          </div>
+        }
+        className="hint-underline text-sm font-semibold text-gray-700"
+      >
         <T k="map.view.label" />
       </ClickHint>
       <ToggleButtons
@@ -138,56 +156,65 @@ function ViewModeRow({
   )
 }
 
-function QuantityFilterRow({
-  includeUnquantified,
-  onChange,
+/** A single independent on/off pill — same colored-when-active/
+ * white-when-not look as ToggleButtons' options, but standalone rather than
+ * part of a mutually-exclusive group. Used for the map canvas's overlay
+ * toggles (minor rivers, routes, no-data points, incomplete counts) below. */
+function ToggleChip({
+  active,
+  onClick,
+  title,
+  children,
 }: {
-  includeUnquantified: boolean
-  onChange: (v: boolean) => void
+  active: boolean
+  onClick: () => void
+  title?: string
+  children: ReactNode
 }) {
-  const { t } = useLanguage()
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <ClickHint
-        hint={t('map.filter.quantityLabelHint')}
-        className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-      >
-        <T k="map.filter.quantityLabel" />
-      </ClickHint>
-      <ToggleButtons
-        value={includeUnquantified ? 'include' : 'exclude'}
-        onChange={(v) => onChange(v === 'include')}
-        options={[
-          { value: 'include' as const, label: <T k="map.filter.quantityInclude" /> },
-          { value: 'exclude' as const, label: <T k="map.filter.quantityExclude" /> },
-        ]}
-      />
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={title}
+      className={`small-pill rounded px-2 py-0.5 text-xs font-semibold transition ${active ? 'small-pill-active' : 'small-pill-inactive'}`}
+    >
+      {children}
+    </button>
   )
 }
 
-/**
- * Paragraph 2 of every map's explanation: how to read the current view mode
- * (color + size mechanics), identical wording wherever that view mode
- * appears — Find Site, the database Mint Town tab, and Museum Collections'
- * Mint Town tab all render the exact same points/density/compare text here,
- * distinct from DensityLegend's terse one-liner in the floating bottom
- * legend. Paragraph 1 (what's currently filtered) lives beside this at each
- * call site, since its wording is specific to that map.
- */
-function MapExplanation({ viewMode }: { viewMode: ViewMode }) {
-  const key = viewMode === 'density' ? 'map.explain.density' : viewMode === 'compare' ? 'map.explain.compare' : 'map.explain.points'
+/** Bootstrap Icons' "question-circle" glyph, inlined since this project
+ * doesn't pull in an icon library for a single icon — the (?) trigger next
+ * to the Mint Town current-view line (both the database and Museum
+ * Collections tabs), where hovering/clicking reveals the mintsPlotted
+ * count via ClickHint. */
+function QuestionCircleIcon() {
   return (
-    <p className="text-xs leading-snug text-gray-500">
-      <T k={key} />
-    </p>
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" className="inline-block">
+      <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z" />
+      <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z" />
+    </svg>
+  )
+}
+
+/** The filter panel's "Clear filter" action — identical markup/behavior in
+ * all three map-vis panels (Find Site, Mint Town, Museum Collections'
+ * Mint Town tab), just wired to each caller's own `clearFilters`. */
+function ClearFiltersButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex justify-end">
+      <button type="button" onClick={onClick} className="btn-clear-filters">
+        <T k="heatmap.clearFilter" />
+      </button>
+    </div>
   )
 }
 
 function DensityLegend({ range }: { range: DensityRange }) {
   return (
     <>
-      <span className="font-semibold uppercase tracking-wide text-gray-500">
+      <span className="eyebrow text-gray-500">
         <T k="map.legend.density" />
       </span>
       <span className="tabular-nums text-gray-500">{range?.min ?? '—'}</span>
@@ -217,7 +244,7 @@ function CompareLegend({
 }) {
   return (
     <>
-      <span className="font-semibold uppercase tracking-wide text-gray-500">
+      <span className="eyebrow text-gray-500">
         <T k={titleKey} />
       </span>
       {entries.map((entry) => (
@@ -239,12 +266,14 @@ function CompareLegend({
  * render, which read as bucketed color steps even though the underlying
  * ratio→color mapping was already continuous. `presentNoCount` and `noData`
  * are categorical states outside the ratio scale, so they keep their own
- * swatches as caller-supplied markup (Find Site pairs each with a checkbox;
- * Mint Town / Museum leave `presentNoCount` off). */
+ * swatches as caller-supplied markup — purely informational now that the
+ * canvas overlay's toggle buttons (not this legend) drive whether they're
+ * shown (Mint Town / Museum leave `presentNoCount` off, since they have no
+ * unquantified-coins concept). */
 function RatioLegend({ presentNoCount, noData }: { presentNoCount?: ReactNode; noData: ReactNode }) {
   return (
     <>
-      <span className="font-semibold uppercase tracking-wide text-gray-500">
+      <span className="eyebrow text-gray-500">
         <T k="map.legend.title" />
       </span>
       <span className="tabular-nums text-gray-500">0%</span>
@@ -439,6 +468,8 @@ function TypologyMultiSelect({
   onAddAnother,
   onRemove,
   onClear,
+  onClearFilters,
+  filterActive,
   hierarchyRows,
   coinIssues,
   optionCounts,
@@ -450,6 +481,10 @@ function TypologyMultiSelect({
   onAddAnother: () => void
   onRemove: (key: string) => void
   onClear: () => void
+  /** Clears the map's active filter — forwarded to TypologyFilterBar's
+   * "Clear filter" button, shown next to Add whenever `filterActive`. */
+  onClearFilters: () => void
+  filterActive: boolean
   hierarchyRows: CoinTypeHierarchyRow[]
   coinIssues: InscriptionSourceRow[]
   /** Counts shown beside each dropdown option — sites on Find Site,
@@ -462,28 +497,22 @@ function TypologyMultiSelect({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2">
-        <TypologyFilterBar
-          sel={staged}
-          onChange={onStagedChange}
-          showInscriptionList
-          hierarchyRows={hierarchyRows}
-          coinIssues={coinIssues}
-          optionCounts={optionCounts}
-          compact
-        />
-        <button
-          type="button"
-          onClick={onAddAnother}
-          disabled={!canAddAnother}
-          className="rounded border border-brand/30 bg-brand-light px-2.5 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-brand-light disabled:hover:text-brand"
-        >
-          <T k="map.filter.addSelection" />
-        </button>
-      </div>
+      <TypologyFilterBar
+        sel={staged}
+        onChange={onStagedChange}
+        showInscriptionList
+        hierarchyRows={hierarchyRows}
+        coinIssues={coinIssues}
+        optionCounts={optionCounts}
+        compact
+        onAddAnother={onAddAnother}
+        canAddAnother={canAddAnother}
+        onClearFilters={onClearFilters}
+        showClearFilters={filterActive}
+      />
 
       {committedEntries.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="filter-row">
           <span className="text-xs text-gray-500">{t('ui.selectedCount', { count: committedEntries.length })}</span>
           {committedEntries.map((entry) => (
             <span
@@ -505,7 +534,7 @@ function TypologyMultiSelect({
               </button>
             </span>
           ))}
-          <button type="button" onClick={onClear} className="text-xs font-semibold text-brand hover:underline">
+          <button type="button" onClick={onClear} className="text-link-sm">
             <T k="ui.clear" />
           </button>
         </div>
@@ -576,8 +605,10 @@ export function FindSpotsVisualization({
   const { t } = useLanguage()
   const [mode, setMode] = useState<FilterMode>(initialMode ?? 'type')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
-  const [showNoData, setShowNoData] = useState(true)
+  const [showNoData, setShowNoData] = useState(false)
   const [includeUnquantified, setIncludeUnquantified] = useState(true)
+  const [showMinorRivers, setShowMinorRivers] = useState(false)
+  const [showRoutes, setShowRoutes] = useState(false)
   const findsForFilter = useMemo(
     () => (includeUnquantified ? finds : filterToFullyQuantifiedContexts(finds)),
     [finds, includeUnquantified]
@@ -771,24 +802,9 @@ export function FindSpotsVisualization({
     const href = `/visualizations/find-site${tab.id === 'all' ? '' : `?precision=${tab.id}`}`
     return (
       <span key={tab.id} className="pointer-events-auto inline-flex shrink-0 items-center gap-1">
-        {/* "All" is the one tab whose count needs explaining — it includes
-            sites whose location is only known to county/city level, not an
-            exact point, which is why it's larger than "Specified to site". */}
-        {tab.id === 'all' && (
-          <ClickHint
-            hint={t('search.precision.allHint')}
-            className="flex h-4 w-4 items-center justify-center rounded-full border border-brand/40 bg-white/95 text-[10px] font-bold leading-none text-brand shadow-sm"
-          >
-            ?
-          </ClickHint>
-        )}
         <Link
           href={href}
-          className={`whitespace-nowrap rounded border px-2.5 py-1 text-sm font-semibold shadow-sm transition ${
-            isActive
-              ? 'border-brand bg-brand text-white'
-              : 'border-brand/30 bg-white/95 text-brand backdrop-blur-sm hover:bg-brand-light'
-          }`}
+          className={`small-pill rounded px-2 py-0.5 text-xs font-semibold transition ${isActive ? 'small-pill-active' : 'small-pill-inactive'}`}
         >
           <T k={tab.key} /> ({precisionCounts[tab.id]})
         </Link>
@@ -807,81 +823,114 @@ export function FindSpotsVisualization({
         densityLatLngs={density.latLngs}
         filterActive={filterActive}
         showNoData={showNoData}
+        showMinorRivers={showMinorRivers}
+        showRoutes={showRoutes}
         pins={pins}
         comparePoints={comparePoints}
       />
 
       <MapVisualizationOverlay>
         <div className="space-y-2.5">
-          {/* Below `lg` the floating top-right precision bar is hidden (no
-              room next to this panel on narrow screens), so it lives here
-              instead, inside the same collapsible dropdown. */}
-          <div className="loc_precision_map-m flex items-center gap-1.5 lg:hidden">{precisionButtons}</div>
+          <div className="space-y-2 map-display-section">
+            <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ClickHint hint={t('map.filter.modeLabelHint')} className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
-              <T k="map.filter.modeLabel" />
-            </ClickHint>
-            <ToggleButtons
-              value={mode}
-              onChange={(m) => {
-                setMode(m)
-                clearFilters()
-              }}
-              options={[
-                { value: 'type' as const, label: <T k="map.filter.byType" /> },
-                { value: 'mint' as const, label: <T k="map.filter.byMint" /> },
-              ]}
-            />
+            <div className="filter-row">
+              <ToggleChip active={showMinorRivers} onClick={() => setShowMinorRivers((v) => !v)}>
+                <T k="map.layers.minorRivers" />
+              </ToggleChip>
+              <ToggleChip
+                active={showRoutes}
+                onClick={() => setShowRoutes((v) => !v)}
+                title={t('map.layers.routesHint')}
+              >
+                <T k="map.layers.routes" />
+              </ToggleChip>
+              <ToggleChip active={showNoData} onClick={() => setShowNoData((v) => !v)}>
+                <T k="map.filter.noDataToggle" />
+              </ToggleChip>
+              <ToggleChip
+                active={includeUnquantified}
+                onClick={() => setIncludeUnquantified((v) => !v)}
+                title={t('map.filter.quantityLabelHint')}
+              >
+                <T k="map.filter.quantityLabel" />
+              </ToggleChip>
+            </div>
+
+            <div className="filter-row">
+              <ClickHint
+                hint={t('search.precision.allHint')}
+                className="hint-underline text-sm font-semibold text-gray-700"
+              >
+                <T k="search.precision.label" />
+              </ClickHint>
+              {precisionButtons}
+            </div>
           </div>
 
-          <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
+          <div className="space-y-2 map-filter-section">
+            <div className="filter-row">
+              <ClickHint hint={t('map.filter.modeLabelHint')} className="hint-underline text-sm font-semibold text-gray-700">
+                <T k="map.filter.modeLabel" />
+              </ClickHint>
+              <ToggleButtons
+                value={mode}
+                onChange={(m) => {
+                  setMode(m)
+                  clearFilters()
+                }}
+                options={[
+                  { value: 'type' as const, label: <T k="map.filter.byType" /> },
+                  { value: 'mint' as const, label: <T k="map.filter.byMint" /> },
+                ]}
+              />
+            </div>
 
-          <QuantityFilterRow includeUnquantified={includeUnquantified} onChange={setIncludeUnquantified} />
-
-          <p className="text-sm leading-snug text-gray-700">
-            {mode === 'type' ? (
-              typeEntries.length === 0 ? (
-                <T k="map.currentView.typeNone" />
+            <p className="text-sm leading-snug text-gray-700">
+              {mode === 'type' ? (
+                typeEntries.length === 0 ? (
+                  <T k="map.currentView.typeNone" />
+                ) : (
+                  <T k={viewMode === 'compare' ? 'map.currentView.typeActiveCompare' : 'map.currentView.typeActiveOr'} />
+                )
+              ) : mintFilters.length === 0 ? (
+                <T k="map.currentView.mintNone" />
               ) : (
-                <T k={viewMode === 'compare' ? 'map.currentView.typeActiveCompare' : 'map.currentView.typeActiveOr'} />
-              )
-            ) : mintFilters.length === 0 ? (
-              <T k="map.currentView.mintNone" />
-            ) : (
-              <T k={viewMode === 'compare' ? 'map.currentView.mintActiveCompare' : 'map.currentView.mintActiveOr'} />
+                <T k={viewMode === 'compare' ? 'map.currentView.mintActiveCompare' : 'map.currentView.mintActiveOr'} />
+              )}
+            </p>
+
+            {mode === 'type' && (
+              <TypologyMultiSelect
+                staged={stagedType}
+                onStagedChange={setStagedType}
+                committedEntries={typeCommittedEntries}
+                colorByValue={typeColorByValue}
+                onAddAnother={addAnotherTypeEntry}
+                onRemove={removeTypeEntry}
+                onClear={clearTypeEntries}
+                onClearFilters={clearFilters}
+                filterActive={filterActive}
+                hierarchyRows={hierarchyRows}
+                coinIssues={coinIssues}
+                optionCounts={typeOptionCounts}
+              />
             )}
-          </p>
-          <MapExplanation viewMode={viewMode} />
 
-          {mode === 'type' && (
-            <TypologyMultiSelect
-              staged={stagedType}
-              onStagedChange={setStagedType}
-              committedEntries={typeCommittedEntries}
-              colorByValue={typeColorByValue}
-              onAddAnother={addAnotherTypeEntry}
-              onRemove={removeTypeEntry}
-              onClear={clearTypeEntries}
-              hierarchyRows={hierarchyRows}
-              coinIssues={coinIssues}
-              optionCounts={typeOptionCounts}
-            />
-          )}
-
-          {mode === 'mint' && (
-            <MultiSelectSearch
-              options={mintSelectOptions}
-              selectedKeys={mintFilterSet}
-              colorByValue={mintColorByValue}
-              onToggle={toggleMintFilter}
-              onClear={clearMintFilters}
-              placeholder={t('map.filter.searchMint')}
-              noResultsLabel={t('map.filter.noMintMatches')}
-              selectedCountLabel={(count) => t('ui.selectedCount', { count })}
-              clearLabel={t('ui.clear')}
-            />
-          )}
+            {mode === 'mint' && (
+              <MultiSelectSearch
+                options={mintSelectOptions}
+                selectedKeys={mintFilterSet}
+                colorByValue={mintColorByValue}
+                onToggle={toggleMintFilter}
+                onClear={clearMintFilters}
+                placeholder={t('map.filter.searchMint')}
+                noResultsLabel={t('map.filter.noMintMatches')}
+                selectedCountLabel={(count) => t('ui.selectedCount', { count })}
+                clearLabel={t('ui.clear')}
+              />
+            )}
+          </div>
 
           {filterActive && foundInSummary && (
             <p className="text-sm text-gray-700">
@@ -891,31 +940,10 @@ export function FindSpotsVisualization({
               />
             </p>
           )}
-          {filterActive && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded border border-brand/30 bg-brand-light px-2.5 py-1 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
-              >
-                <T k="heatmap.clearFilter" />
-              </button>
-            </div>
-          )}
+          {/* Type mode's clear button lives inside TypologyMultiSelect, next to Add. */}
+          {mode === 'mint' && filterActive && <ClearFiltersButton onClick={clearFilters} />}
         </div>
       </MapVisualizationOverlay>
-
-      {/* "Site specification" (location precision) — floats as its own
-          horizontal button row, top-right, separate from the main filter
-          panel so it stays reachable without expanding that panel. Only
-          from `lg` up: below that there's no room next to the main panel on
-          a narrow screen, so the same buttons render inside it instead. */}
-      <div
-        className="loc_precision_map hidden lg:flex"
-        aria-label={t('search.precision.label')}
-      >
-        {precisionButtons}
-      </div>
 
       {(filterActive || viewMode === 'density' || viewMode === 'compare') && (
         <div className="heatmap_legend">
@@ -935,28 +963,16 @@ export function FindSpotsVisualization({
           {filterActive && viewMode === 'points' && (
             <RatioLegend
               presentNoCount={
-                <label className="flex cursor-pointer items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={includeUnquantified}
-                    onChange={(e) => setIncludeUnquantified(e.target.checked)}
-                    className="accent-brand"
-                  />
+                <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-unquantified" />
                   <T k="heatmap.legend.presentNoCount" />
-                </label>
+                </span>
               }
               noData={
-                <label className="flex cursor-pointer items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={showNoData}
-                    onChange={(e) => setShowNoData(e.target.checked)}
-                    className="accent-brand"
-                  />
+                <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-no-data" />
                   <T k="heatmap.legend.noData" />
-                </label>
+                </span>
               }
             />
           )}
@@ -997,6 +1013,8 @@ export function MintTownVisualization({
   // isolate each channel.
   const [sizeBy, setSizeBy] = useState<MintSizeBy>('combined')
   const [showNoData, setShowNoData] = useState(true)
+  const [showMinorRivers, setShowMinorRivers] = useState(false)
+  const [showRoutes, setShowRoutes] = useState(false)
   const {
     staged: stagedType,
     setStaged: setStagedType,
@@ -1011,7 +1029,7 @@ export function MintTownVisualization({
   const filterActive = typeEntries.length > 0
 
   const typeOptionCounts = useMemo(
-    () => buildTypologySpecimenCounts(finds, coinIssues, hierarchyRows, stagedType),
+    () => buildTypologyMintCounts(finds, coinIssues, hierarchyRows, stagedType),
     [finds, coinIssues, hierarchyRows, stagedType]
   )
 
@@ -1086,11 +1104,15 @@ export function MintTownVisualization({
     return buildDensityLayer(points)
   }, [mintPoints, mintStates])
 
+  // Counts across every documented mint (mapped + unmapped), not just the
+  // ones with coordinates to plot — `plottedCount` then narrows that down to
+  // how many of the matches actually show up as points on the map.
   const foundInSummary = useMemo(() => {
     if (!mintStates) return null
-    const foundCount = [...mintStates.values()].filter((s) => s.kind !== 'no-data').length
-    return { foundCount, totalCount: mintPoints.length }
-  }, [mintStates, mintPoints])
+    const plottedCount = [...mintStates.values()].filter((s) => s.kind !== 'no-data').length
+    const foundCount = [...matchedStats.mapped, ...matchedStats.unmapped].filter((m) => m.coinCount > 0).length
+    return { foundCount, totalCount: totalStats.mapped.length + totalStats.unmapped.length, plottedCount }
+  }, [mintStates, matchedStats, totalStats])
 
   // Not every documented mint has known coordinates yet — this is separate
   // from foundInSummary (which is about the active type/inscription filter,
@@ -1149,14 +1171,16 @@ export function MintTownVisualization({
         densityLatLngs={density.latLngs}
         filterActive={filterActive}
         showNoData={showNoData}
+        showMinorRivers={showMinorRivers}
+        showRoutes={showRoutes}
         comparePoints={comparePoints}
         sizeBy={sizeBy}
       />
 
       <MapVisualizationOverlay>
         <div className="space-y-2.5">
-          {/* <div className="flex flex-wrap items-center gap-1.5">
-            <span className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
+          {/* <div className="filter-row">
+            <span className="hint-underline text-sm font-semibold text-gray-700">
               <T k="visualizations.data.label" />
             </span>
             <ToggleButtons
@@ -1166,54 +1190,81 @@ export function MintTownVisualization({
             />
           </div> */}
 
-          <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
+          <div className="space-y-2 map-display-section">
+            <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ClickHint
-              hint={t('map.sizeBy.labelHint')}
-              className="cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2"
-            >
-              <T k="map.sizeBy.label" />
-            </ClickHint>
-            <ToggleButtons
-              value={sizeBy}
-              onChange={setSizeBy}
-              options={[
-                { value: 'combined' as const, label: <T k="map.sizeBy.combined" /> },
-                { value: 'coins' as const, label: <T k="map.sizeBy.coins" /> },
-                { value: 'finds' as const, label: <T k="map.sizeBy.finds" /> },
-              ]}
-            />
+            <div className="filter-row">
+              <ToggleChip active={showMinorRivers} onClick={() => setShowMinorRivers((v) => !v)}>
+                <T k="map.layers.minorRivers" />
+              </ToggleChip>
+              <ToggleChip
+                active={showRoutes}
+                onClick={() => setShowRoutes((v) => !v)}
+                title={t('map.layers.routesHint')}
+              >
+                <T k="map.layers.routes" />
+              </ToggleChip>
+              <ToggleChip active={showNoData} onClick={() => setShowNoData((v) => !v)}>
+                <T k="map.filter.noDataToggle" />
+              </ToggleChip>
+            </div>
+
+            <div className="filter-row">
+              <ClickHint
+                hint={t('map.sizeBy.labelHint')}
+                className="hint-underline text-sm font-semibold text-gray-700"
+              >
+                <T k="map.sizeBy.label" />
+              </ClickHint>
+              <ToggleButtons
+                value={sizeBy}
+                onChange={setSizeBy}
+                compact
+                options={[
+                  { value: 'combined' as const, label: <T k="map.sizeBy.combined" /> },
+                  { value: 'coins' as const, label: <T k="map.sizeBy.coins" /> },
+                  { value: 'finds' as const, label: <T k="map.sizeBy.finds" /> },
+                ]}
+              />
+            </div>
           </div>
 
-          <p className="text-sm leading-snug text-gray-700">
-            {typeEntries.length === 0 ? (
-              <T k="map.currentView.mintTownDbNone" />
-            ) : (
-              <T
-                k={viewMode === 'compare' ? 'map.currentView.mintTownDbActiveCompare' : 'map.currentView.mintTownDbActiveOr'}
-              />
-            )}
-          </p>
-          <MapExplanation viewMode={viewMode} />
-          <p className="text-sm text-gray-700">
-            <T
-              k="visualizations.mintsPlotted"
-              vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
+          <div className="space-y-2 map-filter-section">
+            <p className="text-sm leading-snug text-gray-700">
+              {typeEntries.length === 0 ? (
+                <T k="map.currentView.mintTownDbNone" />
+              ) : (
+                <T
+                  k={viewMode === 'compare' ? 'map.currentView.mintTownDbActiveCompare' : 'map.currentView.mintTownDbActiveOr'}
+                />
+              )}{' '}
+              <ClickHint
+                hint={
+                  <T
+                    k="visualizations.mintsPlotted"
+                    vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
+                  />
+                }
+                className="inline-flex cursor-help text-gray-400 hover:text-gray-600"
+              >
+                <QuestionCircleIcon />
+              </ClickHint>
+            </p>
+            <TypologyMultiSelect
+              staged={stagedType}
+              onStagedChange={setStagedType}
+              committedEntries={typeCommittedEntries}
+              colorByValue={typeColorByValue}
+              onAddAnother={addAnotherTypeEntry}
+              onRemove={removeTypeEntry}
+              onClear={clearTypeEntries}
+              onClearFilters={clearFilters}
+              filterActive={filterActive}
+              hierarchyRows={hierarchyRows}
+              coinIssues={coinIssues}
+              optionCounts={typeOptionCounts}
             />
-          </p>
-          <TypologyMultiSelect
-            staged={stagedType}
-            onStagedChange={setStagedType}
-            committedEntries={typeCommittedEntries}
-            colorByValue={typeColorByValue}
-            onAddAnother={addAnotherTypeEntry}
-            onRemove={removeTypeEntry}
-            onClear={clearTypeEntries}
-            hierarchyRows={hierarchyRows}
-            coinIssues={coinIssues}
-            optionCounts={typeOptionCounts}
-          />
+          </div>
 
           {mintPoints.length === 0 && (
             <p className="text-sm text-gray-700">
@@ -1225,20 +1276,13 @@ export function MintTownVisualization({
             <p className="text-sm text-gray-700">
               <T
                 k="heatmap.foundInMints"
-                vars={{ found: foundInSummary.foundCount, total: foundInSummary.totalCount }}
+                vars={{
+                  found: foundInSummary.foundCount,
+                  total: foundInSummary.totalCount,
+                  plotted: foundInSummary.plottedCount,
+                }}
               />
             </p>
-          )}
-          {filterActive && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded border border-brand/30 bg-brand-light px-2.5 py-1 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
-              >
-                <T k="heatmap.clearFilter" />
-              </button>
-            </div>
           )}
         </div>
       </MapVisualizationOverlay>
@@ -1251,16 +1295,10 @@ export function MintTownVisualization({
           {filterActive && viewMode === 'points' && (
             <RatioLegend
               noData={
-                <label className="flex cursor-pointer items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={showNoData}
-                    onChange={(e) => setShowNoData(e.target.checked)}
-                    className="accent-brand"
-                  />
+                <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full map-legend-swatch-no-data" />
                   <T k="heatmap.legend.noData" />
-                </label>
+                </span>
               }
             />
           )}
@@ -1275,10 +1313,10 @@ export function MintTownVisualization({
 
 type MuseumTab = 'mint' | 'search'
 
-/** Same floating card chrome as MapVisualizationOverlay (mobile collapse
- * toggle included), with its own top-level tab row — Mint Town (the map
- * filter controls) vs Search (accession-number lookup) — playing the same
- * role its Mint Town / Find Site tabs play on the map visualizations page,
+/** Same floating card chrome as MapVisualizationOverlay (collapse toggle at
+ * every breakpoint included), with its own top-level tab row — Mint Town
+ * (the map filter controls) vs Search (accession-number lookup) — playing
+ * the same role its Mint Town / Find Site tabs play on the map visualizations page,
  * just as in-panel tab state instead of separate routes, since Museum
  * Collections is a single page. */
 function MuseumMapOverlay({
@@ -1292,11 +1330,22 @@ function MuseumMapOverlay({
 }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
+
+  // Desktop has room for the panel to sit open by default (unlike mobile/
+  // tablet, where it starts collapsed so the map stays reachable). Not in
+  // the initial useState — that would mismatch the server-rendered
+  // "closed" HTML. Museum Collections is a single page (no tab-driven
+  // remount like MapVisualizationOverlay's Mint Town/Find Site routes), so
+  // this only ever needs to run once, with no cross-mount guard.
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) setOpen(true)
+  }, [])
+
   return (
-    <div className="map-vis-overlay">
-      <div className="rounded-lg border border-brand/15 bg-white/95 shadow-md backdrop-blur-sm">
-        <div className="flex items-center gap-1.5 px-2.5 py-2 sm:px-3">
-          <ClickHint hint={t('nav.spadeHeatmapHint')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
+    <div className={`map-vis-overlay ${open ? '' : 'map-vis-overlay-collapsed'}`}>
+      <div className="map-vis-panel">
+        <div className="map-vis-panel-header">
+          <ClickHint hint={t('nav.spadeHeatmapHint')} className="shrink-0 hint-underline text-sm font-semibold text-gray-700">
             <T k="nav.spadeHeatmap" />
           </ClickHint>
 
@@ -1305,7 +1354,7 @@ function MuseumMapOverlay({
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-label={t('ui.toggleFilters')}
-            className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand/30 text-brand lg:hidden"
+            className="map-vis-panel-toggle"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path
@@ -1319,11 +1368,9 @@ function MuseumMapOverlay({
           </button>
         </div>
 
-        <div
-          className={`${open ? 'block' : 'hidden'} max-h-[min(60dvh,28rem)] overflow-y-auto border-t border-brand/10 px-2.5 py-2.5 sm:px-3 lg:block`}
-        >
-          <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-            <ClickHint hint={t('visualizations.viewByLabelHint.museum')} className="shrink-0 cursor-help text-sm font-semibold text-gray-700 underline decoration-dotted decoration-gray-400 underline-offset-2">
+        <div className={`map-vis-panel-body museum-panel-body ${open ? 'block' : 'hidden'}`}>
+          <div className="map-vis-panel-body-header">
+            <ClickHint hint={t('visualizations.viewByLabelHint.museum')} className="shrink-0 hint-underline text-sm font-semibold text-gray-700">
               <T k="visualizations.viewByLabel" />
             </ClickHint>
             <ToggleButtons
@@ -1372,6 +1419,9 @@ export function AnsMintTownVisualization({
   const { t } = useLanguage()
   const [tab, setTab] = useState<MuseumTab>('mint')
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? 'points')
+  const [showNoData, setShowNoData] = useState(true)
+  const [showMinorRivers, setShowMinorRivers] = useState(false)
+  const [showRoutes, setShowRoutes] = useState(false)
   // Scopes the inscription filter (dropdown options + its count) to
   // inscriptions actually present among these specimens, instead of every
   // inscription in the sitewide coin_issues catalog — see
@@ -1389,7 +1439,7 @@ export function AnsMintTownVisualization({
   } = useTypologyMultiSelect(inscriptionSource, hierarchyRows, initialTypeSelections)
 
   const typeOptionCounts = useMemo(
-    () => buildAnsTypologySpecimenCounts(specimens, hierarchyRows, stagedType),
+    () => buildAnsTypologyMintCounts(specimens, hierarchyRows, stagedType),
     [specimens, hierarchyRows, stagedType]
   )
   // Order of selection (not of `specimens`) so each pick keeps its color
@@ -1493,11 +1543,15 @@ export function AnsMintTownVisualization({
     return buildDensityLayer(points)
   }, [mintPoints, mintStates])
 
+  // Counts across every documented mint (mapped + unmapped), not just the
+  // ones with coordinates to plot — `plottedCount` then narrows that down to
+  // how many of the matches actually show up as points on the map.
   const foundInSummary = useMemo(() => {
     if (!mintStates) return null
-    const foundCount = [...mintStates.values()].filter((s) => s.kind !== 'no-data').length
-    return { foundCount, totalCount: mintPoints.length }
-  }, [mintStates, mintPoints])
+    const plottedCount = [...mintStates.values()].filter((s) => s.kind !== 'no-data').length
+    const foundCount = [...matchedStats.mapped, ...matchedStats.unmapped].filter((m) => m.coinCount > 0).length
+    return { foundCount, totalCount: totalStats.mapped.length + totalStats.unmapped.length, plottedCount }
+  }, [mintStates, matchedStats, totalStats])
 
   const plottedSummary = useMemo(
     () => ({ plotted: totalStats.mapped.length, total: totalStats.mapped.length + totalStats.unmapped.length }),
@@ -1552,6 +1606,9 @@ export function AnsMintTownVisualization({
         viewMode={viewMode}
         densityLatLngs={density.latLngs}
         filterActive={filterActive}
+        showNoData={showNoData}
+        showMinorRivers={showMinorRivers}
+        showRoutes={showRoutes}
         pins={pins}
         comparePoints={comparePoints}
       />
@@ -1561,6 +1618,7 @@ export function AnsMintTownVisualization({
           <AccessionNumberSearch
             specimens={specimens}
             mints={mints}
+            inscriptionSource={inscriptionSource}
             selectedKeys={selectedKeys}
             selectedSpecimens={selectedSpecimens}
             onToggle={toggleSelected}
@@ -1568,43 +1626,66 @@ export function AnsMintTownVisualization({
           />
         ) : (
           <div className="space-y-2.5">
-            <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
+            <div className="space-y-2 map-display-section">
+              <ViewModeRow viewMode={viewMode} onChange={setViewMode} showCompare />
 
-            <p className="text-sm leading-snug text-gray-700">
-              {typeEntries.length === 0 ? (
-                <T k="map.currentView.mintTownAnsNone" />
-              ) : (
-                <T
-                  k={
-                    viewMode === 'compare'
-                      ? 'map.currentView.mintTownAnsActiveCompare'
-                      : 'map.currentView.mintTownAnsActiveOr'
+              <div className="filter-row">
+                <ToggleChip active={showMinorRivers} onClick={() => setShowMinorRivers((v) => !v)}>
+                  <T k="map.layers.minorRivers" />
+                </ToggleChip>
+                <ToggleChip
+                  active={showRoutes}
+                  onClick={() => setShowRoutes((v) => !v)}
+                  title={t('map.layers.routesHint')}
+                >
+                  <T k="map.layers.routes" />
+                </ToggleChip>
+                <ToggleChip active={showNoData} onClick={() => setShowNoData((v) => !v)}>
+                  <T k="map.filter.noDataToggle" />
+                </ToggleChip>
+              </div>
+            </div>
+
+            <div className="space-y-2 map-filter-section">
+              <p className="text-sm leading-snug text-gray-700">
+                {typeEntries.length === 0 ? (
+                  <T k="map.currentView.mintTownAnsNone" vars={{ count: specimens.length }} />
+                ) : (
+                  <T
+                    k={
+                      viewMode === 'compare'
+                        ? 'map.currentView.mintTownAnsActiveCompare'
+                        : 'map.currentView.mintTownAnsActiveOr'
+                    }
+                  />
+                )}{' '}
+                <ClickHint
+                  hint={
+                    <T
+                      k="visualizations.mintsPlotted"
+                      vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
+                    />
                   }
-                />
-              )}
-            </p>
-            <MapExplanation viewMode={viewMode} />
-            <p className="text-sm text-gray-700">
-              <T
-                k="visualizations.mintsPlotted"
-                vars={{ plotted: plottedSummary.plotted, total: plottedSummary.total }}
+                  className="inline-flex cursor-help text-gray-400 hover:text-gray-600"
+                >
+                  <QuestionCircleIcon />
+                </ClickHint>
+              </p>
+              <TypologyMultiSelect
+                staged={stagedType}
+                onStagedChange={setStagedType}
+                committedEntries={typeCommittedEntries}
+                colorByValue={typeColorByValue}
+                onAddAnother={addAnotherTypeEntry}
+                onRemove={removeTypeEntry}
+                onClear={clearTypeEntries}
+                onClearFilters={clearFilters}
+                filterActive={filterActive}
+                hierarchyRows={hierarchyRows}
+                coinIssues={inscriptionSource}
+                optionCounts={typeOptionCounts}
               />
-            </p>
-            <p className="text-sm text-gray-700">
-              <T k="visualizations.stats.specimens" vars={{ count: specimens.length }} />
-            </p>
-            <TypologyMultiSelect
-              staged={stagedType}
-              onStagedChange={setStagedType}
-              committedEntries={typeCommittedEntries}
-              colorByValue={typeColorByValue}
-              onAddAnother={addAnotherTypeEntry}
-              onRemove={removeTypeEntry}
-              onClear={clearTypeEntries}
-              hierarchyRows={hierarchyRows}
-              coinIssues={inscriptionSource}
-              optionCounts={typeOptionCounts}
-            />
+            </div>
 
             {mintPoints.length === 0 && (
               <p className="text-sm text-gray-700">
@@ -1616,20 +1697,13 @@ export function AnsMintTownVisualization({
               <p className="text-sm text-gray-700">
                 <T
                   k="heatmap.foundInMints"
-                  vars={{ found: foundInSummary.foundCount, total: foundInSummary.totalCount }}
+                  vars={{
+                    found: foundInSummary.foundCount,
+                    total: foundInSummary.totalCount,
+                    plotted: foundInSummary.plottedCount,
+                  }}
                 />
               </p>
-            )}
-            {filterActive && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="rounded border border-brand/30 bg-brand-light px-2.5 py-1 text-sm font-semibold text-brand hover:bg-brand hover:text-white"
-                >
-                  <T k="heatmap.clearFilter" />
-                </button>
-              </div>
             )}
           </div>
         )}

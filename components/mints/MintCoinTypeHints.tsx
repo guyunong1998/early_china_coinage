@@ -35,7 +35,7 @@ function CoinTypeHintPanel({ item }: { item: MintCoinTypeHint }) {
       {item.slug && (
         <Link
           href={`/coin-types/${item.slug}`}
-          className="mt-2 block text-xs font-semibold text-brand hover:underline"
+          className="mt-2 block text-link-sm"
         >
           <T k="mintDetail.coinTypeHint.viewMore" /> →
         </Link>
@@ -57,7 +57,7 @@ export function MintCoinTypeHints({ items }: { items: MintCoinTypeHint[] }) {
         const label = (
           <>
             {item.zh}
-            {item.en && <span className="ml-1 text-xs italic text-gray-400">({item.en})</span>}
+            {item.en && <span className="ml-1 text-xs muted-italic">({item.en})</span>}
           </>
         )
         return (
@@ -66,7 +66,7 @@ export function MintCoinTypeHints({ items }: { items: MintCoinTypeHint[] }) {
               <ClickHint
                 hint={<CoinTypeHintPanel item={item} />}
                 panelClassName="w-44"
-                className="cursor-help underline decoration-dotted decoration-gray-400 underline-offset-2"
+                className="hint-underline"
               >
                 {label}
               </ClickHint>

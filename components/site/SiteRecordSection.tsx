@@ -25,7 +25,7 @@ export function SiteRecordSection({ site }: { site: Site }) {
             value={
               <>
                 {s.site_name_zh}
-                {s.site_name_en && <span className="ml-2 text-xs italic text-gray-400">({s.site_name_en})</span>}
+                {s.site_name_en && <span className="ml-2 text-xs muted-italic">({s.site_name_en})</span>}
               </>
             }
           />

@@ -26,7 +26,7 @@ export function linkedList(
             ) : (
               <span>{label}</span>
             )}
-            {en && <span className="ml-1 text-xs italic text-gray-400">({en})</span>}
+            {en && <span className="ml-1 text-xs muted-italic">({en})</span>}
           </span>
         )
       })}

@@ -33,7 +33,7 @@ export function MintImageGallery({ images }: { images: MintImage[] }) {
               <figcaption className="mt-1.5 text-xs text-gray-500">
                 {img.caption && <span>{img.caption}</span>}
                 {img.credit && (
-                  <span className="ml-2 italic text-gray-400">{img.credit}</span>
+                  <span className="ml-2 muted-italic">{img.credit}</span>
                 )}
               </figcaption>
             )}
@@ -68,7 +68,7 @@ export function MintImageGallery({ images }: { images: MintImage[] }) {
               <p className="mt-2 px-2 text-sm text-gray-600">
                 {lightbox.caption}
                 {lightbox.credit && (
-                  <span className="ml-2 italic text-gray-400">{lightbox.credit}</span>
+                  <span className="ml-2 muted-italic">{lightbox.credit}</span>
                 )}
               </p>
             )}

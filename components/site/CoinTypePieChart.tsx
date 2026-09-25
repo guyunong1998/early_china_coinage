@@ -101,8 +101,11 @@ function clampSpan(startAngle: number, endAngle: number) {
 /** Same footprint as a type row's colored square swatch, but a gray circle
  * with an exclamation mark (no type color of its own) — marks the
  * "unquantified types" legend row as a different kind of thing
- * (present-but-uncounted) rather than another color-coded slice. */
-function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
+ * (present-but-uncounted) rather than another color-coded slice. Also reused
+ * by AccessionNumberSearch (Museum Collections' Search tab) to mark a
+ * specimen whose mint has no map coordinates, for the same
+ * present-but-not-fully-resolved reason. */
+export function UnquantifiedSwatch({ className = 'mt-0.5 h-2.5 w-2.5' }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" className={`${className} shrink-0`} aria-hidden="true">
       <circle cx="8" cy="8" r="8" fill={UNCLASSIFIED_COLOR} />
@@ -346,7 +349,7 @@ export function CoinTypePieChart({
                         <span>
                           {c.label}
                           {c.labelEn && c.labelEn !== c.label && (
-                            <span className="ml-1 italic text-gray-400">{c.labelEn}</span>
+                            <span className="ml-1 muted-italic">{c.labelEn}</span>
                           )}
                         </span>
                       </span>
@@ -367,14 +370,14 @@ export function CoinTypePieChart({
                           <>
                             {u.subtypeLabel}
                             {u.subtypeLabelEn && u.subtypeLabelEn !== u.subtypeLabel && (
-                              <span className="ml-1 italic text-gray-400">{u.subtypeLabelEn}</span>
+                              <span className="ml-1 muted-italic">{u.subtypeLabelEn}</span>
                             )}
                             <span className="text-gray-400"> · </span>
                           </>
                         )}
                         {u.inscriptionLabel}
                         {u.inscriptionLabelEn && u.inscriptionLabelEn !== u.inscriptionLabel && (
-                          <span className="ml-1 italic text-gray-400">{u.inscriptionLabelEn}</span>
+                          <span className="ml-1 muted-italic">{u.inscriptionLabelEn}</span>
                         )}
                       </span>
                     </span>
@@ -425,14 +428,14 @@ export function CoinTypePieChart({
                     <span>
                       {u.label}
                       {u.labelEn && u.labelEn !== u.label && (
-                        <span className="ml-1 italic text-gray-400">{u.labelEn}</span>
+                        <span className="ml-1 muted-italic">{u.labelEn}</span>
                       )}
                     </span>
                     <span className="text-gray-400"> · </span>
                     <span>
                       {u.inscriptionLabel}
                       {u.inscriptionLabelEn && u.inscriptionLabelEn !== u.inscriptionLabel && (
-                        <span className="ml-1 italic text-gray-400">{u.inscriptionLabelEn}</span>
+                        <span className="ml-1 muted-italic">{u.inscriptionLabelEn}</span>
                       )}
                     </span>
                     {u.count > 1 && <span className="ml-1 text-gray-400">×{u.count}</span>}

@@ -84,18 +84,18 @@ export function CoinTypeListClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('coinTypeList.searchPlaceholder')}
-            className="w-full rounded-l border border-brand/30 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-brand"
+            className="w-full rounded-l form-input px-4 py-2.5 text-gray-800"
           />
           <span className="flex items-center rounded-r border border-l-0 border-brand/30 bg-white px-3 text-gray-400 text-sm">
             {results.length}
           </span>
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-600">
-          <span className="font-semibold uppercase tracking-wide text-gray-500">{t('coinTypeList.sortBy')}</span>
+          <span className="eyebrow text-gray-500">{t('coinTypeList.sortBy')}</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortOption)}
-            className="rounded border border-brand/30 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+            className="rounded form-input px-2 py-1.5"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

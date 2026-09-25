@@ -68,7 +68,7 @@ export function TaxonomyCombobox({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full rounded border border-brand/30 bg-white px-2.5 py-1.5 text-left text-sm outline-none focus:border-brand"
+        className="w-full rounded form-input px-2.5 py-1.5 text-left"
       >
         {selected ? selected.label : <span className="text-gray-400">{placeholder}</span>}
       </button>
@@ -88,7 +88,7 @@ export function TaxonomyCombobox({
               <button
                 type="button"
                 onClick={() => pick(null)}
-                className="flex w-full items-center px-2.5 py-1.5 text-left text-sm italic text-gray-400 hover:bg-gray-50"
+                className="flex w-full items-center px-2.5 py-1.5 text-left text-sm muted-italic hover:bg-gray-50"
               >
                 Clear selection
               </button>
