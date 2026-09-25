@@ -557,6 +557,7 @@ export const DICTIONARY = {
   'mintDetail.information': { en: 'Information', zh: '基本信息' },
   'mintDetail.description': { en: 'Description', zh: '描述' },
   'mintDetail.mapsImages': { en: 'Maps & Images', zh: '地图与图片' },
+  'mintDetail.inscriptionMaterials': { en: 'Inscription materials', zh: '铭文材料' },
   'mintDetail.references': { en: 'References', zh: '参考文献' },
   'mintDetail.noReferences': { en: 'No references recorded yet.', zh: '暂无参考文献。' },
   'mintDetail.row.state': { en: 'State', zh: '诸侯国' },

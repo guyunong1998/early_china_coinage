@@ -256,6 +256,9 @@ export type MintImage = {
   src: string
   caption?: string
   credit?: string
+  /** 'inscription' is the bronze-vessel / rubbing section. Anything else
+   * stays in Maps & Images (site plans included). */
+  kind?: 'inscription' | 'map'
 }
 
 export type ImageRecord = {
