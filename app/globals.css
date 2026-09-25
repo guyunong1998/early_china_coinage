@@ -334,7 +334,20 @@ button:not(:disabled):hover {
 
 .title-zh {
   font-size: 0.8rem;  /* text-xs */
-  color: var(--brand); 
+  color: var(--brand);
+}
+
+/* Shrink the brand title at very narrow widths (e.g. 320px) so the logo,
+   title, and header controls fit on one line. 375px and up already fits
+   at the sizes above. */
+@media (max-width: 374px) {
+  .title-en {
+    font-size: 0.8rem;
+  }
+
+  .title-zh {
+    font-size: 0.7rem;
+  }
 }
 
 .filter-button{

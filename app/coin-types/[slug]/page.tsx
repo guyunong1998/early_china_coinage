@@ -160,11 +160,18 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
           <DetailRow labelKey="coinTypeDetail.row.level" value={<T k={LEVEL_LABEL_KEY[node.level]} />} />
             <DetailRow
               labelKey="coinTypeDetail.row.parentTypes"
-              value={
-                node.parents.length > 0
-                  ? node.parents.map((p) => `${p.label_zh} (${p.label_en})`).join('、')
-                  : '—'
-              }
+              value={linkedList(
+                node.parents.map((p) => p.label_zh),
+                (labelZh) => {
+                  const index = node.parents.findIndex((p) => p.label_zh === labelZh)
+                  const parent = node.parents[index]
+                  return {
+                    en: parent.label_en,
+                    // Level 1 (the root, always parents[0]) has no page of its own to link to.
+                    href: index > 0 ? `/coin-types/${parent.slug}` : null,
+                  }
+                }
+              )}
             />
             <DetailRow
               labelKey="coinTypeDetail.row.states"
@@ -178,7 +185,12 @@ export default async function CoinTypeDetailPage({ params }: PageProps) {
               labelKey="mintDetail.row.coinsAndSites"
               value={
                 counts.coinCount > 0 ? (
-                  <T k="stats.coinsAcrossSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+                  <Link
+                    href={`/search?coinType=${encodeURIComponent(node.label_zh)}`}
+                    className="text-brand hover:underline"
+                  >
+                    <T k="stats.coinsAcrossSites" vars={{ coins: counts.coinCount, sites: counts.siteCount }} />
+                  </Link>
                 ) : (
                   '—'
                 )

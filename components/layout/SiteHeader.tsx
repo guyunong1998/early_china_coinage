@@ -11,12 +11,12 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2">
-        <Link href="/" className="group flex items-center gap-3">
+        <Link href="/" className="group flex items-center gap-1.5 min-[375px]:gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- plain
               img keeps this a static, non-Next-Image-optimized asset load
               for a small SVG whose intrinsic aspect ratio (tall, spade-coin
               shaped) should drive its own width, not a fixed square box. */}
-          <img src="/coin.svg" alt="" className="h-10 w-auto shrink-0" />
+          <img src="/coin.svg" alt="" className="h-8 w-auto shrink-0 min-[375px]:h-10" />
           <div>
             <p className="title-en">
               Early Chinese Coin Finds
@@ -27,7 +27,7 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 lg:gap-6">
           <nav className="hidden items-center gap-1 text-sm font-medium text-gray-700 lg:flex">
             <Link href="/mints" className="nav-link">
               <T k="nav.mints" />

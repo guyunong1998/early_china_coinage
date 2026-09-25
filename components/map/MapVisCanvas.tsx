@@ -267,6 +267,28 @@ function statusLine(state: DisplayState, totalQty: number, t: TFunction): string
   })
 }
 
+/** Matched/total find-record ("sites") counts implied by a state, for the
+ * mint popup's companion "x of y sites (~z%)" line + bar — mirrors
+ * `ratioNumbers` but against `totalFindCount` instead of coin quantity, and
+ * reuses the same matched-find fallback as `mintSizeMetrics`. */
+function findRatioNumbers(state: DisplayState, totalFindCount: number): { matched: number; total: number } | null {
+  switch (state.kind) {
+    case 'ratio':
+      return {
+        matched: state.matchedFindCount ?? Math.max(1, Math.round(totalFindCount * state.ratio)),
+        total: totalFindCount,
+      }
+    case 'pure':
+    case 'single-find':
+      return { matched: totalFindCount, total: totalFindCount }
+    case 'no-data':
+      return { matched: 0, total: totalFindCount }
+    case 'no-filter':
+    case 'unquantified':
+      return null
+  }
+}
+
 function ratioBarHtml(pct: number, color: string): string {
   const clamped = Math.max(0, Math.min(100, Math.round(pct)))
   return `<div style="height:6px;width:100%;border-radius:3px;background:var(--map-popup-bar-track);overflow:hidden;margin-top:3px"><div style="height:100%;width:${clamped}%;background:${color}"></div></div>`
@@ -280,6 +302,22 @@ function ratioStatusHtml(state: DisplayState, totalQty: number, t: TFunction): s
   const nums = ratioNumbers(state, totalQty)
   const bar = nums && nums.total > 0 ? ratioBarHtml((nums.matched / nums.total) * 100, stateColor(state)) : ''
   return `<div>${text}</div>${bar}<hr style="margin:8px 0;border:none;border-top:1px solid var(--map-popup-divider)" />`
+}
+
+/** Mint popup's version of `ratioStatusHtml`: same "x of y coins" line + bar,
+ * plus a plain "found in x finds" line directly below it (no bar — mints
+ * have their own find-record total, `mint.findCount`, which plain sites
+ * don't) before the shared divider. */
+function mintRatioStatusHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
+  const coinsText = statusLine(state, mint.totalQty, t)
+  if (!coinsText) return ''
+  const coinsNums = ratioNumbers(state, mint.totalQty)
+  const coinsBar = coinsNums && coinsNums.total > 0 ? ratioBarHtml((coinsNums.matched / coinsNums.total) * 100, stateColor(state)) : ''
+  const sitesNums = findRatioNumbers(state, mint.findCount)
+  const sitesLine = sitesNums
+    ? `<div style="margin-top:6px">${t('map.popup.foundInFinds', { matched: sitesNums.matched })}</div>`
+    : ''
+  return `<div>${coinsText}</div>${coinsBar}${sitesLine}<hr style="margin:8px 0;border:none;border-top:1px solid var(--map-popup-divider)" />`
 }
 
 function buildPopupHtml(site: MapSite, state: DisplayState, t: TFunction): string {
@@ -487,7 +525,7 @@ function mintSizePx(
 }
 
 function buildMintPopupHtml(mint: MintPoint, state: DisplayState, t: TFunction): string {
-  const status = ratioStatusHtml(state, mint.totalQty, t)
+  const status = mintRatioStatusHtml(mint, state, t)
 
   return `
     <div class="map-popup" style="min-width:180px">

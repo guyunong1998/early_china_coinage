@@ -117,10 +117,7 @@ export const DICTIONARY = {
   },
   'about.collab.ans': { en: 'American Numismatic Society', zh: '美国钱币学会' },
   'about.schema.title': { en: 'Database Schema', zh: '数据库结构' },
-  'about.schema.body': {
-    en: 'A diagram of how sites, finds, coin types, and mints relate to one another.',
-    zh: '下图展示了遗址、出土记录、币种与铸地之间的关系结构。',
-  },
+
   'about.resources.title': { en: 'Additional Resources', zh: '更多资源' },
   'about.resources.sources': { en: 'Bibliographic Sources', zh: '文献来源' },
   'about.resources.github': { en: 'View source on GitHub', zh: '在 GitHub 上查看源代码' },
@@ -508,6 +505,7 @@ export const DICTIONARY = {
   'map.sizeBy.finds': { en: 'Sites count', zh: '遗址数量' },
   'map.popup.coins': { en: 'Coins', zh: '钱币数' },
   'map.popup.finds': { en: 'Finds', zh: '发现次数' },
+  'map.popup.foundInFinds': { en: 'Found in {matched} finds', zh: '发现于 {matched} 条记录中' },
   'map.legend.density': { en: 'Density mass:', zh: '密度色块：' },
   'map.legend.byMint': { en: 'By mint:', zh: '按铸地：' },
   'map.legend.byType': { en: 'By type:', zh: '按类型：' },
@@ -517,7 +515,6 @@ export const DICTIONARY = {
     en: 'Color by log-scaled coin count.',
     zh: '按当前视图钱币数量对数分级—。',
   },
-  'map.legend.pureMint': { en: 'Context all this mint', zh: '单位内全为此铸地' },
   'map.legend.singleFind': { en: 'Single find', zh: '孤品发现' },
   'map.filter.l0': { en: 'Coin / Mould', zh: '钱币 / 钱范' },
   'map.filter.l1': { en: 'Category', zh: '类别' },
@@ -526,8 +523,7 @@ export const DICTIONARY = {
   'map.filter.l4': { en: 'Variant', zh: '形制' },
   'map.filter.inscription': { en: 'Inscription', zh: '铭文' },
   'map.filter.none': { en: 'None', zh: '无' },
-  'map.legend.title': { en: 'Share within contexts:', zh: '出土单位内占比：' },
-  'map.legend.pure': { en: 'Context all this type', zh: '单位内全为此类' },
+  'map.legend.title': { en: 'Percentage of total coins:', zh: '出土单位内占比：' },
 
   // ── mints page ────────────────────────────────────────────────────────
   'mints.title': { en: 'Mint Town Locations', zh: '铸币城邑位置' },
@@ -610,7 +606,7 @@ export const DICTIONARY = {
   'coinTypeDetail.row.parentTypes': { en: 'Parent types', zh: '上级类型' },
   'coinTypeDetail.row.states': { en: 'States', zh: '诸侯国' },
   'coinTypeDetail.row.mints': { en: 'Mints', zh: '铸地' },
-  'coinTypeDetail.relatedFinds': { en: 'Related Finds', zh: '相关出土记录' },
+  'coinTypeDetail.relatedFinds': { en: 'Related Sites', zh: '相关出土记录' },
   'coinTypeDetail.noSites': {
     en: 'No find sites recorded yet for this coin type.',
     zh: '该币种暂无出土遗址记录。',

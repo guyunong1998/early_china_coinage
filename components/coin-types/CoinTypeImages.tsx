@@ -28,11 +28,11 @@ export function CoinTypeImages({
 
   return (
     <>
-      <div className={`mt-4 grid gap-3 ${panes.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="mt-4 flex flex-wrap justify-center gap-3">
         {panes.map((pane) => (
           <figure
             key={pane.labelKey}
-            className="group cursor-zoom-in border border-gray-200 bg-white"
+            className="group w-56 cursor-zoom-in border border-gray-200 bg-white"
             onClick={() => setLightbox(pane)}
           >
             <div className="relative h-56 w-full overflow-hidden bg-white">
