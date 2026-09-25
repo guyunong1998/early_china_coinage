@@ -212,7 +212,7 @@ export default async function MintDetailPage({ params }: PageProps) {
 
       {/* Description — straight from the mints table. */}
       <Panel header={<T k="mintDetail.description" />} className="mt-6" bodyClassName="space-y-3">
-        {descriptionZh && <p className="leading-7 text-gray-800">{descriptionZh}</p>}
+        {descriptionZh && <p className="whitespace-pre-line leading-7 text-gray-800">{descriptionZh}</p>}
         {descriptionEn ? (
           <p className="leading-7 italic text-gray-600">{descriptionEn}</p>
         ) : (
@@ -264,10 +264,16 @@ export default async function MintDetailPage({ params }: PageProps) {
         )}
       </Panel>
 
-      {/* Maps & Images */}
-      {mint.images.length > 0 && (
+      {/* Maps & Images — site plans. Bronze photos and rubbings are separate. */}
+      {mint.images.some((img) => img.kind !== 'inscription') && (
         <Panel header={<T k="mintDetail.mapsImages" />} className="mt-6">
-          <MintImageGallery images={mint.images} />
+          <MintImageGallery images={mint.images.filter((img) => img.kind !== 'inscription')} />
+        </Panel>
+      )}
+
+      {mint.images.some((img) => img.kind === 'inscription') && (
+        <Panel header={<T k="mintDetail.inscriptionMaterials" />} className="mt-6">
+          <MintImageGallery images={mint.images.filter((img) => img.kind === 'inscription')} />
         </Panel>
       )}
 

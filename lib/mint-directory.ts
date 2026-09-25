@@ -21,6 +21,7 @@ function imageRecordToMintImage(img: ImageRecord): MintImage {
     src: `/images/${img.filename}`,
     caption: img.caption_en ?? img.caption_zh ?? undefined,
     credit: img.source_text ?? sourceCredit ?? undefined,
+    kind: img.note_zh === '铭文材料' ? 'inscription' : 'map',
   }
 }
 
