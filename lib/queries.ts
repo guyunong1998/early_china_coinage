@@ -1,5 +1,5 @@
 import { cache } from 'react'
-import { and, asc, count, eq, getTableColumns, ilike, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, count, eq, getTableColumns, inArray, isNotNull, like, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   coinIssues,
@@ -41,7 +41,7 @@ import type {
 
 /** Drizzle select object for the given columns of a table/view — the
  * equivalent of a supabase-js `select('a, b, c')` column list. */
-function pick<T extends object, K extends keyof T>(source: T, keys: readonly K[]): Pick<T, K> {
+export function pick<T extends object, K extends keyof T>(source: T, keys: readonly K[]): Pick<T, K> {
   return Object.fromEntries(keys.map((key) => [key, source[key]])) as Pick<T, K>
 }
 
@@ -69,7 +69,7 @@ const SITE_PRECISION_FIELDS = pick(sites, [
 
 /** Embedded `periods(period_zh, period_en)` — pair with a leftJoin on
  * period_id, then flattenPeriod. */
-const PERIOD_EMBED = { period_zh: periods.period_zh, period_en: periods.period_en }
+export const PERIOD_EMBED = { period_zh: periods.period_zh, period_en: periods.period_en }
 
 export type SearchSite = MapSite & {
   period_zh: string | null
@@ -154,11 +154,7 @@ export type CoinIssueEmbed = {
   coin_type_hierarchy: CoinTypeHierarchyEmbed
 }
 
-export const COIN_ISSUE_FIELDS =
-  'id, coin_type_code, description_zh, description_en, mint_id, state_id, inscription_id, coin_type_hierarchy_id, legacy_inscription, legacy_mint, legacy_state, mints(name_zh, name_en), states(state_zh, state_en), inscriptions(inscription_zh, inscription_en), coin_type_hierarchy(level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en)'
-
-/** Drizzle counterpart of COIN_ISSUE_FIELDS (which lib/admin/* still uses
- * with supabase-js).
+/** coin_issues joined to its four FK tables, in the CoinIssueEmbed shape.
  * Each nested object comes back null when its left join misses, same as a
  * PostgREST embed. Selecting from coin_issues: use selectCoinIssueEmbeds. */
 const COIN_ISSUE_EMBED = {
@@ -174,7 +170,7 @@ const COIN_ISSUE_EMBED = {
   ] as const),
 }
 
-function selectCoinIssueEmbeds() {
+export function selectCoinIssueEmbeds() {
   return db
     .select(COIN_ISSUE_EMBED)
     .from(coinIssues)
@@ -433,33 +429,6 @@ async function fillMissingMapSiteTypes<T extends MapSite>(sites: T[]): Promise<T
   })
 }
 
-/**
- * Supabase's PostgREST API caps responses at 1000 rows by default. Several
- * tables here (sites, finds, contexts) exceed that, so a single
- * un-paginated request silently drops everything past the cutoff — e.g.
- * many Shanxi/Hebei/Shaanxi sites vanishing from the map. This pages
- * through with `.range()` until a short (or empty) page signals the end.
- */
-export async function fetchAllPages<T>(
-  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  pageSize = 1000
-): Promise<T[]> {
-  const all: T[] = []
-  let from = 0
-
-  while (true) {
-    const { data, error } = await fetchPage(from, from + pageSize - 1)
-    if (error) throw error
-    if (!data || data.length === 0) break
-
-    all.push(...data)
-    if (data.length < pageSize) break
-    from += pageSize
-  }
-
-  return all
-}
-
 /** Raw shape of a `periods(period_zh, period_en)` embed, as returned by
  * PostgREST for a to-one FK (see `one` above for the array-vs-object
  * ambiguity this works around). */
@@ -471,8 +440,7 @@ type PeriodEmbed =
 /** Flattens a row carrying an embedded `periods(...)` relation into the same
  * flat period_zh/period_en shape `sites`/`contexts` exposed before period
  * was normalized into its own lookup table. */
-// row comes straight off the untyped supabase-js client (see lib/supabase.ts);
-// callers cast the result to their target row type (Site, Context, ...).
+// Callers cast the result to their target row type (Site, Context, ...).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function flattenPeriod(row: any) {
   const { periods, ...rest } = row
@@ -558,7 +526,7 @@ async function getPrecisionSupplementSites(): Promise<SearchSite[]> {
   }
   const supplementQuery = () => db.select(fields).from(sites).leftJoin(periods, eq(sites.period_id, periods.id))
   const [nameTagged, countyTagged] = await Promise.all([
-    supplementQuery().where(ilike(sites.site_name_zh, '%不明单位%')).orderBy(asc(sites.site_code)),
+    supplementQuery().where(like(sites.site_name_zh, '%不明单位%')).orderBy(asc(sites.site_code)),
     supplementQuery().where(eq(sites.county_zh, '不明')).orderBy(asc(sites.site_code)),
   ])
 
@@ -682,13 +650,11 @@ export async function getSiteContexts(siteCode: string): Promise<Context[]> {
   return rows.map(flattenPeriod)
 }
 
-export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
-  if (contextCodes.length === 0) return []
-
-  // COIN_ISSUE_EMBED spread at the top level (not nested under coin_issues)
-  // so each of its own embeds still nulls out on a missed left join;
-  // regrouped into `coin_issues` below.
-  const rows = await db
+/** finds joined to their coin issue. COIN_ISSUE_EMBED is spread at the top
+ * level (not nested under coin_issues) so each of its own embeds still nulls
+ * out on a missed left join; regrouped into `coin_issues` by toFind. */
+function selectFindsWithCoinIssues() {
+  return db
     .select({ find: finds, ...COIN_ISSUE_EMBED })
     .from(finds)
     .leftJoin(coinIssues, eq(finds.coin_issues_id, coinIssues.id))
@@ -696,13 +662,26 @@ export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
     .leftJoin(states, eq(coinIssues.state_id, states.id))
     .leftJoin(inscriptions, eq(coinIssues.inscription_id, inscriptions.id))
     .leftJoin(coinTypeHierarchy, eq(coinIssues.coin_type_hierarchy_id, coinTypeHierarchy.id))
+}
+
+function toFind({ find, ...coinIssue }: Awaited<ReturnType<typeof selectFindsWithCoinIssues>>[number]): Find {
+  return { ...find, coin_issues: coinIssue.id ? flattenCoinIssue(coinIssue as CoinIssueEmbed) : null }
+}
+
+export async function getSiteFinds(contextCodes: string[]): Promise<Find[]> {
+  if (contextCodes.length === 0) return []
+
+  const rows = await selectFindsWithCoinIssues()
     .where(inArray(finds.context_code, contextCodes))
     .orderBy(asc(finds.find_code))
 
-  return rows.map(({ find, ...coinIssue }) => ({
-    ...find,
-    coin_issues: coinIssue.id ? flattenCoinIssue(coinIssue as CoinIssueEmbed) : null,
-  }))
+  return rows.map(toFind)
+}
+
+/** One find by id, same shape as getSiteFinds — what a find edit hands back. */
+export async function getFindById(id: string): Promise<Find | null> {
+  const rows = await selectFindsWithCoinIssues().where(eq(finds.id, id)).limit(2)
+  return maybeSingle(rows.map(toFind))
 }
 
 export async function getSources(sourceCodes: string[]): Promise<Source[]> {
@@ -824,7 +803,7 @@ export async function getCoinIssuesByMintId(mintId: string): Promise<CoinIssueDi
     .orderBy(asc(vCoinIssuesFlat.coin_type_code))
 }
 
-const COIN_TYPE_HIERARCHY_FIELDS = pick(coinTypeHierarchy, [
+export const COIN_TYPE_HIERARCHY_FIELDS = pick(coinTypeHierarchy, [
   'id', 'level1_zh', 'level1_en', 'level2_zh', 'level2_en', 'level3_zh', 'level3_en', 'level4_zh', 'level4_en',
   'level5_zh', 'level5_en', 'img_acc_num', 'description_zh', 'description_en', 'type_code',
 ] as const)

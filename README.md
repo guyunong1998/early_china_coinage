@@ -20,11 +20,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Required environment variables (`.env.local`, see that file for the current template):
+Required environment variables (`.env.local`):
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (required for **local** admin editing)
+- `DATABASE_URL` — MySQL connection, e.g. `mysql://root@127.0.0.1:3306/early_china_coinage` for the local `docker compose up` copy
+- `BETTER_AUTH_SECRET` (production) — random secret for signing sessions, e.g. `openssl rand -base64 32`
+- `BETTER_AUTH_URL` (production) — the site's public origin, e.g. `https://example.org`
+- `ADMIN_EMAILS` — comma-separated emails allowed to edit
+- `AUDIT_LOG_PATH` (optional) — where deleted rows are logged (default `logs/deletions.log`); in production, keep it outside the deployed build directory
+- `ALLOW_EDITS_WITHOUT_LOGIN=true` (dev only, optional) — lets `npm run dev` edit without signing in; ignored by production builds
+
+Editors sign in at `/login`. Sign-up is disabled, so to set up auth:
+
+1. Create the auth tables once: `mysql -u <user> -p <database> < scripts/better-auth-schema.sql`.
+2. Create each account, or reset its password. It prompts for the password, and a reset also signs out that account's sessions: `node --env-file=.env.local scripts/create-user.mjs <email>`.
+3. Add the email to `ADMIN_EMAILS`.
+
+Every delete made through the edit UI is appended to the deletion log as one JSON line per row (every column), including rows removed by cascade (a context's finds and coin items), so they can be restored by hand.
 
 Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
@@ -49,4 +60,24 @@ Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, Supabase (Postg
 
 ## Deployment
 
-Deployed on Vercel with no custom configuration. Most pages render per-request; `/mints` uses ISR (`revalidate = 3600`).
+Production is one Ubuntu server: MySQL, the app as a systemd service, and Apache in front with HTTPS. [`scripts/setup-ec2.sh`](scripts/setup-ec2.sh) sets up a fresh server, and [`scripts/deploy-ec2.sh`](scripts/deploy-ec2.sh) redeploys. The Apache config is [`scripts/apache/coin-app.conf.template`](scripts/apache/coin-app.conf.template).
+
+**Testing it locally.** [`docker-compose.prod.yml`](docker-compose.prod.yml) runs the same setup in Docker, using the same Apache config, a limited MySQL user and no exposed app or MySQL ports:
+
+```bash
+cp docker/prod.env.example .env.prod   # fill in the secrets
+docker compose -f docker-compose.prod.yml --env-file .env.prod up --build
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec app node scripts/create-user.mjs you@example.com
+```
+
+Then open https://localhost and accept the self-signed certificate warning.
+
+**No domain name?** Pass the server's public IP to `setup-ec2.sh`. It uses `<ip-with-dashes>.sslip.io` (e.g. `3-91-20-7.sslip.io`), a free hostname that resolves to that IP, and gets a real Let's Encrypt certificate for it. A domain can replace it later; rerun the certificate and Apache steps with the new name.
+
+**Security checklist for any production server** (`setup-ec2.sh` does all of this; check it by hand on a server set up another way):
+
+- The app connects to MySQL as a user with only `SELECT, INSERT, UPDATE, DELETE` on this database, never root.
+- MySQL listens on `127.0.0.1` only. The app listens on `127.0.0.1` only (`HOSTNAME=127.0.0.1`). The firewall/Security Group allows only 22, 80 and 443.
+- Apache serves HTTPS, redirects HTTP to it, and has `RequestHeader unset X-Forwarded-For early` (without that line, the login rate limit can be bypassed).
+- `BETTER_AUTH_SECRET` is random and set only in `.env.production` (mode 600), and `BETTER_AUTH_URL` is the `https://` address.
+- `AUDIT_LOG_PATH` points outside the build directory, which redeploys replace.

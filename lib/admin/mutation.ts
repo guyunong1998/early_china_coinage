@@ -1,18 +1,16 @@
 import 'server-only'
 import type { z } from 'zod'
-import { assertAuthorized, getWriteClient } from '@/lib/admin/guard'
+import { assertAuthorized } from '@/lib/admin/guard'
 import type { ActionState } from '@/lib/admin/types'
+import { db, type Db } from '@/lib/db'
 
-type Db = Awaited<ReturnType<typeof getWriteClient>>
-
-/** assertAuthorized + getWriteClient, with the one real throw risk in every
- * action's prologue (not signed in, or a dev-setup error from getWriteClient)
- * caught here once and turned into a normal ActionState — instead of each
- * action file deciding on its own whether to wrap this in try/catch. */
+/** assertAuthorized + the database handle, with the one real throw risk in
+ * every action's prologue (not signed in) caught here once and turned into a
+ * normal ActionState — instead of each action file deciding on its own
+ * whether to wrap this in try/catch. */
 export async function beginWrite(): Promise<{ ok: true; db: Db } | { ok: false; result: ActionState<never> }> {
   try {
     await assertAuthorized()
-    const db = await getWriteClient()
     return { ok: true, db }
   } catch (err) {
     return { ok: false, result: { ok: false, formError: err instanceof Error ? err.message : 'Not authorized.' } }
@@ -38,28 +36,50 @@ export async function beginMutation<S extends z.ZodType>(
   return { ok: true, db: begun.db, data: parsed.data }
 }
 
+/** The mysql2 error under Drizzle's "Failed query: ..." wrapper, if any. */
+function driverError(err: unknown): { code?: string; message?: string } | undefined {
+  if (!(err instanceof Error)) return undefined
+  return (err.cause ?? err) as { code?: string; message?: string }
+}
+
+/** MySQL's duplicate-key error (Postgres's 23505). */
+export function isUniqueViolation(err: unknown): boolean {
+  return driverError(err)?.code === 'ER_DUP_ENTRY'
+}
+
+/** The database's own message (e.g. a foreign-key or duplicate-key error)
+ * for a form error, rather than Drizzle's wrapper, which embeds the SQL. */
+export function formErrorOf(err: unknown, fallback = 'Database error.'): { ok: false; formError: string } {
+  return { ok: false, formError: driverError(err)?.message ?? fallback }
+}
+
+/** Throws if an update/insert's follow-up select found nothing — the old
+ * supabase-js `.single()` contract. */
+export function required<T>(row: T | null | undefined): T {
+  if (row == null) throw new Error('Row not found.')
+  return row
+}
+
 /**
- * Inserts a row, and if it collides with a unique constraint (Postgres error
- * 23505), re-selects and returns the existing row instead of erroring — the
- * "quick create" taxonomy actions (createMint, createState,
- * createCoinTypeHierarchy) all resolve duplicates this way, since picking an
- * already-catalogued name should just resolve to that row, not fail.
- *
- * Takes plain thunks rather than a query-builder callback so callers can
- * shape each insert/lookup however their table needs (a single .eq(), or
- * several .is()/.eq() calls for a composite key) without this helper needing
- * to know Supabase's query-builder generics.
+ * Inserts a row, and if it collides with a unique constraint, looks up and
+ * returns the existing row instead of erroring — the "quick create" taxonomy
+ * actions (createMint, createState, createCoinTypeHierarchy) all resolve
+ * duplicates this way, since picking an already-catalogued name should just
+ * resolve to that row, not fail.
  */
 export async function insertOrFindExisting<T>(
-  insert: () => PromiseLike<{ data: T | null; error: { code?: string; message: string } | null }>,
-  findExisting: () => PromiseLike<{ data: T | null; error: { message: string } | null }>,
+  insert: () => Promise<T>,
+  findExisting: () => Promise<T | null | undefined>,
   existingMessage: string
-): Promise<{ ok: true; data: T; message: string } | { ok: false; formError: string }> {
-  const { data, error } = await insert()
-  if (!error) return { ok: true, data: data as T, message: 'Created.' }
-  if (error.code !== '23505') return { ok: false, formError: error.message }
-
-  const { data: existing, error: selectError } = await findExisting()
-  if (selectError) return { ok: false, formError: selectError.message }
-  return { ok: true, data: existing as T, message: existingMessage }
+): Promise<{ ok: true; data: T; message: string } | { ok: false; formError?: string }> {
+  try {
+    return { ok: true, data: await insert(), message: 'Created.' }
+  } catch (err) {
+    if (!isUniqueViolation(err)) return formErrorOf(err)
+    try {
+      return { ok: true, data: required(await findExisting()), message: existingMessage }
+    } catch (selectErr) {
+      return formErrorOf(selectErr)
+    }
+  }
 }

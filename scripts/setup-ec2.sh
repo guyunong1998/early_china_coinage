@@ -1,13 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# One-time setup of a fresh Ubuntu server: MySQL, the app (systemd), Apache
+# with HTTPS. docker-compose.prod.yml is a local copy of this same setup.
+#
+#   ./setup-ec2.sh <public-ip-or-domain> [path/to/mysql_dump.sql]
+#
+# Without a domain, pass the server's public IP: it's turned into an
+# <ip-with-dashes>.sslip.io hostname (sslip.io resolves it back to the IP),
+# which Let's Encrypt will issue a real certificate for.
+# Before running: the Security Group must allow 22 (SSH), 80 and 443 — and
+# nothing else. The dump (pg_export/mysql_dump.sql, not in git) can be copied
+# up first with scp; without it the database starts empty.
+
 REPO_URL="https://github.com/anonymousanemone/early_china_coinage_aws.git"
 APP_DIR="$HOME/early_china_coinage_aws"
-SERVER_NAME="${1:?Usage: $0 <public-ip-or-domain>}"
+TARGET="${1:?Usage: $0 <public-ip-or-domain> [path/to/mysql_dump.sql]}"
+DUMP="${2:-}"
+DB_NAME=early_china_coinage
+
+if [[ "$TARGET" =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
+  SERVER_NAME="${TARGET//./-}.sslip.io"
+else
+  SERVER_NAME="$TARGET"
+fi
+echo "Site will be https://$SERVER_NAME"
 
 echo "== System packages =="
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y apache2 git curl build-essential cloud-guest-utils
+sudo apt install -y apache2 mysql-server certbot gettext-base git curl build-essential cloud-guest-utils
 
 echo "== Node 22 =="
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -28,29 +49,58 @@ echo "== Clone app =="
 git clone "$REPO_URL" "$APP_DIR"
 cd "$APP_DIR"
 
-echo "== Supabase credentials =="
-echo "Create $APP_DIR/.env.production with:"
-echo "  NEXT_PUBLIC_SUPABASE_URL=..."
-echo "  NEXT_PUBLIC_SUPABASE_ANON_KEY=..."
-echo "Opening nano now -- save (Ctrl+O, Enter) and exit (Ctrl+X) when done."
-read -p "Press Enter to open the editor..." _
-nano .env.production
+echo "== MySQL =="
+# Ubuntu's MySQL listens on 127.0.0.1 only and root logs in via `sudo mysql`
+# (no password, local only) — check the former rather than assume it.
+if ! sudo grep -Eq '^\s*bind-address\s*=\s*127\.0\.0\.1' /etc/mysql/mysql.conf.d/mysqld.cnf; then
+  echo "MySQL is not bound to 127.0.0.1 — fix bind-address in /etc/mysql/mysql.conf.d/mysqld.cnf first." >&2
+  exit 1
+fi
+sudo mysql -e "CREATE DATABASE $DB_NAME"
+if [[ -n "$DUMP" ]]; then
+  sudo mysql "$DB_NAME" < "$DUMP"
+else
+  echo "No dump given — load it later with: sudo mysql $DB_NAME < mysql_dump.sql"
+fi
+sudo mysql "$DB_NAME" < scripts/better-auth-schema.sql
+
+# The app's own login: read/write rows in this one database, nothing else.
+APP_DB_PASSWORD=$(openssl rand -hex 24)
+sudo mysql <<SQL
+CREATE USER 'coinapp'@'localhost' IDENTIFIED BY '$APP_DB_PASSWORD';
+GRANT SELECT, INSERT, UPDATE, DELETE ON \`$DB_NAME\`.* TO 'coinapp'@'localhost';
+SQL
+
+echo "== App settings (.env.production) =="
+read -r -p "Admin email(s), comma-separated: " ADMIN_EMAILS
+mkdir -p "$APP_DIR/logs"
+# Generated here so the secrets are never typed or pasted anywhere.
+( umask 077 && cat > .env.production <<EOF
+DATABASE_URL=mysql://coinapp:$APP_DB_PASSWORD@127.0.0.1:3306/$DB_NAME
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+BETTER_AUTH_URL=https://$SERVER_NAME
+ADMIN_EMAILS=$ADMIN_EMAILS
+AUDIT_LOG_PATH=$APP_DIR/logs/deletions.log
+EOF
+)
 
 echo "== Install + build =="
-npm install
+npm ci
 NODE_OPTIONS="--max-old-space-size=896" npm run build
 
-STANDALONE_DIR=$(dirname "$(find .next/standalone -name server.js | head -1)")
+STANDALONE_DIR=$(dirname "$(find .next/standalone -name server.js -not -path '*/node_modules/*' | head -1)")
 echo "Standalone server at: $STANDALONE_DIR"
 
 cp -r public "$STANDALONE_DIR/"
 cp -r .next/static "$STANDALONE_DIR/.next/"
 
 echo "== systemd service =="
+# HOSTNAME=127.0.0.1: the app only accepts connections from Apache on this
+# machine, never directly from the internet.
 sudo tee /etc/systemd/system/coin-app.service > /dev/null <<EOF
 [Unit]
 Description=Early China Coinage Next.js app
-After=network.target
+After=network.target mysql.service
 
 [Service]
 Type=simple
@@ -72,31 +122,28 @@ sudo systemctl enable coin-app
 sudo systemctl start coin-app
 sudo systemctl status coin-app --no-pager
 
+echo "== HTTPS certificate (Let's Encrypt) =="
+# Apache's stock site serves /var/www/html on port 80, which is all the
+# webroot challenge needs; renewals reuse the same path (see the template's
+# port-80 vhost), and the deploy hook reloads Apache with the new certificate.
+sudo certbot certonly --webroot -w /var/www/html -d "$SERVER_NAME" \
+  --agree-tos --register-unsafely-without-email --non-interactive \
+  --deploy-hook "systemctl reload apache2"
+
 echo "== Apache reverse proxy =="
-sudo a2enmod proxy proxy_http headers
-
-sudo tee /etc/apache2/sites-available/coin-app.conf > /dev/null <<EOF
-<VirtualHost *:80>
-    ServerName $SERVER_NAME
-
-    ProxyPreserveHost On
-    ProxyPass / http://127.0.0.1:3000/
-    ProxyPassReverse / http://127.0.0.1:3000/
-
-    RequestHeader set X-Forwarded-Proto "http"
-
-    ErrorLog \${APACHE_LOG_DIR}/coin-app-error.log
-    CustomLog \${APACHE_LOG_DIR}/coin-app-access.log combined
-</VirtualHost>
-EOF
+sudo a2enmod ssl proxy proxy_http headers rewrite
+SERVER_NAME="$SERVER_NAME" APP_UPSTREAM=127.0.0.1:3000 \
+  SSL_CERT="/etc/letsencrypt/live/$SERVER_NAME/fullchain.pem" \
+  SSL_KEY="/etc/letsencrypt/live/$SERVER_NAME/privkey.pem" \
+  envsubst '${SERVER_NAME} ${APP_UPSTREAM} ${SSL_CERT} ${SSL_KEY}' < scripts/apache/coin-app.conf.template \
+  | sudo tee /etc/apache2/sites-available/coin-app.conf > /dev/null
 
 sudo a2ensite coin-app.conf
 sudo a2dissite 000-default.conf
+sudo apache2ctl configtest
 sudo systemctl reload apache2
 
 echo "== Done =="
-echo "Test locally: curl -I http://127.0.0.1"
-echo "Then confirm port 80 is open in the instance's Security Group, and visit http://$SERVER_NAME"
-
-
-# ./setup-ec2.sh <new-instance-public-ip>
+echo "Create each editor's login (prompts for the password):"
+echo "  cd $APP_DIR && node --env-file=.env.production scripts/create-user.mjs <email>"
+echo "Then visit https://$SERVER_NAME"

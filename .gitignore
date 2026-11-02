@@ -43,3 +43,5 @@ next-env.d.ts
 
 .agents
 .claude
+# deletion log (lib/admin/deletion-log.ts)
+/logs

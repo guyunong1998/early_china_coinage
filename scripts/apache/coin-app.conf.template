@@ -1,0 +1,37 @@
+# Apache vhost for the app, used by scripts/setup-ec2.sh (production) and
+# docker/apache (the local production copy, docker-compose.prod.yml) — so the
+# Docker copy tests the exact config production runs.
+# Filled in with: envsubst '${SERVER_NAME} ${APP_UPSTREAM} ${SSL_CERT} ${SSL_KEY}'
+# Needs: mod_ssl, mod_proxy, mod_proxy_http, mod_headers, mod_rewrite.
+
+# Plain HTTP only redirects to HTTPS — except Let's Encrypt's challenge files,
+# served from /var/www/html so certificate renewal never needs this file changed.
+<VirtualHost *:80>
+    ServerName ${SERVER_NAME}
+    DocumentRoot /var/www/html
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName ${SERVER_NAME}
+
+    SSLEngine on
+    SSLCertificateFile ${SSL_CERT}
+    SSLCertificateKeyFile ${SSL_KEY}
+    Header always set Strict-Transport-Security "max-age=31536000"
+
+    ProxyPreserveHost On
+    # mod_proxy appends the client's IP to any X-Forwarded-For the client sent
+    # itself; drop that first so the header holds only the real IP. Better
+    # Auth's login rate limit is keyed on it.
+    RequestHeader unset X-Forwarded-For early
+    RequestHeader set X-Forwarded-Proto "https"
+    ProxyPass / http://${APP_UPSTREAM}/
+    ProxyPassReverse / http://${APP_UPSTREAM}/
+
+    ErrorLog ${APACHE_LOG_DIR}/coin-app-error.log
+    CustomLog ${APACHE_LOG_DIR}/coin-app-access.log combined
+</VirtualHost>

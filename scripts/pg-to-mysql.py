@@ -75,10 +75,10 @@ EXCLUDED_SCHEMAS = [
 ]
 
 # Tables whose structure is migrated but whose rows are not.
-SCHEMA_ONLY_TABLES = ["public.deleted_rows"]
+SCHEMA_ONLY_TABLES = []
 
 # Tables left out of the export entirely.
-EXCLUDED_TABLES = ["public.ans_data_upload"]
+EXCLUDED_TABLES = ["public.ans_data_upload", "public.deleted_rows"]
 
 # Columns left out of the export, along with any key/index/constraint on them.
 EXCLUDED_COLUMNS = {"public.ans_data": ["upload_id"]}

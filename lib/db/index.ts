@@ -1,30 +1,37 @@
 import 'server-only'
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
+import { drizzle } from 'drizzle-orm/mysql2'
+import { createPool, type Pool } from 'mysql2/promise'
 import * as schema from '@/lib/db/schema'
 
 /**
- * Direct Postgres connection for lib/queries.ts's reads — replaces the
- * anon-key supabase-js client there. Connects as the DATABASE_URL role, so
- * RLS doesn't apply; that's fine for these reads since every content table
- * already grants SELECT to public (see DATABASE_QUERIES.md).
+ * The one MySQL connection pool for the whole app: lib/queries.ts's reads,
+ * lib/admin/*'s writes, and Better Auth's user/session tables (lib/auth/auth.ts)
+ * all share it. MySQL has no row-level security, so nothing at the database
+ * layer stops a write — every Server Action must call assertAuthorized()
+ * (lib/admin/guard.ts) first, and the DATABASE_URL user should only have the
+ * grants the app needs.
  *
- * DATABASE_URL should be Supabase's *transaction pooler* string (port 6543).
- * node-postgres rather than postgres-js: postgres-js wedged Supavisor's
- * transaction mode under `next build`-level concurrency (backends stuck
- * `active`/`ClientRead`, every page timing out), even with pipelining off.
- * `max: 3` keeps `next build`'s 7 prerender workers to ~21 connections.
- * Cached on globalThis so dev-mode HMR doesn't open a new pool per reload.
+ * DATABASE_URL is a mysql:// URI, e.g.
+ * mysql://user:password@127.0.0.1:3306/early_china_coinage
+ * `timezone: 'Z'` keeps Better Auth's Date values in UTC, matching how the
+ * migrated created_at columns were written. The connection collation is
+ * MySQL 8's server default rather than mysql2's utf8mb4_unicode_ci: views
+ * like v_source_link_targets build columns from string literals, which take
+ * the server default, and comparing them to a unicode_ci parameter fails
+ * with "Illegal mix of collations". Cached on globalThis so dev-mode HMR
+ * doesn't open a new pool per reload.
  */
-const globalForDb = globalThis as unknown as { pgPool?: Pool }
+const globalForDb = globalThis as unknown as { mysqlPool?: Pool }
 
 function getPool() {
-  if (!globalForDb.pgPool) {
-    const url = process.env.DATABASE_URL?.trim()
-    if (!url) throw new Error('Missing DATABASE_URL in .env.local (Supabase → Connect → Transaction pooler).')
-    globalForDb.pgPool = new Pool({ connectionString: url, max: 3 })
+  if (!globalForDb.mysqlPool) {
+    const uri = process.env.DATABASE_URL?.trim()
+    if (!uri) throw new Error('Missing DATABASE_URL in .env.local (mysql://user:password@host:3306/database).')
+    globalForDb.mysqlPool = createPool({ uri, connectionLimit: 5, timezone: 'Z', charset: 'UTF8MB4_0900_AI_CI' })
   }
-  return globalForDb.pgPool
+  return globalForDb.mysqlPool
 }
 
-export const db = drizzle({ client: getPool(), schema })
+export const pool = getPool()
+export const db = drizzle({ client: pool, schema, mode: 'default' })
+export type Db = typeof db
