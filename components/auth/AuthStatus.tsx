@@ -6,9 +6,7 @@ import { signOut } from '@/lib/auth/actions'
 
 /** Placed at the bottom of the About page rather than in the site chrome --
  * deliberately quiet, for the small handful of authorized collaborators, not
- * a general-audience "log in" call to action. When dev skips login
- * (ALLOW_EDITS_WITHOUT_LOGIN), /api/auth/me always returns { email: null },
- * so this just shows the sign-in link. */
+ * a general-audience "log in" call to action. */
 export function AuthStatus() {
   const [email, setEmail] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)

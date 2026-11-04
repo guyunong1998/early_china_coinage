@@ -27,7 +27,6 @@ Required environment variables (`.env.local`):
 - `BETTER_AUTH_URL` (production) — the site's public origin, e.g. `https://example.org`
 - `ADMIN_EMAILS` — comma-separated emails allowed to edit
 - `AUDIT_LOG_PATH` (optional) — where deleted rows are logged (default `logs/deletions.log`); in production, keep it outside the deployed build directory
-- `ALLOW_EDITS_WITHOUT_LOGIN=true` (dev only, optional) — lets `npm run dev` edit without signing in; ignored by production builds
 
 Editors sign in at `/login`. Sign-up is disabled, so to set up auth:
 
@@ -43,19 +42,17 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
 | Doc | What it covers |
 |---|---|
-| [`docs/SITEMAP.md`](docs/SITEMAP.md) | Every route, what visitors see there, and — for each page — which components and `lib/` data functions it's built from. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The stack, the server/client split, where data actually lives (Supabase vs. local files), the shared map-rendering engine, i18n, styling, and deployment. Start here to understand how the app is put together. |
 | [`docs/DATA_VISUALIZATION_CALCULATIONS.md`](docs/DATA_VISUALIZATION_CALCULATIONS.md) | The exact math behind every map's point size and color (Points/Density/Compare modes) — the "what number produces what pixel" reference. |
 
 
 ## Stack
 
-Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, Supabase (Postgres) as the one remote datastore, and Leaflet for every interactive map. No separate backend or API layer — server components query Supabase directly at render time. See `docs/ARCHITECTURE.md` for the full picture.
+Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, MySQL (via Drizzle ORM) as the one datastore, Better Auth for editor sign-in, and Leaflet for every interactive map. No separate backend or API layer — server components query MySQL directly at render time.
 
 ## Data
 
 
-- **Supabase (remote)**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
+- **MySQL**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
 - **Local (bundled in the repo)**: reference/gazetteer data that rarely changes (river overlays, specimen photography) — used as a fallback or supplement wherever the database doesn't carry a field yet. 
 
 ## Deployment
