@@ -1,8 +1,0 @@
-.git
-.next
-node_modules
-logs
-pg_export
-.env*
-.claude
-.agents

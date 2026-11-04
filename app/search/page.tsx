@@ -31,8 +31,9 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const PAGE_SIZE = 20
 
-// Time limit for /search, which cold-loads the full site + coin_issues
-// catalogs. Only serverless hosts enforce it; the self-hosted Node server ignores it.
+// Vercel serverless default can be too tight when /search cold-loads the full
+// site + coin_issues catalogs; give the route breathing room on plans that
+// allow it (ignored on shorter-cap hobby tiers).
 export const maxDuration = 60
 
 export const revalidate = 86400
@@ -137,7 +138,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const currentPage = Math.max(1, Number(params.page) || 1)
 
   // Fetch each catalog once — a previous searchSites() helper re-fetched
-  // both, which doubled database work and could time out; it had no
+  // both, which doubled Supabase work and timed out on Vercel; it had no
   // callers and was removed. Don't reintroduce that pattern here.
   const [allSites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
   const baseResults = q ? filterSitesByQuery(allSites, coinIssues, q) : allSites
@@ -400,7 +401,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <div className="panel-body overflow-hidden">
                 {/* Slim payload for the client map — full SearchSite rows for
                     every hit bloat the RSC response (~1–2MB) and can stall
-                    the browser when opening unfiltered /search. */}
+                    the browser / Vercel edge when opening unfiltered /search. */}
                 <CoinMap
                   sites={filtered
                     .filter((s) => s.lat != null && s.lng != null)
