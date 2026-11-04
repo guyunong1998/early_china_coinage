@@ -1,16 +1,17 @@
 'use server'
 
-import { randomUUID } from 'crypto'
-import { eq, getTableColumns, sql, type SQL } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { deleteWithLog } from '@/lib/admin/deletion-log'
-import { beginMutation, beginWrite, formErrorOf, isUniqueViolation, required } from '@/lib/admin/mutation'
+import type { getWriteClient } from '@/lib/admin/guard'
+import { beginMutation, beginWrite } from '@/lib/admin/mutation'
 import { contextSchema, findSchema, siteSchema } from '@/lib/admin/schemas'
+import { COIN_ISSUE_FIELDS, flattenCoinIssue, flattenPeriod, type CoinIssueEmbed } from '@/lib/queries'
 import type { ActionState } from '@/lib/admin/types'
-import type { Db } from '@/lib/db'
-import { contexts, finds, periods, sites } from '@/lib/db/schema'
-import { PERIOD_EMBED, flattenPeriod, getFindById } from '@/lib/queries'
 import type { Context, Find, Site } from '@/lib/types'
+
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
 
 /** Site/context period stays free-text in the edit form (unchanged from
  * before periods was normalized into its own lookup table) — find a row
@@ -18,35 +19,36 @@ import type { Context, Find, Site } from '@/lib/types'
  * pattern as taxonomy-actions.ts's createState. Editing period_en on an
  * existing period_zh only relabels that shared lookup row, same tradeoff
  * state_id/inscription_id already have. */
-async function resolvePeriodId(db: Db, periodZh: string | null, periodEn: string | null): Promise<string | null> {
+async function resolvePeriodId(
+  db: Awaited<ReturnType<typeof getWriteClient>>,
+  periodZh: string | null,
+  periodEn: string | null
+): Promise<string | null> {
   if (!periodZh && !periodEn) return null
 
-  const id = randomUUID()
-  try {
-    await db.insert(periods).values({ id, period_zh: periodZh, period_en: periodEn })
-    return id
-  } catch (err) {
-    if (!isUniqueViolation(err)) throw err
-  }
+  const { data, error } = await db
+    .from('periods')
+    .insert({ period_zh: periodZh, period_en: periodEn })
+    .select('id')
+    .single()
+  if (!error) return data.id
+  if (error.code !== '23505') throw error
 
-  const [existing] = await db
-    .select({ id: periods.id })
-    .from(periods)
-    .where(eq(periods.period_zh, periodZh as string))
-    .limit(1)
-  return required(existing).id
+  const { data: existing, error: selectError } = await db
+    .from('periods')
+    .select('id')
+    .eq('period_zh', periodZh as string)
+    .single()
+  if (selectError) throw selectError
+  return existing.id
 }
 
-/** A sites/contexts row with its period flattened in — what the old
- * `.select('*, periods(period_zh, period_en)')` returned. */
-async function selectWithPeriod<T>(db: Db, table: typeof sites | typeof contexts, where: SQL): Promise<T> {
-  const [row] = await db
-    .select({ ...getTableColumns(table), periods: PERIOD_EMBED })
-    .from(table)
-    .leftJoin(periods, eq(table.period_id, periods.id))
-    .where(where)
-    .limit(1)
-  return flattenPeriod(required(row)) as T
+/** Re-shapes a `finds` row with an embedded `coin_issues(...)` into the
+ * `Find` type getSiteFinds produces, so a saved find's display doesn't lose
+ * its type/inscription/mint/state labels until the next full page load. */
+function flattenFind(row: Omit<Find, 'coin_issues'> & { coin_issues: CoinIssueEmbed | CoinIssueEmbed[] | null }): Find {
+  const coinIssue = one(row.coin_issues)
+  return { ...row, coin_issues: coinIssue ? flattenCoinIssue(coinIssue) : null }
 }
 
 function revalidateSite(siteCode: string) {
@@ -61,17 +63,24 @@ export async function updateSite(_prev: ActionState<Site>, formData: FormData): 
   const { db, data: parsed } = begun
 
   const { site_code, period_zh, period_en, ...rest } = parsed
-  let data: Site
+  let period_id: string | null
   try {
-    const period_id = await resolvePeriodId(db, period_zh, period_en)
-    await db.update(sites).set({ ...rest, period_id }).where(eq(sites.site_code, site_code))
-    data = await selectWithPeriod<Site>(db, sites, eq(sites.site_code, site_code))
+    period_id = await resolvePeriodId(db, period_zh, period_en)
   } catch (err) {
-    return formErrorOf(err)
+    return { ok: false, formError: err instanceof Error ? err.message : 'Failed to resolve period.' }
   }
 
+  const { data, error } = await db
+    .from('sites')
+    .update({ ...rest, period_id })
+    .eq('site_code', site_code)
+    .select('*, periods(period_zh, period_en)')
+    .single()
+
+  if (error) return { ok: false, formError: error.message }
+
   revalidateSite(site_code)
-  return { ok: true, data, message: 'Saved.' }
+  return { ok: true, data: flattenPeriod(data), message: 'Saved.' }
 }
 
 // ── contexts ─────────────────────────────────────────────────────────────
@@ -81,21 +90,25 @@ export async function createContext(_prev: ActionState<Context>, formData: FormD
   if (!begun.ok) return begun.result
   const { db, data: parsed } = begun
 
-  // parsed.id is undefined on create (contextSchema's id is .optional());
-  // the new id is generated here so the row can be re-selected after insert.
+  // parsed.id is undefined on create (contextSchema's id is .optional()) and
+  // JSON.stringify drops undefined-valued keys, so no need to strip it.
   const { period_zh, period_en, ...rest } = parsed
-  const id = randomUUID()
-  let data: Context
+  let period_id: string | null
   try {
-    const period_id = await resolvePeriodId(db, period_zh, period_en)
-    await db.insert(contexts).values({ ...rest, id, period_id })
-    data = await selectWithPeriod<Context>(db, contexts, eq(contexts.id, id))
+    period_id = await resolvePeriodId(db, period_zh, period_en)
   } catch (err) {
-    return formErrorOf(err)
+    return { ok: false, formError: err instanceof Error ? err.message : 'Failed to resolve period.' }
   }
 
+  const { data, error } = await db
+    .from('contexts')
+    .insert({ ...rest, period_id })
+    .select('*, periods(period_zh, period_en)')
+    .single()
+  if (error) return { ok: false, formError: error.message }
+
   revalidateSite(parsed.site_code)
-  return { ok: true, data, message: 'Added.' }
+  return { ok: true, data: flattenPeriod(data), message: 'Added.' }
 }
 
 export async function updateContext(_prev: ActionState<Context>, formData: FormData): Promise<ActionState<Context>> {
@@ -105,42 +118,30 @@ export async function updateContext(_prev: ActionState<Context>, formData: FormD
   if (!parsed.id) return { ok: false, formError: 'Missing context id.' }
 
   const { id, period_zh, period_en, ...rest } = parsed
-  let data: Context
+  let period_id: string | null
   try {
-    const period_id = await resolvePeriodId(db, period_zh, period_en)
-    await db.update(contexts).set({ ...rest, period_id }).where(eq(contexts.id, id))
-    data = await selectWithPeriod<Context>(db, contexts, eq(contexts.id, id))
+    period_id = await resolvePeriodId(db, period_zh, period_en)
   } catch (err) {
-    return formErrorOf(err)
+    return { ok: false, formError: err instanceof Error ? err.message : 'Failed to resolve period.' }
   }
 
+  const { data, error } = await db
+    .from('contexts')
+    .update({ ...rest, period_id })
+    .eq('id', id)
+    .select('*, periods(period_zh, period_en)')
+    .single()
+  if (error) return { ok: false, formError: error.message }
+
   revalidateSite(parsed.site_code)
-  return { ok: true, data, message: 'Saved.' }
+  return { ok: true, data: flattenPeriod(data), message: 'Saved.' }
 }
 
 export async function deleteContext(id: string, siteCode: string): Promise<ActionState<null>> {
   const begun = await beginWrite()
   if (!begun.ok) return begun.result
-  try {
-    // finds and their coin_items go with the context (ON DELETE CASCADE).
-    await deleteWithLog(
-      begun.db,
-      [
-        { table: 'contexts', query: sql`select * from contexts where id = ${id}` },
-        {
-          table: 'finds',
-          query: sql`select f.* from finds f join contexts c on c.context_code = f.context_code where c.id = ${id}`,
-        },
-        {
-          table: 'coin_items',
-          query: sql`select ci.* from coin_items ci join finds f on f.find_code = ci.find_code join contexts c on c.context_code = f.context_code where c.id = ${id}`,
-        },
-      ],
-      (tx) => tx.delete(contexts).where(eq(contexts.id, id))
-    )
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { error } = await begun.db.from('contexts').delete().eq('id', id)
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSite(siteCode)
   return { ok: true, data: null, message: 'Deleted.' }
@@ -153,17 +154,15 @@ export async function createFind(_prev: ActionState<Find>, formData: FormData): 
   if (!begun.ok) return begun.result
   const { db, data: parsed } = begun
 
-  const id = randomUUID()
-  let data: Find
-  try {
-    await db.insert(finds).values({ ...parsed, id })
-    data = required(await getFindById(id))
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { data, error } = await db
+    .from('finds')
+    .insert(parsed)
+    .select(`*, coin_issues(${COIN_ISSUE_FIELDS})`)
+    .single()
+  if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/sites/[site_code]', 'page')
-  return { ok: true, data, message: 'Added.' }
+  return { ok: true, data: flattenFind(data), message: 'Added.' }
 }
 
 export async function updateFind(_prev: ActionState<Find>, formData: FormData): Promise<ActionState<Find>> {
@@ -173,34 +172,23 @@ export async function updateFind(_prev: ActionState<Find>, formData: FormData): 
   if (!parsed.id) return { ok: false, formError: 'Missing find id.' }
 
   const { id, ...rest } = parsed
-  let data: Find
-  try {
-    await db.update(finds).set(rest).where(eq(finds.id, id))
-    data = required(await getFindById(id))
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { data, error } = await db
+    .from('finds')
+    .update(rest)
+    .eq('id', id)
+    .select(`*, coin_issues(${COIN_ISSUE_FIELDS})`)
+    .single()
+  if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/sites/[site_code]', 'page')
-  return { ok: true, data, message: 'Saved.' }
+  return { ok: true, data: flattenFind(data), message: 'Saved.' }
 }
 
 export async function deleteFind(id: string): Promise<ActionState<null>> {
   const begun = await beginWrite()
   if (!begun.ok) return begun.result
-  try {
-    // coin_items go with the find (ON DELETE CASCADE).
-    await deleteWithLog(
-      begun.db,
-      [
-        { table: 'finds', query: sql`select * from finds where id = ${id}` },
-        { table: 'coin_items', query: sql`select ci.* from coin_items ci join finds f on f.find_code = ci.find_code where f.id = ${id}` },
-      ],
-      (tx) => tx.delete(finds).where(eq(finds.id, id))
-    )
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { error } = await begun.db.from('finds').delete().eq('id', id)
+  if (error) return { ok: false, formError: error.message }
 
   revalidatePath('/sites/[site_code]', 'page')
   return { ok: true, data: null, message: 'Deleted.' }

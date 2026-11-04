@@ -1,19 +1,10 @@
 'use server'
 
-import { randomUUID } from 'crypto'
-import { eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { deleteWithLog } from '@/lib/admin/deletion-log'
-import { beginMutation, beginWrite, formErrorOf, required } from '@/lib/admin/mutation'
+import { beginMutation, beginWrite } from '@/lib/admin/mutation'
 import { sourceSchema } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
-import type { Db } from '@/lib/db'
-import { sources } from '@/lib/db/schema'
 import type { Source } from '@/lib/types'
-
-async function selectSource(db: Db, id: string): Promise<Source> {
-  return required((await db.select().from(sources).where(eq(sources.id, id)))[0]) as Source
-}
 
 function revalidateSources() {
   revalidatePath('/sources')
@@ -25,16 +16,10 @@ export async function createSource(_prev: ActionState<Source>, formData: FormDat
   if (!begun.ok) return begun.result
   const { db, data: parsed } = begun
 
-  // parsed.id is undefined on create (sourceSchema's id is .optional()); the
-  // new id is generated here so the row can be re-selected after insert.
-  const id = randomUUID()
-  let data: Source
-  try {
-    await db.insert(sources).values({ ...parsed, id })
-    data = await selectSource(db, id)
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  // parsed.id is undefined on create (sourceSchema's id is .optional()) and
+  // JSON.stringify drops undefined-valued keys, so no need to strip it.
+  const { data, error } = await db.from('sources').insert(parsed).select('*').single()
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSources()
   return { ok: true, data, message: 'Created.' }
@@ -47,13 +32,8 @@ export async function updateSource(_prev: ActionState<Source>, formData: FormDat
   if (!parsed.id) return { ok: false, formError: 'Missing source id.' }
 
   const { id, ...rest } = parsed
-  let data: Source
-  try {
-    await db.update(sources).set(rest).where(eq(sources.id, id))
-    data = await selectSource(db, id)
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { data, error } = await db.from('sources').update(rest).eq('id', id).select('*').single()
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSources()
   return { ok: true, data, message: 'Saved.' }
@@ -65,13 +45,8 @@ export async function updateSource(_prev: ActionState<Source>, formData: FormDat
 export async function deleteSource(id: string): Promise<ActionState<null>> {
   const begun = await beginWrite()
   if (!begun.ok) return begun.result
-  try {
-    await deleteWithLog(begun.db, [{ table: 'sources', query: sql`select * from sources where id = ${id}` }], (tx) =>
-      tx.delete(sources).where(eq(sources.id, id))
-    )
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { error } = await begun.db.from('sources').delete().eq('id', id)
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSources()
   return { ok: true, data: null, message: 'Deleted.' }

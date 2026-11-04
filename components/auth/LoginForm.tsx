@@ -1,31 +1,13 @@
 'use client'
 
 import { useActionState } from 'react'
-import { useRouter } from 'next/navigation'
-import { authClient } from '@/lib/auth/client'
+import { signInWithPassword } from '@/lib/auth/actions'
 import type { ActionState } from '@/lib/admin/types'
 
 const initialState: ActionState<null> = { ok: true, data: null }
 
 export function LoginForm() {
-  const router = useRouter()
-  // Signs in through Better Auth's /api/auth handler (not a Server Action) so
-  // its sign-in rate limit applies.
-  const [state, formAction, pending] = useActionState(
-    async (_prev: ActionState<null>, formData: FormData): Promise<ActionState<null>> => {
-      const email = String(formData.get('email') ?? '')
-      const password = String(formData.get('password') ?? '')
-      if (!email || !password) return { ok: false, formError: 'Email and password are required.' }
-
-      const { error } = await authClient.signIn.email({ email, password })
-      if (error) return { ok: false, formError: error.message ?? 'Could not sign in.' }
-
-      router.push('/')
-      router.refresh()
-      return { ok: true, data: null }
-    },
-    initialState
-  )
+  const [state, formAction, pending] = useActionState(signInWithPassword, initialState)
 
   return (
     <div className="mx-auto mt-16 max-w-sm px-4">

@@ -1,5 +1,4 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-/pg_export
 
 # dependencies
 /node_modules
@@ -43,5 +42,3 @@ next-env.d.ts
 
 .agents
 .claude
-# deletion log (lib/admin/deletion-log.ts)
-/logs

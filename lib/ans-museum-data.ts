@@ -1,10 +1,9 @@
-import { asc } from 'drizzle-orm'
-import { readDb } from '@/lib/db'
-import { vAnsFlat } from '@/lib/db/schema'
+import { fetchAllPages } from '@/lib/queries'
+import { supabase } from '@/lib/supabase'
 import type { AnsSpecimen } from '@/lib/mint-stats'
 
 /**
- * Every specimen in the reconciled `ans_data` table (see
+ * Every specimen in the reconciled `public.ans_data` table (see
  * scripts/reconcile-ans-data.sql), with mint/state resolved via
  * `v_ans_flat` (scripts/add-ans-flat-view.sql) instead of an embedded join.
  * Powers the Museum Collections page: the mint-town map
@@ -12,5 +11,13 @@ import type { AnsSpecimen } from '@/lib/mint-stats'
  * search box both read from this same fetch.
  */
 export async function getAnsSpecimens(): Promise<AnsSpecimen[]> {
-  return readDb.select().from(vAnsFlat).orderBy(asc(vAnsFlat.catalog_number))
+  return fetchAllPages<AnsSpecimen>((from, to) =>
+    supabase
+      .from('v_ans_flat')
+      .select(
+        'id, catalog_number, level1_zh, level1_en, level2_zh, level2_en, level3_zh, level3_en, level4_zh, level4_en, level5_zh, level5_en, inscription_zh, inscription_en, mint_zh, mint_en, state_zh, state_en'
+      )
+      .order('catalog_number')
+      .range(from, to)
+  )
 }

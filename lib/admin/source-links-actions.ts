@@ -1,13 +1,10 @@
 'use server'
 
 import { randomUUID } from 'crypto'
-import { eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { deleteWithLog } from '@/lib/admin/deletion-log'
-import { beginMutation, beginWrite, formErrorOf, required } from '@/lib/admin/mutation'
+import { beginMutation, beginWrite } from '@/lib/admin/mutation'
 import { createSourceLinkSchema } from '@/lib/admin/schemas'
 import type { ActionState } from '@/lib/admin/types'
-import { sourceLinks } from '@/lib/db/schema'
 import type { SourceLink } from '@/lib/types'
 
 function revalidateSourceLinks() {
@@ -29,14 +26,12 @@ export async function createSourceLink(
   const { db, data: parsed } = begun
 
   const source_link_code = `SL_ADMIN_${randomUUID()}`
-  const id = randomUUID()
-  let data: SourceLink
-  try {
-    await db.insert(sourceLinks).values({ ...parsed, id, source_link_code })
-    data = required((await db.select().from(sourceLinks).where(eq(sourceLinks.id, id)))[0]) as SourceLink
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { data, error } = await db
+    .from('source_links')
+    .insert({ ...parsed, source_link_code })
+    .select('*')
+    .single()
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSourceLinks()
   return { ok: true, data, message: 'Citation added.' }
@@ -45,13 +40,8 @@ export async function createSourceLink(
 export async function deleteSourceLink(id: string): Promise<ActionState<null>> {
   const begun = await beginWrite()
   if (!begun.ok) return begun.result
-  try {
-    await deleteWithLog(begun.db, [{ table: 'source_links', query: sql`select * from source_links where id = ${id}` }], (tx) =>
-      tx.delete(sourceLinks).where(eq(sourceLinks.id, id))
-    )
-  } catch (err) {
-    return formErrorOf(err)
-  }
+  const { error } = await begun.db.from('source_links').delete().eq('id', id)
+  if (error) return { ok: false, formError: error.message }
 
   revalidateSourceLinks()
   return { ok: true, data: null, message: 'Deleted.' }
