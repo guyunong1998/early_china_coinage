@@ -11,8 +11,8 @@
    every dot uses the shared `--map-dot-border` — except the deliberate
    "disabled/de-emphasized" look (`.map-dot-home-site`, `.map-dot-disabled`),
    which intentionally uses its own `--map-dot-disabled-border` instead, and
-   `.map-dot-ratio`, which uses a fainter `--map-dot-ratio-border` so the
-   border doesn't outshine the computed heatmap fill color.
+   `.map-dot-density` (Density view's gray dots), which uses a fainter
+   `--map-dot-density-border` so the border doesn't outshine the density mass.
    Each marker div otherwise gets exactly three classes:
 
      1. `.map-dot`            — shared border chrome (every map)
@@ -27,10 +27,10 @@
   --map-dot-special: rgba(var(--accent-rgb), 0.6);
   --map-dot-border: rgba(255, 255, 255, 0.9); /* white with low opacity, so the dot's fill color shows through */
 
-  /* MapVisCanvas.tsx's match-ratio "heatmap" dots (`.map-dot-ratio`) — a
-     fainter border than --map-dot-border so it doesn't outline-outshine the
-     computed fill color at high density. */
-  --map-dot-ratio-border: rgba(255, 255, 255, 0.4);
+  /* MapVisCanvas.tsx's Density-view dots (`.map-dot-density`) — a fainter
+     border than --map-dot-border so it doesn't outline-outshine the density
+     mass. Points and Compare views keep the shared --map-dot-border. */
+  --map-dot-density-border: rgba(255, 255, 255, 0.4);
 
   --map-dot-disabled-fill: rgba(62, 62, 62, 0.14);
   --map-dot-disabled-border: rgba(41, 41, 41, 0.2);
@@ -263,7 +263,11 @@
    `--map-dot-border` as every other role. */
 .map-dot-ratio {
   background: var(--dot-fill);
-  border-color: var(--map-dot-ratio-border);
+}
+
+/* MapVisCanvas.tsx Density view's gray dots (stacks on `.map-dot-ratio`). */
+.map-dot-density {
+  border-color: var(--map-dot-density-border);
 }
 
 /* MapVisCanvas.tsx: a point where the active filter (coin type or mint) has

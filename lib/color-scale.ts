@@ -37,7 +37,6 @@ export const SINGLE_FIND_COLOR = '#7b3fa0'
  */
 export const SELECTION_COLORS = [
   '#2a78d6', // blue
-  '#008300', // green
   '#e87ba4', // magenta
   '#eda100', // yellow
   '#1baf7a', // aqua

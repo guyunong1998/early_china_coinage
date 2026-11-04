@@ -1,0 +1,18 @@
+services:
+  mysql:
+    build: docker/mysql
+    environment:
+      # Local test copy only: root has no password, so the port is bound to
+      # this machine alone.
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Imported only on first start (when mysql-data is empty); regenerate
+      # with scripts/pg-to-mysql.py.
+      - ./pg_export/mysql_dump.sql:/docker-entrypoint-initdb.d/01-dump.sql:ro
+      - ./scripts/better-auth-schema.sql:/docker-entrypoint-initdb.d/02-better-auth.sql:ro
+
+volumes:
+  mysql-data:

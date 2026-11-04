@@ -120,13 +120,13 @@ function effectiveQty(state: DisplayState, totalQty: number): number {
 // the other maps' simple site/mint dots — they're the "heatmap colors" this
 // map is built around, so they can't be pre-enumerated in app/maps.css.
 // Fill color is set via the scoped CSS custom property `.map-dot-ratio`
-// reads (--dot-fill); border-color is never overridden here, same shared
-// `--map-dot-border` as every other role. Size is set with an inline
+// reads (--dot-fill); border-color is the shared `--map-dot-border`, except
+// Density's gray dots (`.map-dot-density`, fainter border). Size is set with an inline
 // width/height alongside so it isn't limited to the fixed `.map-dot-size-N`
 // steps in app/maps.css (quantity sizing is continuous, not one of the
 // fixed steps).
-function dot(color: string, size = 14) {
-  return `<div class="map-dot map-dot-ratio" style="--dot-fill:${color};width:${size}px;height:${size}px"></div>`
+function dot(color: string, size = 14, density = false) {
+  return `<div class="map-dot map-dot-ratio${density ? ' map-dot-density' : ''}" style="--dot-fill:${color};width:${size}px;height:${size}px"></div>`
 }
 
 // "No record at all" marker — fixed size + color, both set in app/maps.css
@@ -628,7 +628,7 @@ function applyHeatMarkerStyle(
   marker.setIcon(
     L.divIcon({
       className: '',
-      html: size > 0 ? (isStaticNoData ? noDataDot() : dot(color, size)) : '',
+      html: size > 0 ? (isStaticNoData ? noDataDot() : dot(color, size, inDensity)) : '',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     })

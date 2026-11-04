@@ -9,7 +9,7 @@ type LeafletNS = typeof import('leaflet')
 
 /**
  * River network (Natural Earth 1:10m, ranked by relative importance).
- * Line geometry is pre-clipped (see scripts/clip-rivers-to-china.js) to the
+ * Line geometry is pre-clipped to the
  * segments that fall within a generously buffered version of China's
  * national boundary (800km) — cross-border rivers like the Mekong/Lancang,
  * Amur/Heilong Jiang, or Red River/Yuan Jiang trail off well past the
@@ -432,7 +432,24 @@ export function buildBaseLayers(L: LeafletNS) {
     }
   )
 
-  return { cawm, satellite, cyclosm, osm, amap }
+  // Mapbox Streets — requires NEXT_PUBLIC_MAPBOX_TOKEN (see .env.local).
+  // tileSize 512 + zoomOffset -1 is the standard adjustment for requesting
+  // Mapbox's high-res raster tiles through Leaflet's 256px tile grid.
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const mapbox = mapboxToken
+    ? L.tileLayer.fallback(
+        `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
+        {
+          attribution:
+            '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          tileSize: 512,
+          zoomOffset: -1,
+          maxZoom: 22,
+        }
+      )
+    : null
+
+  return { cawm, satellite, cyclosm, osm, amap, mapbox }
 }
 
 export type BaseLayers = ReturnType<typeof buildBaseLayers>
@@ -457,7 +474,7 @@ export function addLayerControl(
   layers: BaseLayers,
   options?: { collapsed?: boolean; position?: import('leaflet').ControlPosition }
 ) {
-  const { cawm, satellite, cyclosm, osm, amap } = layers
+  const { cawm, satellite, cyclosm, osm, amap, mapbox } = layers
   const position = options?.position ?? 'topright'
 
   buildRiverLayer(L, map, '/data/rivers-major.geojson').addTo(map)
@@ -476,6 +493,7 @@ export function addLayerControl(
         // 'Ancient World Map': cawm,
         Satellite: satellite,
         // OpenStreetMap: osm,
+        ...(mapbox ? { Mapbox: mapbox } : {}),
       },
       undefined,
       { collapsed: options?.collapsed ?? false, position }

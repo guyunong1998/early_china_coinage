@@ -31,9 +31,8 @@ import type { DictionaryKey } from '@/lib/i18n/dictionary'
 
 const PAGE_SIZE = 20
 
-// Vercel serverless default can be too tight when /search cold-loads the full
-// site + coin_issues catalogs; give the route breathing room on plans that
-// allow it (ignored on shorter-cap hobby tiers).
+// Time limit for /search, which cold-loads the full site + coin_issues
+// catalogs. Only serverless hosts enforce it; the self-hosted Node server ignores it.
 export const maxDuration = 60
 
 export const revalidate = 86400
@@ -111,7 +110,7 @@ function toArray(value: string | string[] | undefined): string[] {
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams
-  // Trim so whitespace-only q doesn't call searchSites([]) and show "no results".
+  // Trim so a whitespace-only q doesn't count as a real search query.
   const q = (params.q ?? '').trim()
   const precision = parsePrecisionFilter(params.precision)
 
@@ -137,8 +136,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
 
   const currentPage = Math.max(1, Number(params.page) || 1)
 
-  // Fetch each catalog once — never call searchSites() here (it re-fetches
-  // both), which previously doubled Supabase work and timed out on Vercel.
+  // Fetch each catalog once — a previous searchSites() helper re-fetched
+  // both, which doubled database work and could time out; it had no
+  // callers and was removed. Don't reintroduce that pattern here.
   const [allSites, coinIssues] = await Promise.all([getAllSites(), getCoinIssues()])
   const baseResults = q ? filterSitesByQuery(allSites, coinIssues, q) : allSites
 
@@ -400,7 +400,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               <div className="panel-body overflow-hidden">
                 {/* Slim payload for the client map — full SearchSite rows for
                     every hit bloat the RSC response (~1–2MB) and can stall
-                    the browser / Vercel edge when opening unfiltered /search. */}
+                    the browser when opening unfiltered /search. */}
                 <CoinMap
                   sites={filtered
                     .filter((s) => s.lat != null && s.lng != null)
@@ -414,8 +414,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
                       city_en: s.city_en,
                       county_zh: s.county_zh,
                       county_en: s.county_en,
-                      location_detail_zh: s.location_detail_zh,
-                      location_detail_en: s.location_detail_en,
                       lat: s.lat,
                       lng: s.lng,
                       precision_level: s.precision_level,

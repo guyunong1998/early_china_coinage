@@ -247,7 +247,7 @@ type SiteDetailTabsProps = {
   structuredSourceLinks?: SourceLink[]
   sourcesByCode?: Map<string, Source>
   resolvedTargets?: Map<string, ResolvedTarget>
-  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[slug], for
+  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[type_code], for
    * linking a find row's Type cell straight to its catalog entry. */
   coinTypeHrefByHierarchyId?: Map<string, string>
   /** find.coin_issues.mint_id → /mints/[mint_code], for linking a find

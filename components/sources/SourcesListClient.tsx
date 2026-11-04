@@ -119,8 +119,8 @@ export function SourcesListClient({
 
   async function handleLinkAdded(link: SourceLink) {
     setLinks((prev) => [...prev, link])
-    const { resolveSourceLinkTargets } = await import('@/lib/admin/resolve-source-link-target')
-    const newResolved = await resolveSourceLinkTargets([link])
+    const { resolveSourceLinkTargetsAction } = await import('@/lib/admin/resolve-source-link-target-action')
+    const newResolved = await resolveSourceLinkTargetsAction([link])
     setResolved((prev) => new Map([...prev, ...newResolved]))
   }
 

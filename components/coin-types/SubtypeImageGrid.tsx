@@ -7,7 +7,7 @@ import type { CoinTypeNode } from '@/lib/coin-type-catalog'
 
 /**
  * Shown in place of a general-category node's own image (see
- * app/coin-types/[slug]/page.tsx): a node with no photographed specimen of
+ * app/coin-types/[type_code]/page.tsx): a node with no photographed specimen of
  * its own (node.imgAccNum is null) has nothing but a generic silhouette to
  * show for itself, so instead we show the obverse photo of each of its
  * direct subtypes, linked through to that subtype's page.

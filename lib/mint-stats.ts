@@ -1,14 +1,13 @@
 import { findMintByNameZh } from '@/lib/mint-directory'
 import { findQuantity } from '@/lib/quantity'
-import {
-  coinMatchesTypologyFilter,
-  getMatchingHierarchyIds,
-  type InscriptionSourceRow,
-  type TypologyFilterSelection,
-  type TypologyOptionCounts,
-  type TypologySelectionEntry,
+import type {
+  InscriptionSourceRow,
+  TypologyFilterSelection,
+  TypologyOptionCounts,
+  TypologySelectionEntry,
 } from '@/lib/typology-filter'
 import type { MintPoint } from '@/components/map/MapVisCanvas'
+import type { MintStatsRow } from '@/lib/queries'
 import type { CoinIssueDisplay, CoinTypeHierarchyRow, HeatmapFind, MintInfo } from '@/lib/types'
 
 const LEVEL_KEYS: Array<keyof Pick<TypologyFilterSelection, 'level1' | 'level2' | 'level3' | 'level4' | 'level5'>> = [
@@ -171,6 +170,29 @@ export function computeMintStatsFromFinds(
   return statsFromGroups(normalized, mints)
 }
 
+/** Unfiltered equivalent of computeMintStatsFromFinds, built from
+ * v_mint_stats rows (already aggregated in Postgres) instead of the full
+ * finds + coin_issues tables — for overview consumers like /mints that never
+ * apply a typology filter. */
+export function computeMintStatsFromView(
+  rows: MintStatsRow[],
+  mints: MintInfo[]
+): { mapped: MintStat[]; unmapped: MintStat[] } {
+  const nameZhById = new Map(mints.map((m) => [m.id, m.name_zh]))
+  const groups = new Map<string, MintStatGroup>()
+  rows.forEach((r) => {
+    const mintZh = nameZhById.get(r.mint_id)
+    if (!mintZh) return
+    groups.set(mintZh, {
+      findCount: r.find_count,
+      coinCount: r.coin_count,
+      siteCount: r.site_count,
+      inscriptions: [...r.inscriptions].sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    })
+  })
+  return statsFromGroups(groups, mints)
+}
+
 /** Reshapes mapped mint stats into the plain `MintPoint[]` MapVisCanvas
  * plots — shared so every "mint town map" (the Mint Town visualization tab,
  * the /mints overview page, ...) renders from the exact same point list. */
@@ -190,9 +212,10 @@ export function toMintPoints(stats: MintStat[]): MintPoint[] {
 
 /**
  * One row per specimen in the reconciled `public.ans_data` table (see
- * scripts/reconcile-ans-data.sql) — mint/state/hierarchy/inscription are
- * already resolved per specimen there (mint_id, hierarchy_id, inscription_id
- * FKs), rather than guessed from inscription text. Fetched by
+ * scripts/reconcile-ans-data.sql), as flattened by `v_ans_flat`
+ * (scripts/add-ans-flat-view.sql) — mint/state/hierarchy/inscription are
+ * already resolved per specimen there via their FKs (mint_id, hierarchy_id,
+ * inscription_id), rather than guessed from inscription text. Fetched by
  * lib/ans-museum-data.ts.
  */
 export type AnsSpecimen = {
@@ -203,14 +226,102 @@ export type AnsSpecimen = {
    * never catalog_number. */
   id: string
   catalog_number: string | null
-  inscription_raw: string | null
-  reverse_inscription: string | null
-  hierarchy_id: string | null
-  inscription_id: string | null
+  level1_zh: string | null
+  level1_en: string | null
+  level2_zh: string | null
+  level2_en: string | null
+  level3_zh: string | null
+  level3_en: string | null
+  level4_zh: string | null
+  level4_en: string | null
+  level5_zh: string | null
+  level5_en: string | null
+  /** `public.inscriptions.inscription_zh` is NOT NULL + UNIQUE, so it's a
+   * safe match key on its own — no inscription_id needed to disambiguate. */
+  inscription_zh: string | null
+  inscription_en: string | null
   mint_zh: string | null
   mint_en: string | null
   state_zh: string | null
   state_en: string | null
+}
+
+/** An ans_data specimen's own level1..level5 path, trimmed at the first
+ * unset level — the ans_data equivalent of typology-filter.ts's (unexported)
+ * rowPath, reading directly off the specimen's already-flattened hierarchy
+ * levels instead of looking a hierarchy row up by id. */
+function ansSpecimenPath(s: AnsSpecimen): string[] {
+  const path: string[] = []
+  for (const v of [s.level1_zh, s.level2_zh, s.level3_zh, s.level4_zh, s.level5_zh]) {
+    if (!v) break
+    path.push(v)
+  }
+  return path
+}
+
+/**
+ * Synthetic coin_type_hierarchy rows built from the distinct level1..level5
+ * paths actually present among ans_data specimens — lets Museum Collections'
+ * type-filter picker (TypologyFilterBar, useTypologyMultiSelect) and
+ * buildAnsInscriptionSource's id reconstruction run on the same generic,
+ * id-based machinery as the real coin_issues catalog, without a separate
+ * getCoinTypeHierarchy() fetch. This also scopes the dropdown to categories
+ * this museum's own specimens actually have, rather than every sitewide
+ * category (some of which have zero ANS specimens).
+ *
+ * `id`/`type_code` are the path itself, never a real coin_type_hierarchy.id
+ * — this synthetic catalog is self-contained and never compared against the
+ * real one.
+ */
+export function buildAnsHierarchyRows(specimens: AnsSpecimen[]): CoinTypeHierarchyRow[] {
+  const rows = new Map<string, CoinTypeHierarchyRow>()
+  specimens.forEach((s) => {
+    const path = ansSpecimenPath(s)
+    if (path.length === 0) return
+    const key = path.join('\u0000')
+    if (rows.has(key)) return
+    rows.set(key, {
+      id: key,
+      level1_zh: s.level1_zh,
+      level1_en: s.level1_en,
+      level2_zh: s.level2_zh,
+      level2_en: s.level2_en,
+      level3_zh: s.level3_zh,
+      level3_en: s.level3_en,
+      level4_zh: s.level4_zh,
+      level4_en: s.level4_en,
+      level5_zh: s.level5_zh,
+      level5_en: s.level5_en,
+      img_acc_num: null,
+      description_zh: null,
+      description_en: null,
+      type_code: key,
+    })
+  })
+  return [...rows.values()]
+}
+
+/** ans_data equivalent of typology-filter.ts's coinMatchesTypologyFilter —
+ * matches the specimen's own level path directly instead of resolving
+ * coin_type_hierarchy_id through hierarchyRows, since v_ans_flat already
+ * inlines the path. Inscription matches by inscription_zh text — safe since
+ * it's NOT NULL + UNIQUE — rather than an id, since `sel.inscriptionId` here
+ * is whatever key buildAnsInscriptionSource assigned (inscription_zh, not a
+ * real inscriptions.id). */
+function ansMatchesTypologyFilter(s: AnsSpecimen, sel: TypologyFilterSelection): boolean {
+  if (!sel.level1) {
+    if (!sel.inscriptionId) return false
+    return s.inscription_zh === sel.inscriptionId
+  }
+  const prefix: string[] = []
+  for (const v of [sel.level1, sel.level2, sel.level3, sel.level4, sel.level5]) {
+    if (!v) break
+    prefix.push(v)
+  }
+  const path = ansSpecimenPath(s)
+  if (prefix.length > path.length || !prefix.every((v, i) => path[i] === v)) return false
+  if (sel.inscriptionId) return s.inscription_zh === sel.inscriptionId
+  return true
 }
 
 /** ans_data.catalog_number is the specimen's ANS museum accession number
@@ -247,7 +358,7 @@ export function computeAnsMintStats(
     }
     const group = groups.get(mintZh)!
     group.coinCount += 1
-    const insc = s.inscription_raw?.trim()
+    const insc = s.inscription_zh?.trim()
     if (insc) group.inscriptions.add(insc)
   })
 
@@ -266,33 +377,18 @@ export function computeAnsMintStats(
 }
 
 /** Narrows ans_data specimens to the active (multiselect, OR/ANY) typology
- * filter, reusing the exact same match rule as the database-backed Mint Town
- * tab (coinMatchesTypologyFilter) since ans_data.hierarchy_id/inscription_id
- * live in the same id space as coin_issues.coin_type_hierarchy_id/
- * inscription_id. For the Points/Density display in Museum Collections' Mint
- * Town view. Returns null when `entries` is empty (no filter active). */
+ * filter, reusing the same match rule as the database-backed Mint Town tab
+ * (coinMatchesTypologyFilter) via ansMatchesTypologyFilter, which matches
+ * against the specimen's own inlined level1..level5 path instead of a
+ * coin_type_hierarchy_id lookup. For the Points/Density display in Museum
+ * Collections' Mint Town view. Returns null when `entries` is empty (no
+ * filter active). */
 export function getMatchingAnsSpecimensMulti(
   specimens: AnsSpecimen[],
-  hierarchyRows: CoinTypeHierarchyRow[],
   entries: TypologySelectionEntry[]
 ): AnsSpecimen[] | null {
   if (entries.length === 0) return null
-  // Precompute each entry's hierarchy id set once — coinMatchesTypologyFilter
-  // would otherwise re-scan hierarchyRows for every specimen × entry.
-  const entryMatchers = entries.map((entry) => ({
-    sel: entry.sel,
-    hierarchyIds: entry.sel.level1 ? getMatchingHierarchyIds(hierarchyRows, entry.sel) : null,
-  }))
-  return specimens.filter((s) =>
-    entryMatchers.some(({ sel, hierarchyIds }) =>
-      coinMatchesTypologyFilter(
-        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
-        hierarchyRows,
-        sel,
-        hierarchyIds
-      )
-    )
-  )
+  return specimens.filter((s) => entries.some((entry) => ansMatchesTypologyFilter(s, entry.sel)))
 }
 
 /** Per-option distinct-mint-town counts for Museum Collections' type filter
@@ -304,12 +400,10 @@ export function getMatchingAnsSpecimensMulti(
  * with no resolved mint_zh can't contribute to that count and are skipped. */
 export function buildAnsTypologyMintCounts(
   specimens: AnsSpecimen[],
-  hierarchyRows: CoinTypeHierarchyRow[],
   sel: TypologyFilterSelection
 ): TypologyOptionCounts {
   // One pass over specimens (same idea as buildTypologyMintCounts) —
   // per-option filter scans were O(options × specimens × hierarchy).
-  const hierarchyById = new Map(hierarchyRows.map((r) => [r.id, r]))
   const levelPrefix: string[] = []
   for (const key of LEVEL_KEYS) {
     const v = sel[key]
@@ -323,14 +417,7 @@ export function buildAnsTypologyMintCounts(
 
   for (const s of specimens) {
     if (!s.mint_zh) continue
-    const row = s.hierarchy_id ? hierarchyById.get(s.hierarchy_id) : undefined
-    const path: string[] = []
-    if (row) {
-      for (const v of [row.level1_zh, row.level2_zh, row.level3_zh, row.level4_zh, row.level5_zh]) {
-        if (!v) break
-        path.push(v)
-      }
-    }
+    const path = ansSpecimenPath(s)
 
     for (let depth = 1; depth <= 5; depth++) {
       let prefixOk = true
@@ -353,13 +440,13 @@ export function buildAnsTypologyMintCounts(
       set.add(s.mint_zh)
     }
 
-    if (!s.inscription_id) continue
+    if (!s.inscription_zh) continue
     const matchesPrefix = levelPrefix.length === 0 || levelPrefix.every((v, i) => path[i] === v)
     if (matchesPrefix) {
-      let set = inscriptionMap.get(s.inscription_id)
+      let set = inscriptionMap.get(s.inscription_zh)
       if (!set) {
         set = new Set()
-        inscriptionMap.set(s.inscription_id, set)
+        inscriptionMap.set(s.inscription_zh, set)
       }
       set.add(s.mint_zh)
     }
@@ -381,35 +468,42 @@ export function buildAnsTypologyMintCounts(
  * that actually exist among ans_data specimens, instead of every inscription
  * catalogued sitewide.
  *
- * ans_data doesn't carry its own zh/en inscription label — only
- * inscription_raw (the specimen's own transcribed text) plus inscription_id
- * (a FK in the same id space as coin_issues.inscription_id, per
- * docs/ARCHITECTURE.md). So the label prefers the matching coin_issues row's
- * bilingual `inscription`/`inscription_en` where one exists, and falls back
- * to inscription_raw for specimens whose inscription isn't (yet) catalogued
- * as a coin_issues row at all.
+ * v_ans_flat resolves inscription_id to its own bilingual inscription_zh/en
+ * directly, so no coin_issues cross-reference is needed for the label
+ * itself. InscriptionSourceRow's `inscription_id` field is filled with
+ * inscription_zh instead of a real inscriptions.id — safe as a match/dedupe
+ * key since inscription_zh is NOT NULL + UNIQUE, and this synthesized source
+ * never mixes with the real coin_issues catalog's ids. coin_type_hierarchy_id
+ * is still required by the shared coinMatchesTypologyFilter (used inside
+ * getInscriptionOptions to scope inscriptions to the currently-selected
+ * type), so it's reconstructed here by matching the specimen's own
+ * level1..level5 path against hierarchyRows — the same row v_ans_flat's join
+ * resolved it from.
  */
 export function buildAnsInscriptionSource(
   specimens: AnsSpecimen[],
-  coinIssues: CoinIssueDisplay[]
+  hierarchyRows: CoinTypeHierarchyRow[]
 ): InscriptionSourceRow[] {
-  const issueByInscriptionId = new Map<string, CoinIssueDisplay>()
-  coinIssues.forEach((c) => {
-    if (c.inscription_id && !issueByInscriptionId.has(c.inscription_id)) issueByInscriptionId.set(c.inscription_id, c)
+  const hierarchyIdByPath = new Map<string, string>()
+  hierarchyRows.forEach((row) => {
+    const path: string[] = []
+    for (const v of [row.level1_zh, row.level2_zh, row.level3_zh, row.level4_zh, row.level5_zh]) {
+      if (!v) break
+      path.push(v)
+    }
+    if (path.length > 0) hierarchyIdByPath.set(path.join('\u0000'), row.id)
   })
 
   return specimens.flatMap((s): InscriptionSourceRow[] => {
-    if (!s.inscription_id) return []
-    const issue = issueByInscriptionId.get(s.inscription_id)
-    const zh = issue?.inscription ?? s.inscription_raw
-    if (!zh) return []
+    if (!s.inscription_zh) return []
+    const path = ansSpecimenPath(s)
     return [
       {
-        inscription_id: s.inscription_id,
-        inscription: zh,
-        inscription_en: issue?.inscription_en ?? s.inscription_raw,
+        inscription_id: s.inscription_zh,
+        inscription: s.inscription_zh,
+        inscription_en: s.inscription_en ?? s.inscription_zh,
         mint_zh: s.mint_zh,
-        coin_type_hierarchy_id: s.hierarchy_id,
+        coin_type_hierarchy_id: path.length > 0 ? (hierarchyIdByPath.get(path.join('\u0000')) ?? null) : null,
       },
     ]
   })
@@ -421,7 +515,6 @@ export function buildAnsInscriptionSource(
  * Museum Collections' Mint Town Compare view. */
 export function computeAnsMintTypeQuantities(
   specimens: AnsSpecimen[],
-  hierarchyRows: CoinTypeHierarchyRow[],
   entries: TypologySelectionEntry[]
 ): Map<string, Map<string, number>> {
   const result = new Map<string, Map<string, number>>()
@@ -429,12 +522,7 @@ export function computeAnsMintTypeQuantities(
     if (!s.mint_zh) return
     const mintZh = s.mint_zh
     entries.forEach((entry) => {
-      const matches = coinMatchesTypologyFilter(
-        { coin_type_hierarchy_id: s.hierarchy_id, inscription_id: s.inscription_id },
-        hierarchyRows,
-        entry.sel
-      )
-      if (!matches) return
+      if (!ansMatchesTypologyFilter(s, entry.sel)) return
       if (!result.has(mintZh)) result.set(mintZh, new Map())
       const byMint = result.get(mintZh)!
       byMint.set(entry.key, (byMint.get(entry.key) ?? 0) + 1)

@@ -72,7 +72,12 @@ function uniqueSlug(candidate: string, used: Set<string>, fallbackPrefix: string
   return `${prefixed}-${i}`
 }
 
-function dedupeStates(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): StateRef[] {
+/** Exported so a caller that already has a node's matchedHierarchyIds and a
+ * *scoped* coinIssues fetch (e.g. CoinTypeDetailContent.tsx, via
+ * getCoinIssuesByHierarchyIds) can resolve just that one node's
+ * states/mints/inscriptions directly, instead of rebuilding the whole tree
+ * with the full catalog just to read one node's dedup lists back out. */
+export function dedupeStates(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): StateRef[] {
   const seen = new Map<string, StateRef>()
   coinIssues.forEach((c) => {
     if (!c.coin_type_hierarchy_id || !hierarchyIds.has(c.coin_type_hierarchy_id)) return
@@ -83,7 +88,7 @@ function dedupeStates(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>)
   return [...seen.values()].sort((a, b) => a.state_zh.localeCompare(b.state_zh, 'zh-CN'))
 }
 
-function dedupeMints(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): MintRef[] {
+export function dedupeMints(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): MintRef[] {
   const seen = new Map<string, MintRef>()
   coinIssues.forEach((c) => {
     if (!c.coin_type_hierarchy_id || !hierarchyIds.has(c.coin_type_hierarchy_id)) return
@@ -119,7 +124,7 @@ function ownDescriptionRow(rows: CoinTypeHierarchyRow[], depthIndex: number): Co
   return candidates.find((r) => r.description_zh || r.description_en) ?? candidates[0]
 }
 
-function dedupeInscriptions(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): InscriptionRef[] {
+export function dedupeInscriptions(coinIssues: CoinIssueDisplay[], hierarchyIds: Set<string>): InscriptionRef[] {
   const seen = new Map<string, InscriptionRef>()
   coinIssues.forEach((c) => {
     if (!c.coin_type_hierarchy_id || !hierarchyIds.has(c.coin_type_hierarchy_id)) return
@@ -162,12 +167,18 @@ function buildLevel(
   ;[...groups.values()]
     .sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN'))
     .forEach((group) => {
-      const fallbackPrefix = parents.length > 0 ? parents[parents.length - 1].slug : level
-      const slug = uniqueSlug(slugify(group.en, 'type'), used, fallbackPrefix)
-      used.add(slug)
-
       const hierarchyIds = new Set(group.rows.map((r) => r.id))
       const descriptionRow = ownDescriptionRow(group.rows, depthIndex)
+
+      // A node with its own row uses that row's persisted type_code directly
+      // (same value /coin-types/[type_code] routes on), rather than
+      // recomputing a slug that could in principle drift from it. Only pure
+      // grouping buckets with no row of their own -- currently just the two
+      // level1 roots, which have no page -- fall back to a freshly-slugified
+      // value.
+      const fallbackPrefix = parents.length > 0 ? parents[parents.length - 1].slug : level
+      const slug = descriptionRow?.type_code ?? uniqueSlug(slugify(group.en, 'type'), used, fallbackPrefix)
+      used.add(slug)
 
       nodes.push({
         slug,
@@ -225,39 +236,6 @@ export function childrenOf(nodes: CoinTypeNode[], parent: CoinTypeNode): CoinTyp
   const childLevel = CHILD_LEVEL[parent.level]
   if (!childLevel) return []
   return nodes.filter((n) => n.level === childLevel && n.parents[n.parents.length - 1]?.slug === parent.slug)
-}
-
-/** Every img_acc_num photographed anywhere under this node's subtree (its
- * own row plus every descendant) — for picking a real specimen photo to
- * represent a broad category that has no photographed specimen of its own
- * (CoinTypeNode.imgAccNum only ever looks at the node's own row). */
-export function photographedAccNumsUnder(node: CoinTypeNode, hierarchyRows: CoinTypeHierarchyRow[]): string[] {
-  const ids = new Set(node.matchedHierarchyIds)
-  const accNums: string[] = []
-  hierarchyRows.forEach((r) => {
-    if (ids.has(r.id) && r.img_acc_num) accNums.push(r.img_acc_num)
-  })
-  return accNums
-}
-
-/** For each top-level (钱币, not 钱范/mould) category: one real obverse photo,
- * picked at random from anywhere in that category's subtree — never a
- * silhouette. A category with no photographed specimen anywhere under it is
- * left out. Used by the home page's category showcase. */
-export function pickLevel2ShowcasePhotos(
-  nodes: CoinTypeNode[],
-  hierarchyRows: CoinTypeHierarchyRow[],
-  getObverseSrc: (accNum: string) => string | null
-): { node: CoinTypeNode; obverseSrc: string }[] {
-  return nodes
-    .filter((n) => n.level === 'level2' && !isMouldNode(n))
-    .flatMap((node) => {
-      const accNums = photographedAccNumsUnder(node, hierarchyRows)
-      if (accNums.length === 0) return []
-      const accNum = accNums[Math.floor(Math.random() * accNums.length)]
-      const obverseSrc = getObverseSrc(accNum)
-      return obverseSrc ? [{ node, obverseSrc }] : []
-    })
 }
 
 /** True for a node under the '钱范' (Coin Mould) level1 branch, as opposed

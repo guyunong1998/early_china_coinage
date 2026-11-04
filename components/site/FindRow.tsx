@@ -78,7 +78,7 @@ export function FindRow({
   contextOptions: { context_code: string; label: string }[]
   isDevMode: boolean
   coinIssueOptions: ComboOption[]
-  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[slug], for
+  /** find.coin_issues.coin_type_hierarchy_id → /coin-types/[type_code], for
    * linking the Type cell. Omitted rows (or unmatched ids) render as
    * plain text. */
   coinTypeHrefByHierarchyId?: Map<string, string>

@@ -1,16 +1,8 @@
+import { Suspense } from 'react'
 import { FullViewportMapShell } from '@/components/visualizations/FullViewportMapShell'
+import { MapLoadingOverlay } from '@/components/visualizations/MapLoadingOverlay'
 import { FindSpotsVisualization } from '@/components/visualizations/MapVisualization'
-import {
-  countSitesByPrecision,
-  parsePrecisionFilter,
-  siteMatchesPrecisionFilter,
-} from '@/lib/city-boundaries'
 import { getCoinIssues, getCoinTypeHierarchy, getFindSpotsMapSites, getFindsForHeatmap, getMintInfos } from '@/lib/queries'
-import { decodeMintNames, parseCommonDeeplinkParams, parseFilterMode } from '@/lib/visualization-deeplink'
-
-type PageProps = {
-  searchParams: Promise<{ precision?: string; mode?: string; view?: string; mints?: string; types?: string }>
-}
 
 export const metadata = {
   title: 'Find Site Visualization | Early Chinese Coin Finds',
@@ -20,11 +12,12 @@ export const metadata = {
 
 export const revalidate = 86400
 
-export default async function FindSiteVisualizationPage({ searchParams }: PageProps) {
-  const { precision: precisionParam, mode, view, mints: mintsParam, types } = await searchParams
-  const currentPrecision = parsePrecisionFilter(precisionParam)
-
-  const [allSites, coinIssues, hierarchyRows, finds, mints] = await Promise.all([
+// Precision filter and deep-link params (precision/mode/view/mints/types) are
+// read client-side via useSearchParams, so this page never touches
+// searchParams and stays statically cached. The Suspense boundary is what
+// useSearchParams requires on a static route.
+export default async function FindSiteVisualizationPage() {
+  const [sites, coinIssues, hierarchyRows, finds, mints] = await Promise.all([
     getFindSpotsMapSites(),
     getCoinIssues(),
     getCoinTypeHierarchy(),
@@ -32,23 +25,17 @@ export default async function FindSiteVisualizationPage({ searchParams }: PagePr
     getMintInfos(),
   ])
 
-  const counts = countSitesByPrecision(allSites)
-  const sites = allSites.filter((site) => siteMatchesPrecisionFilter(site, currentPrecision))
-
   return (
     <FullViewportMapShell>
-      <FindSpotsVisualization
-        sites={sites}
-        coinIssues={coinIssues}
-        hierarchyRows={hierarchyRows}
-        finds={finds}
-        mints={mints}
-        currentPrecision={currentPrecision}
-        precisionCounts={counts}
-        initialMode={parseFilterMode(mode)}
-        initialMintNames={decodeMintNames(mintsParam)}
-        {...parseCommonDeeplinkParams(view, types)}
-      />
+      <Suspense fallback={<MapLoadingOverlay />}>
+        <FindSpotsVisualization
+          sites={sites}
+          coinIssues={coinIssues}
+          hierarchyRows={hierarchyRows}
+          finds={finds}
+          mints={mints}
+        />
+      </Suspense>
     </FullViewportMapShell>
   )
 }

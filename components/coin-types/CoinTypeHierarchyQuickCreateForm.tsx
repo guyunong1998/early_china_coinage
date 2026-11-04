@@ -25,6 +25,7 @@ const INITIAL: ActionState<CoinTypeHierarchyRow> = {
     img_acc_num: null,
     description_zh: null,
     description_en: null,
+    type_code: '',
   },
 }
 

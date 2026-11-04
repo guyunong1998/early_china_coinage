@@ -8,8 +8,6 @@ export type MapSite = {
   city_en: string | null
   county_zh: string | null
   county_en: string | null
-  location_detail_zh: string | null
-  location_detail_en: string | null
   lat: number | null
   lng: number | null
   precision_level: number | null
@@ -39,6 +37,8 @@ export type Site = MapSite & {
   id: string
   period_zh: string | null
   period_en: string | null
+  location_detail_zh: string | null
+  location_detail_en: string | null
   description_zh: string | null
   description_en: string | null
   note_zh: string | null
@@ -78,6 +78,7 @@ export type CoinTypeHierarchyRow = {
   img_acc_num: string | null
   description_zh: string | null
   description_en: string | null
+  type_code: string
 }
 
 /**
@@ -92,8 +93,7 @@ export type CoinTypeHierarchyRow = {
  * the coin-types detail page); `finds.coin_type_code` itself was renamed to
  * `deprecated_coin_type_code` and no longer exists under that name. Map
  * filters, search pies, and site classification all join through
- * coin_issues_id; when coin_type_hierarchy_id is still null they fall back
- * to coin_issues.legacy_type (see matchHierarchyForLegacyType).
+ * coin_issues_id; a null coin_type_hierarchy_id means the issue has no type.
  */
 export type CoinIssueDisplay = {
   id: string

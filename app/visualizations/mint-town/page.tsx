@@ -1,11 +1,8 @@
+import { Suspense } from 'react'
 import { FullViewportMapShell } from '@/components/visualizations/FullViewportMapShell'
+import { MapLoadingOverlay } from '@/components/visualizations/MapLoadingOverlay'
 import { MintTownVisualization } from '@/components/visualizations/MapVisualization'
 import { getCoinIssues, getCoinTypeHierarchy, getFindsForHeatmap, getMintInfos } from '@/lib/queries'
-import { parseCommonDeeplinkParams } from '@/lib/visualization-deeplink'
-
-type PageProps = {
-  searchParams: Promise<{ view?: string; types?: string }>
-}
 
 export const metadata = {
   title: 'Mint Town Visualization | Early Chinese Coin Finds',
@@ -14,9 +11,10 @@ export const metadata = {
 
 export const revalidate = 86400
 
-export default async function MintTownVisualizationPage({ searchParams }: PageProps) {
-  const { view, types } = await searchParams
-
+// Deep-link params (view/types) are read client-side via useSearchParams, so
+// this page never touches searchParams and stays statically cached. The
+// Suspense boundary is what useSearchParams requires on a static route.
+export default async function MintTownVisualizationPage() {
   const [coinIssues, hierarchyRows, finds, mints] = await Promise.all([
     getCoinIssues(),
     getCoinTypeHierarchy(),
@@ -26,13 +24,9 @@ export default async function MintTownVisualizationPage({ searchParams }: PagePr
 
   return (
     <FullViewportMapShell>
-      <MintTownVisualization
-        finds={finds}
-        coinIssues={coinIssues}
-        hierarchyRows={hierarchyRows}
-        mints={mints}
-        {...parseCommonDeeplinkParams(view, types)}
-      />
+      <Suspense fallback={<MapLoadingOverlay />}>
+        <MintTownVisualization finds={finds} coinIssues={coinIssues} hierarchyRows={hierarchyRows} mints={mints} />
+      </Suspense>
     </FullViewportMapShell>
   )
 }

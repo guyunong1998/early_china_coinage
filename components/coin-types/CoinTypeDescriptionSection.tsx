@@ -42,6 +42,7 @@ export function CoinTypeDescriptionSection({
     level5_zh: null,
     level5_en: null,
     img_acc_num: null,
+    type_code: '',
   }
 
   return (

@@ -1,6 +1,6 @@
 import { toEnglishName } from '@/lib/name-translation'
 import type { MintRow } from '@/lib/queries'
-import type { CoinIssueDisplay, ImageRecord, MintImage, MintInfo } from '@/lib/types'
+import type { ImageRecord, MintImage, MintInfo } from '@/lib/types'
 
 /** Shown in place of a modern-location value when neither language is
  * recorded, pointing readers at the description field instead — bilingual so
@@ -133,30 +133,3 @@ export function mintCompleteness(mint: MintDirectoryEntry): number {
 }
 
 export type MintTypeLabel = { zh: string; en: string | null }
-
-/**
- * Distinct coin-type labels actually catalogued at each mint, computed live
- * from `coin_issues` (bilingual). Keyed by mint_zh, matching how
- * `statsByMint` is keyed on the `/mints` list page.
- * Uses the same "deepest populated hierarchy level, minor falling back to
- * major" resolution `getMintFindspotsData` uses for a single mint.
- */
-export function buildMintTypeLabels(coinIssues: CoinIssueDisplay[]): Map<string, MintTypeLabel[]> {
-  const byMint = new Map<string, Map<string, MintTypeLabel>>()
-
-  coinIssues.forEach((c) => {
-    const mintZh = c.mint_zh?.trim()
-    const zh = c.minor_type_zh ?? c.major_type_zh
-    if (!mintZh || !zh) return
-    const en = c.minor_type_zh ? c.minor_type_en : c.major_type_en
-    if (!byMint.has(mintZh)) byMint.set(mintZh, new Map())
-    const labels = byMint.get(mintZh)!
-    if (!labels.has(zh)) labels.set(zh, { zh, en })
-  })
-
-  const result = new Map<string, MintTypeLabel[]>()
-  byMint.forEach((labels, mintZh) => {
-    result.set(mintZh, [...labels.values()].sort((a, b) => a.zh.localeCompare(b.zh, 'zh-CN')))
-  })
-  return result
-}

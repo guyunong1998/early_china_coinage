@@ -1,12 +1,9 @@
+import { Suspense } from 'react'
 import { FullViewportMapShell } from '@/components/visualizations/FullViewportMapShell'
+import { MapLoadingOverlay } from '@/components/visualizations/MapLoadingOverlay'
 import { AnsMintTownVisualization } from '@/components/visualizations/MapVisualization'
 import { getAnsSpecimens } from '@/lib/ans-museum-data'
-import { getCoinIssues, getCoinTypeHierarchy, getMintInfos } from '@/lib/queries'
-import { parseCommonDeeplinkParams } from '@/lib/visualization-deeplink'
-
-type PageProps = {
-  searchParams: Promise<{ view?: string; types?: string }>
-}
+import { getMintInfos } from '@/lib/queries'
 
 export const metadata = {
   title: 'Museum Collections | Early Chinese Coin Finds',
@@ -15,25 +12,17 @@ export const metadata = {
 
 export const revalidate = 86400
 
-export default async function MuseumCollectionsPage({ searchParams }: PageProps) {
-  const { view, types } = await searchParams
-
-  const [specimens, coinIssues, hierarchyRows, mints] = await Promise.all([
-    getAnsSpecimens(),
-    getCoinIssues(),
-    getCoinTypeHierarchy(),
-    getMintInfos(),
-  ])
+// Deep-link params (view/types) are read client-side via useSearchParams, so
+// this page never touches searchParams and stays statically cached. The
+// Suspense boundary is what useSearchParams requires on a static route.
+export default async function MuseumCollectionsPage() {
+  const [specimens, mints] = await Promise.all([getAnsSpecimens(), getMintInfos()])
 
   return (
     <FullViewportMapShell>
-      <AnsMintTownVisualization
-        specimens={specimens}
-        coinIssues={coinIssues}
-        hierarchyRows={hierarchyRows}
-        mints={mints}
-        {...parseCommonDeeplinkParams(view, types)}
-      />
+      <Suspense fallback={<MapLoadingOverlay />}>
+        <AnsMintTownVisualization specimens={specimens} mints={mints} />
+      </Suspense>
     </FullViewportMapShell>
   )
 }

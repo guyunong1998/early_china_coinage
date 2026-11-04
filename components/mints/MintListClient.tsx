@@ -47,8 +47,8 @@ function sortMints(
 
 /** Searches the list actually being displayed (`all`), which now already
  * covers every mint in the database. Matches against the live bilingual
- * coin-type labels from `typesByMint` (computed from coin_issues; see
- * lib/mint-directory.ts's buildMintTypeLabels), and against
+ * coin-type labels from `typesByMint` (v_mint_stats.type_labels; see
+ * scripts/add-mint-stats-view.sql), and against
  * alternative_names (historical spellings a researcher might search for). */
 function filterMints(mints: MintDirectoryEntry[], typesByMint: Record<string, MintTypeLabel[]>, query: string): MintDirectoryEntry[] {
   const q = query.trim().toLowerCase()
@@ -77,8 +77,8 @@ export function MintListClient({
 }: {
   all: MintDirectoryEntry[]
   statsByMint?: Record<string, MintStats>
-  /** Bilingual coin-type labels per mint, computed live from coin_issues
-   * (lib/mint-directory.ts's buildMintTypeLabels). */
+  /** Bilingual coin-type labels per mint, from v_mint_stats.type_labels
+   * (scripts/add-mint-stats-view.sql). */
   typesByMint?: Record<string, MintTypeLabel[]>
   /** Distinct catalogued coin_issues per mint (lib/mint-directory.ts's
    * consumer in app/mints/page.tsx) — the "Number of issues" sort option. */

@@ -25,7 +25,6 @@ import { UnquantifiedSwatch } from '@/components/site/CoinTypePieChart'
 import { ClickHint } from '@/components/ui/ClickHint'
 import { findMintByNameZh } from '@/lib/mint-directory'
 import { ansCollectionUrl, type AnsSpecimen } from '@/lib/mint-stats'
-import type { InscriptionSourceRow } from '@/lib/typology-filter'
 import type { MintInfo } from '@/lib/types'
 
 const MAX_RESULTS = 200
@@ -42,7 +41,6 @@ function specimenTier(catalogNumber: string | null, isMapped: boolean): number {
 export function AccessionNumberSearch({
   specimens,
   mints,
-  inscriptionSource,
   selectedKeys,
   selectedSpecimens,
   onToggle,
@@ -50,11 +48,6 @@ export function AccessionNumberSearch({
 }: {
   specimens: AnsSpecimen[]
   mints: MintInfo[]
-  /** Resolves a specimen's inscription_id to its bilingual coin_issues label
-   * (falling back to the specimen's own inscription_raw), so search can
-   * match an English inscription too — see buildAnsInscriptionSource's doc
-   * comment for why ans_data doesn't carry inscription_en itself. */
-  inscriptionSource: InscriptionSourceRow[]
   /** Selected specimen ids (ans_data.id, NOT catalog_number — the live table
    * has specimens sharing an accession number), for quickly checking a
    * result row's state. */
@@ -73,30 +66,21 @@ export function AccessionNumberSearch({
     [selectedSpecimens]
   )
 
-  // Each specimen's resolved mint (for isMapped + the mint-code link) and
-  // English inscription, precomputed once per specimens/mints/coinIssues
-  // change rather than re-looked-up on every keystroke or render.
+  // Each specimen's resolved mint (for isMapped + the mint-code link),
+  // precomputed once per specimens/mints change rather than re-looked-up on
+  // every keystroke or render.
   const mintBySpecimenId = useMemo(() => {
     const m = new Map<string, MintInfo | undefined>()
     specimens.forEach((s) => m.set(s.id, s.mint_zh ? findMintByNameZh(mints, s.mint_zh) : undefined))
     return m
   }, [specimens, mints])
 
-  const inscriptionEnById = useMemo(() => {
-    const m = new Map<string, string | null>()
-    inscriptionSource.forEach((row) => {
-      if (row.inscription_id) m.set(row.inscription_id, row.inscription_en)
-    })
-    return m
-  }, [inscriptionSource])
-
   // Browsable even with no query — the full (sorted) list, not just search
   // hits, so the checkbox list always has something to scroll through.
   const filteredSpecimens = useMemo(() => {
     const matches = (s: AnsSpecimen) => {
       if (!trimmed) return true
-      const inscriptionEn = s.inscription_id ? inscriptionEnById.get(s.inscription_id) : null
-      return [s.catalog_number, s.mint_zh, s.mint_en, s.state_zh, s.state_en, s.inscription_raw, inscriptionEn].some(
+      return [s.catalog_number, s.mint_zh, s.mint_en, s.state_zh, s.state_en, s.inscription_zh, s.inscription_en].some(
         (field) => field?.toLowerCase().includes(trimmed)
       )
     }
@@ -108,7 +92,7 @@ export function AccessionNumberSearch({
       if (tierDiff !== 0) return tierDiff
       return (a.catalog_number ?? '').localeCompare(b.catalog_number ?? '') || a.id.localeCompare(b.id)
     })
-  }, [specimens, trimmed, mintBySpecimenId, inscriptionEnById])
+  }, [specimens, trimmed, mintBySpecimenId])
 
   const results = useMemo(() => filteredSpecimens.slice(0, MAX_RESULTS), [filteredSpecimens])
   const truncated = filteredSpecimens.length > MAX_RESULTS
@@ -236,9 +220,9 @@ export function AccessionNumberSearch({
                       )}
                     </div>
                     <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                      {s.inscription_raw && (
+                      {s.inscription_zh && (
                         <span>
-                          <T k="museum.search.inscriptionLabel" /> {s.inscription_raw}
+                          <T k="museum.search.inscriptionLabel" /> {s.inscription_zh}
                         </span>
                       )}
                       {s.state_zh && (

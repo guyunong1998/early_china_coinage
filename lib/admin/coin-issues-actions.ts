@@ -1,9 +1,11 @@
 'use server'
 
+import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { beginMutation } from '@/lib/admin/mutation'
+import { beginMutation, formErrorOf, required } from '@/lib/admin/mutation'
 import { coinIssueSchema } from '@/lib/admin/schemas'
-import { COIN_ISSUE_FIELDS, flattenCoinIssue, type CoinIssueEmbed } from '@/lib/queries'
+import { coinIssues } from '@/lib/db/schema'
+import { flattenCoinIssue, selectCoinIssueEmbeds, type CoinIssueEmbed } from '@/lib/queries'
 import type { ActionState } from '@/lib/admin/types'
 import type { CoinIssueDisplay } from '@/lib/types'
 
@@ -18,16 +20,15 @@ export async function updateCoinIssue(
   const { db, data: parsed } = begun
 
   const { id, ...rest } = parsed
-  const { data, error } = await db
-    .from('coin_issues')
-    .update(rest)
-    .eq('id', id)
-    .select(COIN_ISSUE_FIELDS)
-    .single()
+  let data: CoinIssueEmbed
+  try {
+    await db.update(coinIssues).set(rest).where(eq(coinIssues.id, id))
+    data = required((await selectCoinIssueEmbeds().where(eq(coinIssues.id, id)))[0]) as CoinIssueEmbed
+  } catch (err) {
+    return formErrorOf(err)
+  }
 
-  if (error) return { ok: false, formError: error.message }
-
-  revalidatePath('/coin-types/[slug]', 'page')
+  revalidatePath('/coin-types/[type_code]', 'page')
   revalidatePath('/coin-types')
-  return { ok: true, data: flattenCoinIssue(data as CoinIssueEmbed), message: 'Saved.' }
+  return { ok: true, data: flattenCoinIssue(data), message: 'Saved.' }
 }

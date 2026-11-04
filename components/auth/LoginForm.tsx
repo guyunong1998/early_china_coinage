@@ -1,13 +1,31 @@
 'use client'
 
 import { useActionState } from 'react'
-import { signInWithGoogle, signInWithPassword } from '@/lib/auth/actions'
+import { useRouter } from 'next/navigation'
+import { authClient } from '@/lib/auth/client'
 import type { ActionState } from '@/lib/admin/types'
 
 const initialState: ActionState<null> = { ok: true, data: null }
 
 export function LoginForm() {
-  const [state, formAction, pending] = useActionState(signInWithPassword, initialState)
+  const router = useRouter()
+  // Signs in through Better Auth's /api/auth handler (not a Server Action) so
+  // its sign-in rate limit applies.
+  const [state, formAction, pending] = useActionState(
+    async (_prev: ActionState<null>, formData: FormData): Promise<ActionState<null>> => {
+      const email = String(formData.get('email') ?? '')
+      const password = String(formData.get('password') ?? '')
+      if (!email || !password) return { ok: false, formError: 'Email and password are required.' }
+
+      const { error } = await authClient.signIn.email({ email, password })
+      if (error) return { ok: false, formError: error.message ?? 'Could not sign in.' }
+
+      router.push('/')
+      router.refresh()
+      return { ok: true, data: null }
+    },
+    initialState
+  )
 
   return (
     <div className="mx-auto mt-16 max-w-sm px-4">
@@ -15,22 +33,7 @@ export function LoginForm() {
         <h1 className="section-heading">Sign in</h1>
         <p className="mt-1 text-sm text-gray-600">Sign in to edit this database.</p>
 
-        <form action={signInWithGoogle} className="mt-6">
-          <button
-            type="submit"
-            className="w-full rounded border border-brand/30 px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-light"
-          >
-            Sign in with Google
-          </button>
-        </form>
-
-        <div className="my-5 flex items-center gap-3 text-xs text-gray-400">
-          <div className="h-px flex-1 bg-gray-200" />
-          or
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} className="mt-6 space-y-3">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
