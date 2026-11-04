@@ -1,5 +1,5 @@
 import { asc } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { readDb } from '@/lib/db'
 import { vAnsFlat } from '@/lib/db/schema'
 import type { AnsSpecimen } from '@/lib/mint-stats'
 
@@ -12,5 +12,5 @@ import type { AnsSpecimen } from '@/lib/mint-stats'
  * search box both read from this same fetch.
  */
 export async function getAnsSpecimens(): Promise<AnsSpecimen[]> {
-  return db.select().from(vAnsFlat).orderBy(asc(vAnsFlat.catalog_number))
+  return readDb.select().from(vAnsFlat).orderBy(asc(vAnsFlat.catalog_number))
 }

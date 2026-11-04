@@ -18,6 +18,7 @@ services:
       # root can only log in from inside the MySQL container itself.
       MYSQL_ROOT_HOST: localhost
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set in .env.prod}
+      APP_RO_DB_PASSWORD: ${APP_RO_DB_PASSWORD:?set in .env.prod}
     volumes:
       - mysql-data:/var/lib/mysql
       # Imported only on first start (when mysql-data is empty).
@@ -37,6 +38,7 @@ services:
       dockerfile: docker/app/Dockerfile
     environment:
       DATABASE_URL: mysql://coinapp:${APP_DB_PASSWORD}@mysql:3306/early_china_coinage
+      DATABASE_URL_READONLY: mysql://coinapp_ro:${APP_RO_DB_PASSWORD}@mysql:3306/early_china_coinage
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set in .env.prod}
       BETTER_AUTH_URL: https://localhost
       ADMIN_EMAILS: ${ADMIN_EMAILS:?set in .env.prod}

@@ -1,5 +1,5 @@
 import { like, or, sql, type AnyColumn } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { readDb } from '@/lib/db'
 import { coinItems, contexts, finds, mints, sites } from '@/lib/db/schema'
 import type { ComboOption } from '@/components/edit/TaxonomyCombobox'
 
@@ -23,7 +23,7 @@ export async function searchTargets(targetType: TargetType, query: string): Prom
 
   switch (targetType) {
     case 'site': {
-      const data = await db
+      const data = await readDb
         .select({ site_code: sites.site_code, site_name_zh: sites.site_name_zh })
         .from(sites)
         .where(or(ilike(sites.site_code, q), ilike(sites.site_name_zh, q)))
@@ -31,7 +31,7 @@ export async function searchTargets(targetType: TargetType, query: string): Prom
       return data.map((r) => ({ value: r.site_code, label: `${r.site_code} · ${r.site_name_zh ?? ''}` }))
     }
     case 'context': {
-      const data = await db
+      const data = await readDb
         .select({ context_code: contexts.context_code, context_name_zh: contexts.context_name_zh })
         .from(contexts)
         .where(or(ilike(contexts.context_code, q), ilike(contexts.context_name_zh, q)))
@@ -42,11 +42,11 @@ export async function searchTargets(targetType: TargetType, query: string): Prom
       }))
     }
     case 'find': {
-      const data = await db.select({ find_code: finds.find_code }).from(finds).where(ilike(finds.find_code, q)).limit(RESULT_LIMIT)
+      const data = await readDb.select({ find_code: finds.find_code }).from(finds).where(ilike(finds.find_code, q)).limit(RESULT_LIMIT)
       return data.map((r) => ({ value: r.find_code, label: r.find_code }))
     }
     case 'coin_item': {
-      const data = await db
+      const data = await readDb
         .select({ coin_item_code: coinItems.coin_item_code, description_zh: coinItems.description_zh })
         .from(coinItems)
         .where(or(ilike(coinItems.coin_item_code, q), ilike(coinItems.description_zh, q)))
@@ -60,7 +60,7 @@ export async function searchTargets(targetType: TargetType, query: string): Prom
       // mint_code is a generated URL slug, not a natural business code like
       // the other target types' — still the right join key since it's what
       // resolveSourceLinkTargets uses to build /mints/[mint_code] hrefs.
-      const data = await db
+      const data = await readDb
         .select({ mint_code: mints.mint_code, name_zh: mints.name_zh, name_en: mints.name_en })
         .from(mints)
         .where(or(ilike(mints.mint_code, q), ilike(mints.name_zh, q), ilike(mints.name_en, q)))

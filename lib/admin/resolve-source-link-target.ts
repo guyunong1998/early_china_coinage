@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { readDb } from '@/lib/db'
 import { vSourceLinkTargets } from '@/lib/db/schema'
 import type { SourceLink } from '@/lib/types'
 
@@ -36,7 +36,7 @@ export async function resolveSourceLinkTargets(
   await Promise.all(
     [...codesByType.entries()].map(async ([targetType, rawCodes]) => {
       const codes = [...new Set(rawCodes)]
-      const rows = await db
+      const rows = await readDb
         .select({ target_code: vSourceLinkTargets.target_code, label: vSourceLinkTargets.label, href: vSourceLinkTargets.href })
         .from(vSourceLinkTargets)
         .where(and(eq(vSourceLinkTargets.target_type, targetType), inArray(vSourceLinkTargets.target_code, codes)))

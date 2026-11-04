@@ -22,7 +22,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Required environment variables (`.env.local`):
 
-- `DATABASE_URL` — MySQL connection, e.g. `mysql://root@127.0.0.1:3306/early_china_coinage` for the local `docker compose up` copy
+- `DATABASE_URL` — MySQL connection for the read/write user (edits and sign-in), e.g. `mysql://root@127.0.0.1:3306/early_china_coinage` for the local `docker compose up` copy
+- `DATABASE_URL_READONLY` — required. The same database as a `SELECT`-only user, used for every page's reads; the app won't start without it. Locally it can be the same URL as `DATABASE_URL`. Both users must reach the same primary server, not a lagging replica.
 - `BETTER_AUTH_SECRET` (production) — random secret for signing sessions, e.g. `openssl rand -base64 32`
 - `BETTER_AUTH_URL` (production) — the site's public origin, e.g. `https://example.org`
 - `ADMIN_EMAILS` — comma-separated emails allowed to edit
@@ -73,7 +74,7 @@ Then open https://localhost and accept the self-signed certificate warning.
 
 **Security checklist for any production server** (`setup-ec2.sh` does all of this; check it by hand on a server set up another way):
 
-- The app connects to MySQL as a user with only `SELECT, INSERT, UPDATE, DELETE` on this database, never root.
+- The app connects to MySQL as two users on this database, never root: `DATABASE_URL_READONLY` with only `SELECT` (all page reads), and `DATABASE_URL` with only `SELECT, INSERT, UPDATE, DELETE` (edits and sign-in).
 - MySQL listens on `127.0.0.1` only. The app listens on `127.0.0.1` only (`HOSTNAME=127.0.0.1`). The firewall/Security Group allows only 22, 80 and 443.
 - Apache serves HTTPS, redirects HTTP to it, and has `RequestHeader unset X-Forwarded-For early` (without that line, the login rate limit can be bypassed).
 - `BETTER_AUTH_SECRET` is random and set only in `.env.production` (mode 600), and `BETTER_AUTH_URL` is the `https://` address.

@@ -64,11 +64,15 @@ else
 fi
 sudo mysql "$DB_NAME" < scripts/better-auth-schema.sql
 
-# The app's own login: read/write rows in this one database, nothing else.
+# The app's own logins: one that reads/writes rows in this one database, and
+# one that can only read (used for every page's reads), nothing else.
 APP_DB_PASSWORD=$(openssl rand -hex 24)
+APP_RO_DB_PASSWORD=$(openssl rand -hex 24)
 sudo mysql <<SQL
 CREATE USER 'coinapp'@'localhost' IDENTIFIED BY '$APP_DB_PASSWORD';
 GRANT SELECT, INSERT, UPDATE, DELETE ON \`$DB_NAME\`.* TO 'coinapp'@'localhost';
+CREATE USER 'coinapp_ro'@'localhost' IDENTIFIED BY '$APP_RO_DB_PASSWORD';
+GRANT SELECT ON \`$DB_NAME\`.* TO 'coinapp_ro'@'localhost';
 SQL
 
 echo "== App settings (.env.production) =="
@@ -77,6 +81,7 @@ mkdir -p "$APP_DIR/logs"
 # Generated here so the secrets are never typed or pasted anywhere.
 ( umask 077 && cat > .env.production <<EOF
 DATABASE_URL=mysql://coinapp:$APP_DB_PASSWORD@127.0.0.1:3306/$DB_NAME
+DATABASE_URL_READONLY=mysql://coinapp_ro:$APP_RO_DB_PASSWORD@127.0.0.1:3306/$DB_NAME
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://$SERVER_NAME
 ADMIN_EMAILS=$ADMIN_EMAILS

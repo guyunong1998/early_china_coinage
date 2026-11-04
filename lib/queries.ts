@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { and, asc, count, eq, getTableColumns, inArray, isNotNull, like, sql } from 'drizzle-orm'
-import { db } from '@/lib/db'
+import { readDb } from '@/lib/db'
 import {
   coinIssues,
   coinTypeHierarchy,
@@ -171,7 +171,7 @@ const COIN_ISSUE_EMBED = {
 }
 
 export function selectCoinIssueEmbeds() {
-  return db
+  return readDb
     .select(COIN_ISSUE_EMBED)
     .from(coinIssues)
     .leftJoin(mints, eq(coinIssues.mint_id, mints.id))
@@ -453,7 +453,7 @@ function textIncludes(value: string | null | undefined, query: string): boolean 
 }
 
 export async function getMapSites(): Promise<MapSite[]> {
-  return db
+  return readDb
     .select(MAP_SITE_FIELDS)
     .from(vCoinMapSites)
     .where(and(isNotNull(vCoinMapSites.lat), isNotNull(vCoinMapSites.lng)))
@@ -524,7 +524,7 @@ async function getPrecisionSupplementSites(): Promise<SearchSite[]> {
     description_en: sites.description_en,
     periods: PERIOD_EMBED,
   }
-  const supplementQuery = () => db.select(fields).from(sites).leftJoin(periods, eq(sites.period_id, periods.id))
+  const supplementQuery = () => readDb.select(fields).from(sites).leftJoin(periods, eq(sites.period_id, periods.id))
   const [nameTagged, countyTagged] = await Promise.all([
     supplementQuery().where(like(sites.site_name_zh, '%不明单位%')).orderBy(asc(sites.site_code)),
     supplementQuery().where(eq(sites.county_zh, '不明')).orderBy(asc(sites.site_code)),
@@ -577,20 +577,20 @@ export async function getFindSpotsMapSites(): Promise<MapSite[]> {
 export async function getMapSitesByCodes(siteCodes: string[]): Promise<MapSite[]> {
   if (siteCodes.length === 0) return []
 
-  const data = await db.select(MAP_SITE_FIELDS).from(vCoinMapSites).where(inArray(vCoinMapSites.site_code, siteCodes))
+  const data = await readDb.select(MAP_SITE_FIELDS).from(vCoinMapSites).where(inArray(vCoinMapSites.site_code, siteCodes))
 
   const found = new Set(data.map((s) => s.site_code))
   const missing = siteCodes.filter((code) => !found.has(code))
   if (missing.length === 0) return data
 
-  const fallback = await db.select(SITE_PRECISION_FIELDS).from(sites).where(inArray(sites.site_code, missing))
+  const fallback = await readDb.select(SITE_PRECISION_FIELDS).from(sites).where(inArray(sites.site_code, missing))
 
   return [...data, ...fallback.map(siteRowToMapSite)]
 }
 
 export async function getAllSites(): Promise<SearchSite[]> {
   const [sites, supplements] = await Promise.all([
-    db.select(SEARCH_SITE_FIELDS).from(vCoinMapSites).orderBy(asc(vCoinMapSites.site_name_zh)),
+    readDb.select(SEARCH_SITE_FIELDS).from(vCoinMapSites).orderBy(asc(vCoinMapSites.site_name_zh)),
     getPrecisionSupplementSites(),
   ])
   return fillMissingMapSiteTypes(mergeMapSites(sites, supplements))
@@ -601,9 +601,9 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
   // function (scripts/add-sum-total-quantity-function.sql) rather than calling
   // it, so it carries over to a database without that function.
   const [[{ siteCount }], [{ findCount }], [{ totalCoins }]] = await Promise.all([
-    db.select({ siteCount: count() }).from(vCoinMapSites),
-    db.select({ findCount: count() }).from(finds),
-    db
+    readDb.select({ siteCount: count() }).from(vCoinMapSites),
+    readDb.select({ findCount: count() }).from(finds),
+    readDb
       .select({ totalCoins: sql<number>`coalesce(sum(${vCoinMapSites.total_quantity_for_map}), 0)`.mapWith(Number) })
       .from(vCoinMapSites),
   ])
@@ -617,7 +617,7 @@ export async function getDatabaseStats(): Promise<DatabaseStats> {
 export const getSite = cache(async function getSite(siteCode: string): Promise<Site | null> {
   // .limit(2) + length check mirrors supabase-js .maybeSingle(), which
   // errors rather than picking one if the code isn't unique.
-  const rows = await db
+  const rows = await readDb
     .select({ ...getTableColumns(sites), periods: PERIOD_EMBED })
     .from(sites)
     .leftJoin(periods, eq(sites.period_id, periods.id))
@@ -635,12 +635,12 @@ function maybeSingle<T>(rows: T[]): T | null {
 }
 
 export async function getSiteMapSummary(siteCode: string): Promise<MapSite | null> {
-  const rows = await db.select(MAP_SITE_FIELDS).from(vCoinMapSites).where(eq(vCoinMapSites.site_code, siteCode)).limit(2)
+  const rows = await readDb.select(MAP_SITE_FIELDS).from(vCoinMapSites).where(eq(vCoinMapSites.site_code, siteCode)).limit(2)
   return maybeSingle(rows)
 }
 
 export async function getSiteContexts(siteCode: string): Promise<Context[]> {
-  const rows = await db
+  const rows = await readDb
     .select({ ...getTableColumns(contexts), periods: PERIOD_EMBED })
     .from(contexts)
     .leftJoin(periods, eq(contexts.period_id, periods.id))
@@ -654,7 +654,7 @@ export async function getSiteContexts(siteCode: string): Promise<Context[]> {
  * level (not nested under coin_issues) so each of its own embeds still nulls
  * out on a missed left join; regrouped into `coin_issues` by toFind. */
 function selectFindsWithCoinIssues() {
-  return db
+  return readDb
     .select({ find: finds, ...COIN_ISSUE_EMBED })
     .from(finds)
     .leftJoin(coinIssues, eq(finds.coin_issues_id, coinIssues.id))
@@ -688,7 +688,7 @@ export async function getSources(sourceCodes: string[]): Promise<Source[]> {
   const codes = [...new Set(sourceCodes.flatMap((raw) => splitSourceCodes(raw)).filter(Boolean))]
   if (codes.length === 0) return []
 
-  return db.select().from(sources).where(inArray(sources.source_code, codes)) as Promise<Source[]>
+  return readDb.select().from(sources).where(inArray(sources.source_code, codes)) as Promise<Source[]>
 }
 
 /**
@@ -776,7 +776,7 @@ export function filterSitesByQuery(
  * CoinIssueDisplay shape, no client-side join. A row with a null hierarchy FK
  * simply has no type. */
 export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
-  return db.select().from(vCoinIssuesFlat).orderBy(asc(vCoinIssuesFlat.coin_type_code))
+  return readDb.select().from(vCoinIssuesFlat).orderBy(asc(vCoinIssuesFlat.coin_type_code))
 }
 
 /** Scoped counterpart to getCoinIssues -- `.in('coin_type_hierarchy_id', ...)`
@@ -785,7 +785,7 @@ export async function getCoinIssues(): Promise<CoinIssueDisplay[]> {
  * Issues table, and its states/mints/inscriptions dedup lists). */
 export async function getCoinIssuesByHierarchyIds(hierarchyIds: string[]): Promise<CoinIssueDisplay[]> {
   if (hierarchyIds.length === 0) return []
-  return db
+  return readDb
     .select()
     .from(vCoinIssuesFlat)
     .where(inArray(vCoinIssuesFlat.coin_type_hierarchy_id, hierarchyIds))
@@ -796,7 +796,7 @@ export async function getCoinIssuesByHierarchyIds(hierarchyIds: string[]): Promi
  * few dozen) instead of the whole catalog, for the /mints/[mint_code] page's
  * coin-type label links. */
 export async function getCoinIssuesByMintId(mintId: string): Promise<CoinIssueDisplay[]> {
-  return db
+  return readDb
     .select()
     .from(vCoinIssuesFlat)
     .where(eq(vCoinIssuesFlat.mint_id, mintId))
@@ -812,7 +812,7 @@ export const COIN_TYPE_HIERARCHY_FIELDS = pick(coinTypeHierarchy, [
  * generateMetadata and the page component — both called for the same
  * request — share one fetch instead of two (same pattern as getSite). */
 export const getCoinTypeHierarchy = cache(async function getCoinTypeHierarchy(): Promise<CoinTypeHierarchyRow[]> {
-  return db.select(COIN_TYPE_HIERARCHY_FIELDS).from(coinTypeHierarchy).orderBy(asc(coinTypeHierarchy.level2_zh))
+  return readDb.select(COIN_TYPE_HIERARCHY_FIELDS).from(coinTypeHierarchy).orderBy(asc(coinTypeHierarchy.level2_zh))
 })
 
 /** Single hierarchy row by its URL slug — same scoped `.eq(...).maybeSingle()`
@@ -823,7 +823,7 @@ export const getCoinTypeHierarchy = cache(async function getCoinTypeHierarchy():
 export const getCoinTypeByCode = cache(async function getCoinTypeByCode(
   typeCode: string
 ): Promise<CoinTypeHierarchyRow | null> {
-  const rows = await db
+  const rows = await readDb
     .select(COIN_TYPE_HIERARCHY_FIELDS)
     .from(coinTypeHierarchy)
     .where(eq(coinTypeHierarchy.type_code, typeCode))
@@ -834,11 +834,11 @@ export const getCoinTypeByCode = cache(async function getCoinTypeByCode(
 // ── sources / source_links ──────────────────────────────────────────────
 
 export async function getAllSources(): Promise<Source[]> {
-  return db.select().from(sources).orderBy(asc(sources.source_code)) as Promise<Source[]>
+  return readDb.select().from(sources).orderBy(asc(sources.source_code)) as Promise<Source[]>
 }
 
 export async function getAllSourceLinks(): Promise<SourceLink[]> {
-  return db.select().from(sourceLinks).orderBy(asc(sourceLinks.source_code)) as Promise<SourceLink[]>
+  return readDb.select().from(sourceLinks).orderBy(asc(sourceLinks.source_code)) as Promise<SourceLink[]>
 }
 
 /**
@@ -859,7 +859,7 @@ export async function getSourceLinksForSite(
 ): Promise<SourceLink[]> {
   async function linksForCodes(targetType: SourceLink['target_type'], codes: string[]): Promise<SourceLink[]> {
     if (codes.length === 0) return []
-    return db
+    return readDb
       .select()
       .from(sourceLinks)
       .where(and(eq(sourceLinks.target_type, targetType), inArray(sourceLinks.target_code, codes))) as Promise<
@@ -879,18 +879,18 @@ export async function getSourceLinksForSite(
 /** source_links scoped to one mint — no child records to also pull in
  * (unlike a site's contexts/finds), so a single scoped query is enough. */
 export async function getSourceLinksForMint(mintCode: string): Promise<SourceLink[]> {
-  return db
+  return readDb
     .select()
     .from(sourceLinks)
     .where(and(eq(sourceLinks.target_type, 'mint'), eq(sourceLinks.target_code, mintCode))) as Promise<SourceLink[]>
 }
 
 export async function getStates(): Promise<State[]> {
-  return db.select(pick(states, ['id', 'state_zh', 'state_en'] as const)).from(states).orderBy(asc(states.state_zh))
+  return readDb.select(pick(states, ['id', 'state_zh', 'state_en'] as const)).from(states).orderBy(asc(states.state_zh))
 }
 
 export async function getInscriptions(): Promise<Inscription[]> {
-  return db
+  return readDb
     .select(pick(inscriptions, ['id', 'inscription_zh', 'inscription_en'] as const))
     .from(inscriptions)
     .orderBy(asc(inscriptions.inscription_zh))
@@ -898,7 +898,7 @@ export async function getInscriptions(): Promise<Inscription[]> {
 
 /** images + embedded `sources(citation_zh, citation_en, url)`. */
 function selectImages() {
-  return db
+  return readDb
     .select({
       ...pick(images, [
         'id', 'filename', 'source_id', 'source_text', 'caption_zh', 'caption_en', 'note_zh', 'note_en',
@@ -943,7 +943,7 @@ export type MintRow = {
 
 /** mints + embedded `states(state_zh, state_en)`. */
 function selectMints() {
-  return db
+  return readDb
     .select({
       ...pick(mints, [
         'id', 'name_zh', 'name_en', 'precision_level', 'latitude', 'longitude', 'description_zh', 'description_en',
@@ -991,7 +991,7 @@ export type MintStatsRow = {
 }
 
 export async function getMintStats(): Promise<MintStatsRow[]> {
-  return db.select().from(vMintStats).orderBy(asc(vMintStats.mint_code))
+  return readDb.select().from(vMintStats).orderBy(asc(vMintStats.mint_code))
 }
 
 /** Minimal shape of a v_coin_finds row scoped to one coin-type node's
@@ -1010,7 +1010,7 @@ export type CoinTypeFind = {
  * derive an issue-id list the way a raw `finds` query would need to. */
 export async function getCoinFindsByHierarchyIds(hierarchyIds: string[]): Promise<CoinTypeFind[]> {
   if (hierarchyIds.length === 0) return []
-  return db
+  return readDb
     .select(pick(vCoinFinds, ['site_code', 'quantity_for_map'] as const))
     .from(vCoinFinds)
     .where(inArray(vCoinFinds.coin_type_id, hierarchyIds))
@@ -1029,7 +1029,7 @@ export async function getFindsForHeatmap(): Promise<HeatmapFind[]> {
 /** finds inner-joined to their context's site_code — the old
  * `contexts!inner(site_code)` embed. */
 function selectHeatmapFinds() {
-  return db
+  return readDb
     .select({
       ...pick(finds, [
         'coin_issues_id', 'context_code', 'quantity_total', 'quantity_min', 'quantity_estimated', 'presence',
@@ -1149,7 +1149,7 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
 
   // v_coin_issues_flat already has major/minor derived and inscription
   // flattened, so no deriveMajorMinor/one() unwrapping needed here.
-  const mintedCoinTypes = await db
+  const mintedCoinTypes = await readDb
     .select(
       pick(vCoinIssuesFlat, [
         'id', 'coin_type_code', 'major_type_zh', 'major_type_en', 'minor_type_zh', 'minor_type_en', 'inscription',
@@ -1190,7 +1190,7 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
   const coinIssueIds = mintedCoinTypes.map((row) => row.id).filter(Boolean)
   if (coinIssueIds.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels }
 
-  const mintFinds = await db
+  const mintFinds = await readDb
     .select(
       pick(finds, [
         'find_code', 'context_code', 'coin_issues_id', 'quantity_total', 'quantity_estimated', 'quantity_min',
@@ -1204,7 +1204,7 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
   const totalCoinCount = mintFinds.reduce((sum, f) => sum + findQuantity(f), 0)
 
   const contextCodes = [...new Set(mintFinds.map((f) => f.context_code).filter(Boolean))]
-  const mintContexts = await db
+  const mintContexts = await readDb
     .select(pick(contexts, ['context_code', 'site_code'] as const))
     .from(contexts)
     .where(inArray(contexts.context_code, contextCodes))
@@ -1243,7 +1243,7 @@ export async function getMintFindspotsData(mintId: string): Promise<MintFindspot
   const siteCodes = [...siteCodeSet]
   if (siteCodes.length === 0) return { ...EMPTY_MINT_FINDSPOTS_DATA, inscriptions, typeLabels, totalCoinCount }
 
-  const sites = await db
+  const sites = await readDb
     .select(MAP_SITE_FIELDS)
     .from(vCoinMapSites)
     .where(
