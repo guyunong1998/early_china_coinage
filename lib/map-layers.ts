@@ -9,7 +9,7 @@ type LeafletNS = typeof import('leaflet')
 
 /**
  * River network (Natural Earth 1:10m, ranked by relative importance).
- * Line geometry is pre-clipped (see scripts/clip-rivers-to-china.js) to the
+ * Line geometry is pre-clipped to the
  * segments that fall within a generously buffered version of China's
  * national boundary (800km) — cross-border rivers like the Mekong/Lancang,
  * Amur/Heilong Jiang, or Red River/Yuan Jiang trail off well past the

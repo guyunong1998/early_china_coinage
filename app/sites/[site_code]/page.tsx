@@ -11,7 +11,7 @@ type PageProps = {
 //
 // generateStaticParams returns [] on purpose: unlike /coin-types/[type_code]
 // and /mints/[mint_code], nothing is prerendered at build — this table has
-// ~1,830 rows, and each site's content issues up to ~9 sequential Supabase
+// ~1,830 rows, and each site's content issues up to ~9 sequential
 // queries, so prerendering all of them would cost ~16,000+ DB round trips
 // per build. But the export itself is required: without generateStaticParams
 // the App Router treats this dynamic segment as fully dynamic (`ƒ`, every

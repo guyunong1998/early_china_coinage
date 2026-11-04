@@ -20,11 +20,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Required environment variables (`.env.local`, see that file for the current template):
+Required environment variables (`.env.local`):
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (required for **local** admin editing)
+- `DATABASE_URL` — MySQL connection for the read/write user (edits and sign-in), e.g. `mysql://root@127.0.0.1:3306/early_china_coinage` for the local `docker compose up` copy
+- `DATABASE_URL_READONLY` — required. The same database as a `SELECT`-only user, used for every page's reads; the app won't start without it. Locally it can be the same URL as `DATABASE_URL`. Both users must reach the same primary server, not a lagging replica.
+- `BETTER_AUTH_SECRET` (production) — random secret for signing sessions, e.g. `openssl rand -base64 32`
+- `BETTER_AUTH_URL` (production) — the site's public origin, e.g. `https://example.org`
+- `ADMIN_EMAILS` — comma-separated emails allowed to edit
+- `AUDIT_LOG_PATH` (optional) — where deleted rows are logged (default `logs/deletions.log`); in production, keep it outside the deployed build directory
+
+Editors sign in at `/login`. Sign-up is disabled, so to set up auth:
+
+1. Create the auth tables once: `mysql -u <user> -p <database> < scripts/better-auth-schema.sql`.
+2. Create each account, or reset its password. It prompts for the password, and a reset also signs out that account's sessions: `node --env-file=.env.local scripts/create-user.mjs <email>`.
+3. Add the email to `ADMIN_EMAILS`.
+
+Every delete made through the edit UI is appended to the deletion log as one JSON line per row (every column), including rows removed by cascade (a context's finds and coin items), so they can be restored by hand.
 
 Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
@@ -32,21 +43,48 @@ Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
 | Doc | What it covers |
 |---|---|
-| [`docs/SITEMAP.md`](docs/SITEMAP.md) | Every route, what visitors see there, and — for each page — which components and `lib/` data functions it's built from. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The stack, the server/client split, where data actually lives (Supabase vs. local files), the shared map-rendering engine, i18n, styling, and deployment. Start here to understand how the app is put together. |
 | [`docs/DATA_VISUALIZATION_CALCULATIONS.md`](docs/DATA_VISUALIZATION_CALCULATIONS.md) | The exact math behind every map's point size and color (Points/Density/Compare modes) — the "what number produces what pixel" reference. |
 
 
 ## Stack
 
-Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, Supabase (Postgres) as the one remote datastore, and Leaflet for every interactive map. No separate backend or API layer — server components query Supabase directly at render time. See `docs/ARCHITECTURE.md` for the full picture.
+Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, MySQL (via Drizzle ORM) as the one datastore, Better Auth for editor sign-in, and Leaflet for every interactive map. No separate backend or API layer — server components query MySQL directly at render time.
 
 ## Data
 
 
-- **Supabase (remote)**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
+- **MySQL**: anything about a specific archaeological find, coin issue, or museum specimen — queried through `lib/queries.ts` and `lib/ans-museum-data.ts`.
 - **Local (bundled in the repo)**: reference/gazetteer data that rarely changes (river overlays, specimen photography) — used as a fallback or supplement wherever the database doesn't carry a field yet. 
 
 ## Deployment
 
-Deployed on Vercel with no custom configuration. Most pages render per-request; `/mints` uses ISR (`revalidate = 3600`).
+Production is one Ubuntu server: MySQL, the app as a systemd service, and Apache in front with HTTPS. [`scripts/setup-full.sh`](scripts/setup-full.sh) sets up a blank server, and [`scripts/redeploy-full.sh`](scripts/redeploy-full.sh) redeploys. The Apache config is [`scripts/apache/coin-app.conf.template`](scripts/apache/coin-app.conf.template).
+
+**Four deploy scripts** in `scripts/`, written to be read and pasted from a line at a time as much as run. Each says at the top what a `git pull` will *not* bring (`.env.production`, the systemd unit, the Apache config, the SQL dump).
+
+| Script | For |
+|---|---|
+| [`setup-full.sh`](scripts/setup-full.sh) | A blank Linux server: installs MySQL, Node and Apache, gets a certificate, adds swap for the small box. |
+| [`redeploy-full.sh`](scripts/redeploy-full.sh) | Pull, rebuild and restart on that server. |
+| [`setup-ans.sh`](scripts/setup-ans.sh) | The ANS server: database on RDS, Apache and HTTPS run by ANS, files under `/usr/local/projects/chec`. |
+| [`redeploy-ans.sh`](scripts/redeploy-ans.sh) | Pull, rebuild and restart there, keeping the previous build for rollback. |
+
+**Testing it locally.** [`docker-compose.prod.yml`](docker-compose.prod.yml) runs the same setup in Docker, using the same Apache config, a limited MySQL user and no exposed app or MySQL ports:
+
+```bash
+cp docker/prod.env.example .env.prod   # fill in the secrets
+docker compose -f docker-compose.prod.yml --env-file .env.prod up --build
+docker compose -f docker-compose.prod.yml --env-file .env.prod exec app node scripts/create-user.mjs you@example.com
+```
+
+Then open https://localhost and accept the self-signed certificate warning.
+
+**No domain name?** Pass the server's public IP to `setup-full.sh`. It uses `<ip-with-dashes>.sslip.io` (e.g. `3-91-20-7.sslip.io`), a free hostname that resolves to that IP, and gets a real Let's Encrypt certificate for it. A domain can replace it later; rerun the certificate and Apache steps with the new name.
+
+**Security checklist for any production server** (`setup-full.sh` does all of this; check it by hand on a server set up another way):
+
+- The app connects to MySQL as two users on this database, never root: `DATABASE_URL_READONLY` with only `SELECT` (all page reads), and `DATABASE_URL` with only `SELECT, INSERT, UPDATE, DELETE` (edits and sign-in).
+- MySQL listens on `127.0.0.1` only. The app listens on `127.0.0.1` only (`HOSTNAME=127.0.0.1`). The firewall/Security Group allows only 22, 80 and 443.
+- Apache serves HTTPS, redirects HTTP to it, and has `RequestHeader unset X-Forwarded-For early` (without that line, the login rate limit can be bypassed).
+- `BETTER_AUTH_SECRET` is random and set only in `.env.production` (mode 600), and `BETTER_AUTH_URL` is the `https://` address.
+- `AUDIT_LOG_PATH` points outside the build directory, which redeploys replace.
