@@ -1,12 +1,9 @@
 import 'server-only'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { auth } from '@/lib/auth/auth'
 
-/** Null in dev (nothing to show — there's no login there) and whenever
- * nobody's signed in; the logged-in user's email otherwise. */
+/** Null whenever nobody's signed in; the logged-in user's email otherwise. */
 export async function getCurrentUserEmail(): Promise<string | null> {
-  if (process.env.NODE_ENV !== 'production') return null
-
-  const supabase = await createServerSupabaseClient()
-  const { data } = await supabase.auth.getClaims()
-  return data?.claims?.email ?? null
+  const session = await auth.api.getSession({ headers: await headers() })
+  return session?.user.email ?? null
 }
