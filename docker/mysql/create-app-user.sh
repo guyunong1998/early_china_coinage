@@ -2,7 +2,7 @@
 # Docker init step (docker-compose.prod.yml): the app's own MySQL logins — one
 # able to read and write rows in this one database, one that can only read —
 # and nothing else: no DDL, no GRANT, no other databases. Mirrors the users
-# scripts/setup-ec2.sh creates.
+# scripts/setup-full.sh creates.
 set -euo pipefail
 for var in APP_DB_PASSWORD APP_RO_DB_PASSWORD; do
   if [[ ! "${!var}" =~ ^[A-Za-z0-9]{20,}$ ]]; then

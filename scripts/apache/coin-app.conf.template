@@ -1,4 +1,4 @@
-# Apache vhost for the app, used by scripts/setup-ec2.sh (production) and
+# Apache vhost for the app, used by scripts/setup-full.sh (production) and
 # docker/apache (the local production copy, docker-compose.prod.yml) — so the
 # Docker copy tests the exact config production runs.
 # Filled in with: envsubst '${SERVER_NAME} ${APP_UPSTREAM} ${SSL_CERT} ${SSL_KEY}'

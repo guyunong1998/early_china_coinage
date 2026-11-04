@@ -58,7 +58,16 @@ Next.js 16 (App Router) + React 19 + TypeScript, Tailwind CSS 4, MySQL (via Driz
 
 ## Deployment
 
-Production is one Ubuntu server: MySQL, the app as a systemd service, and Apache in front with HTTPS. [`scripts/setup-ec2.sh`](scripts/setup-ec2.sh) sets up a fresh server, and [`scripts/deploy-ec2.sh`](scripts/deploy-ec2.sh) redeploys. The Apache config is [`scripts/apache/coin-app.conf.template`](scripts/apache/coin-app.conf.template).
+Production is one Ubuntu server: MySQL, the app as a systemd service, and Apache in front with HTTPS. [`scripts/setup-full.sh`](scripts/setup-full.sh) sets up a blank server, and [`scripts/redeploy-full.sh`](scripts/redeploy-full.sh) redeploys. The Apache config is [`scripts/apache/coin-app.conf.template`](scripts/apache/coin-app.conf.template).
+
+**Four deploy scripts** in `scripts/`, written to be read and pasted from a line at a time as much as run. Each says at the top what a `git pull` will *not* bring (`.env.production`, the systemd unit, the Apache config, the SQL dump).
+
+| Script | For |
+|---|---|
+| [`setup-full.sh`](scripts/setup-full.sh) | A blank Linux server: installs MySQL, Node and Apache, gets a certificate, adds swap for the small box. |
+| [`redeploy-full.sh`](scripts/redeploy-full.sh) | Pull, rebuild and restart on that server. |
+| [`setup-ans.sh`](scripts/setup-ans.sh) | The ANS server: database on RDS, Apache and HTTPS run by ANS, files under `/usr/local/projects/chec`. |
+| [`redeploy-ans.sh`](scripts/redeploy-ans.sh) | Pull, rebuild and restart there, keeping the previous build for rollback. |
 
 **Testing it locally.** [`docker-compose.prod.yml`](docker-compose.prod.yml) runs the same setup in Docker, using the same Apache config, a limited MySQL user and no exposed app or MySQL ports:
 
@@ -70,9 +79,9 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod exec app node scr
 
 Then open https://localhost and accept the self-signed certificate warning.
 
-**No domain name?** Pass the server's public IP to `setup-ec2.sh`. It uses `<ip-with-dashes>.sslip.io` (e.g. `3-91-20-7.sslip.io`), a free hostname that resolves to that IP, and gets a real Let's Encrypt certificate for it. A domain can replace it later; rerun the certificate and Apache steps with the new name.
+**No domain name?** Pass the server's public IP to `setup-full.sh`. It uses `<ip-with-dashes>.sslip.io` (e.g. `3-91-20-7.sslip.io`), a free hostname that resolves to that IP, and gets a real Let's Encrypt certificate for it. A domain can replace it later; rerun the certificate and Apache steps with the new name.
 
-**Security checklist for any production server** (`setup-ec2.sh` does all of this; check it by hand on a server set up another way):
+**Security checklist for any production server** (`setup-full.sh` does all of this; check it by hand on a server set up another way):
 
 - The app connects to MySQL as two users on this database, never root: `DATABASE_URL_READONLY` with only `SELECT` (all page reads), and `DATABASE_URL` with only `SELECT, INSERT, UPDATE, DELETE` (edits and sign-in).
 - MySQL listens on `127.0.0.1` only. The app listens on `127.0.0.1` only (`HOSTNAME=127.0.0.1`). The firewall/Security Group allows only 22, 80 and 443.

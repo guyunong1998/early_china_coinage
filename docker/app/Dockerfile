@@ -1,4 +1,4 @@
-# The app, built and run the way scripts/setup-ec2.sh / deploy-ec2.sh do it on
+# The app, built and run the way scripts/setup-full.sh / redeploy-full.sh do it on
 # the server: `npm run build` (which reads the database to prerender pages,
 # so it runs at container start, once MySQL is up), then the standalone
 # server as a non-root user.

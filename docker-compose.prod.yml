@@ -1,5 +1,5 @@
 # Local copy of the production setup (Apache + app + MySQL on one server, see
-# scripts/setup-ec2.sh), for testing it before deploying:
+# scripts/setup-full.sh), for testing it before deploying:
 #
 #   cp docker/prod.env.example .env.prod   # then fill it in
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up --build

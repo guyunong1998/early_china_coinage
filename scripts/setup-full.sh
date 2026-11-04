@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-time setup of a fresh Ubuntu server: MySQL, the app (systemd), Apache
-# with HTTPS. docker-compose.prod.yml is a local copy of this same setup.
+# One-time setup of a blank Ubuntu server (e.g. a small EC2 instance): MySQL,
+# the app (systemd), Apache with HTTPS, all on the one machine.
+# docker-compose.prod.yml is a local copy of this same setup. A reference more
+# than a script: you can paste the lines in one at a time. For the ANS server
+# (database on RDS, Apache run by ANS) use setup-ans.sh instead.
 #
-#   ./setup-ec2.sh <public-ip-or-domain> [path/to/mysql_dump.sql]
+#   ./setup-full.sh <public-ip-or-domain> [path/to/mysql_dump.sql]
+#
+# Because the box is small, it gets a 2GB swap file and the build is capped
+# at 896MB of Node memory so it doesn't run out of RAM; the ANS server needs
+# neither.
+#
+# NOT in git, so a pull never brings or changes them (recreate by hand):
+#   .env.production, the systemd unit, the Apache site, the MySQL logins and
+#   the dump (pg_export/mysql_dump.sql).
 #
 # Without a domain, pass the server's public IP: it's turned into an
 # <ip-with-dashes>.sslip.io hostname (sslip.io resolves it back to the IP),
@@ -76,6 +87,16 @@ GRANT SELECT ON \`$DB_NAME\`.* TO 'coinapp_ro'@'localhost';
 SQL
 
 echo "== App settings (.env.production) =="
+# Every variable the app reads in production:
+# DATABASE_URL            read/write login: edits and sign-in.
+# DATABASE_URL_READONLY   read-only login: every page's reads. Required.
+# BETTER_AUTH_SECRET      signs login sessions; generated, never typed.
+# BETTER_AUTH_URL         the site's public address, https.
+# ADMIN_EMAILS            only these signed-in accounts can edit.
+# AUDIT_LOG_PATH          where rows deleted through the edit UI are logged.
+# NEXT_PUBLIC_*           baked into the pages at BUILD time, so changing them
+#                         needs a rebuild (redeploy-full.sh). MAPBOX_TOKEN is
+#                         optional: without it the Mapbox map layer is not offered.
 read -r -p "Admin email(s), comma-separated: " ADMIN_EMAILS
 mkdir -p "$APP_DIR/logs"
 # Generated here so the secrets are never typed or pasted anywhere.
@@ -86,6 +107,8 @@ BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://$SERVER_NAME
 ADMIN_EMAILS=$ADMIN_EMAILS
 AUDIT_LOG_PATH=$APP_DIR/logs/deletions.log
+NEXT_PUBLIC_SITE_URL=https://$SERVER_NAME
+NEXT_PUBLIC_MAPBOX_TOKEN=
 EOF
 )
 
